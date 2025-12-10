@@ -6,7 +6,7 @@ import 'entities/group.dart';
 
 class GroupsService {
   GroupsService({StatisticsService? statistics})
-      : _statisticsFactory = () => statistics ?? StatisticsService() {
+      : _statisticsFactory = (() => statistics ?? StatisticsService()) {
     _seed();
   }
 
