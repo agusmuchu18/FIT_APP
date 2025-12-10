@@ -1,16 +1,20 @@
 import 'local_storage_service.dart';
 import 'remote_sync_service.dart';
+import 'statistics_service.dart';
 import '../domain/entities.dart';
 
 class FitnessRepository {
   FitnessRepository({
     required LocalStorageService local,
     required RemoteSyncService remote,
+    required StatisticsService statistics,
   })  : _local = local,
-        _remote = remote;
+        _remote = remote,
+        _statistics = statistics;
 
   final LocalStorageService _local;
   final RemoteSyncService _remote;
+  final StatisticsService _statistics;
 
   Future<void> saveWorkout(WorkoutEntry entry, {bool sync = false}) async {
     await _local.saveWorkout(entry);
@@ -39,4 +43,18 @@ class FitnessRepository {
   }
 
   Future<UserPreferences?> getPreferences() => _local.fetchPreferences();
+
+  Future<void> exportNutritionStats({
+    required DateTime date,
+    required int totalCalories,
+    required Macros macros,
+  }) async {
+    await _statistics.recordNutritionMetrics(
+      NutritionMetrics(date: date, totalCalories: totalCalories, macros: macros),
+    );
+  }
+
+  Future<NutritionMetrics?> getDailyNutritionStats(DateTime date) {
+    return _statistics.getNutritionMetrics(date);
+  }
 }
