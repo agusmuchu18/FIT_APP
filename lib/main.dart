@@ -1,0 +1,64 @@
+import 'package:flutter/material.dart';
+
+import 'app/theme/app_theme.dart';
+import 'core/data/local_storage_service.dart';
+import 'core/data/remote_sync_service.dart';
+import 'core/data/repositories.dart';
+import 'features/nutrition/nutrition_screens.dart';
+import 'features/onboarding/onboarding_screen.dart';
+import 'features/sleep/sleep_screens.dart';
+import 'features/workout/workout_screens.dart';
+
+void main() {
+  final repository = FitnessRepository(
+    local: LocalStorageService(),
+    remote: const RemoteSyncService(),
+  );
+
+  runApp(RepositoryScope(
+    repository: repository,
+    child: const FitApp(),
+  ));
+}
+
+class FitApp extends StatelessWidget {
+  const FitApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'FIT App',
+      theme: AppTheme.light,
+      routes: {
+        '/': (_) => const OnboardingScreen(),
+        '/workout/lite': (_) => const WorkoutLiteScreen(),
+        '/workout/pro': (_) => const WorkoutProScreen(),
+        '/nutrition/lite': (_) => const NutritionLiteScreen(),
+        '/nutrition/pro': (_) => const NutritionProScreen(),
+        '/sleep/lite': (_) => const SleepLiteScreen(),
+        '/sleep/pro': (_) => const SleepProScreen(),
+      },
+    );
+  }
+}
+
+class RepositoryScope extends InheritedWidget {
+  const RepositoryScope({
+    super.key,
+    required this.repository,
+    required super.child,
+  });
+
+  final FitnessRepository repository;
+
+  static FitnessRepository of(BuildContext context) {
+    final scope = context.dependOnInheritedWidgetOfExactType<RepositoryScope>();
+    assert(scope != null, 'RepositoryScope not found in context');
+    return scope!.repository;
+  }
+
+  @override
+  bool updateShouldNotify(covariant RepositoryScope oldWidget) {
+    return repository != oldWidget.repository;
+  }
+}
