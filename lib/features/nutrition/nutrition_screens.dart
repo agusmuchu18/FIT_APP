@@ -84,11 +84,13 @@ class _NutritionLiteScreenState extends State<NutritionLiteScreen> {
           runSpacing: 4,
           children: [
             for (int i = 0; i < _templates.length; i++)
-              InputChip(
-                label: Text(_templates[i]),
-                onPressed: () => _applyTemplate(_templates[i]),
-                onDeleted: () => setState(() => _templates.removeAt(i)),
+              GestureDetector(
                 onLongPress: () => _editTemplate(i),
+                child: InputChip(
+                  label: Text(_templates[i]),
+                  onPressed: () => _applyTemplate(_templates[i]),
+                  onDeleted: () => setState(() => _templates.removeAt(i)),
+                ),
               ),
           ],
         ),
@@ -311,6 +313,36 @@ class _NutritionProScreenState extends State<NutritionProScreen> {
               },
               displayStringForOption: (option) => option.name,
               onSelected: _onFoodSelected,
+              optionsViewBuilder: (
+                context,
+                onSelected,
+                options,
+              ) {
+                return Align(
+                  alignment: Alignment.topLeft,
+                  child: Material(
+                    elevation: 4,
+                    child: SizedBox(
+                      height: 200,
+                      child: ListView.builder(
+                        padding: EdgeInsets.zero,
+                        itemCount: options.length,
+                        itemBuilder: (context, index) {
+                          final option = options.elementAt(index);
+                          return ListTile(
+                            title: Text(option.name),
+                            subtitle: Text(
+                              '${option.caloriesPer100g} kcal · '
+                              '${option.macros.carbs}C/${option.macros.protein}P/${option.macros.fat}G',
+                            ),
+                            onTap: () => onSelected(option),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                );
+              },
               fieldViewBuilder: (
                 context,
                 controller,
