@@ -4,6 +4,7 @@ import 'app/theme/app_theme.dart';
 import 'core/data/local_storage_service.dart';
 import 'core/data/remote_sync_service.dart';
 import 'core/data/repositories.dart';
+import 'core/data/statistics_service.dart';
 import 'features/nutrition/nutrition_screens.dart';
 import 'features/onboarding/onboarding_screen.dart';
 import 'features/sleep/sleep_screens.dart';
@@ -13,6 +14,7 @@ void main() {
   final repository = FitnessRepository(
     local: LocalStorageService(),
     remote: const RemoteSyncService(),
+    statistics: StatisticsService(),
   );
 
   runApp(RepositoryScope(
