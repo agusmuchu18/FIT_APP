@@ -242,14 +242,21 @@ class _NutritionProScreenState extends State<NutritionProScreen> {
   final TextEditingController _carbsController = TextEditingController();
   final TextEditingController _proteinController = TextEditingController();
   final TextEditingController _fatController = TextEditingController();
+  final TextEditingController _templateNameController = TextEditingController();
   final FoodRepository _foodRepository = FoodRepository();
-  final List<String> _templates = const ['Batch cooking', 'Post-entreno', 'Cena completa'];
   final List<MealEntry> _loggedMeals = [];
   final FocusNode _foodSearchFocus = FocusNode();
 
   List<FoodItem> _catalog = [];
   FoodItem? _selectedFood;
   int _portionSize = 100;
+  String? _activeTemplateName;
+  final Map<String, List<_MealFoodSelection>> _mealTemplates = {
+    'Batch cooking': [],
+    'Post-entreno': [],
+    'Cena completa': [],
+  };
+  final List<_MealFoodSelection> _currentFoods = [];
   Macros _dailyMacros = Macros(carbs: 0, protein: 0, fat: 0);
   int _dailyCalories = 0;
 
@@ -267,6 +274,7 @@ class _NutritionProScreenState extends State<NutritionProScreen> {
     _carbsController.dispose();
     _proteinController.dispose();
     _fatController.dispose();
+    _templateNameController.dispose();
     _foodSearchFocus.dispose();
     super.dispose();
   }
@@ -281,6 +289,11 @@ class _NutritionProScreenState extends State<NutritionProScreen> {
   }
 
   void _applyTemplate(String template) {
+    if (_mealTemplates.containsKey(template)) {
+      _loadTemplate(template);
+      return;
+    }
+
     setState(() {
       _titleController.text = template;
       _caloriesController.text = '750';
@@ -293,6 +306,29 @@ class _NutritionProScreenState extends State<NutritionProScreen> {
   void _onFoodSelected(FoodItem food) {
     _selectedFood = food;
     _updatePortion(grams: _portionSize, food: food);
+  }
+
+  void _addFoodToMeal() {
+    if (_selectedFood == null) return;
+    final food = _selectedFood!;
+    final macros = food.macrosForPortion(_portionSize);
+    final calories = food.caloriesForPortion(_portionSize);
+
+    setState(() {
+      _currentFoods.add(
+        _MealFoodSelection(
+          item: food,
+          grams: _portionSize,
+          macros: macros,
+          calories: calories,
+        ),
+      );
+      _templateNameController.text = _templateNameController.text.isEmpty
+          ? _titleController.text
+          : _templateNameController.text;
+    });
+
+    _syncTotalsWithFoods();
   }
 
   void _updatePortion({required int grams, FoodItem? food}) {
@@ -311,6 +347,117 @@ class _NutritionProScreenState extends State<NutritionProScreen> {
       _proteinController.text = macros.protein.toString();
       _fatController.text = macros.fat.toString();
     });
+  }
+
+  void _updateFoodPortion(int index, int grams) {
+    if (index < 0 || index >= _currentFoods.length) return;
+    final selection = _currentFoods[index];
+    final macros = selection.item.macrosForPortion(grams);
+    final calories = selection.item.caloriesForPortion(grams);
+
+    setState(() {
+      _currentFoods[index] = selection.copyWith(
+        grams: grams,
+        macros: macros,
+        calories: calories,
+      );
+    });
+
+    _syncTotalsWithFoods();
+  }
+
+  void _removeFood(int index) {
+    if (index < 0 || index >= _currentFoods.length) return;
+    setState(() {
+      _currentFoods.removeAt(index);
+    });
+    _syncTotalsWithFoods();
+  }
+
+  void _syncTotalsWithFoods() {
+    if (_currentFoods.isEmpty) {
+      setState(() {
+        _caloriesController.clear();
+        _carbsController.clear();
+        _proteinController.clear();
+        _fatController.clear();
+      });
+      return;
+    }
+    final totals = _calculateCurrentTotals();
+    setState(() {
+      _caloriesController.text = totals.$2.toString();
+      _carbsController.text = totals.$1.carbs.toString();
+      _proteinController.text = totals.$1.protein.toString();
+      _fatController.text = totals.$1.fat.toString();
+    });
+  }
+
+  (Macros, int) _calculateCurrentTotals() {
+    var calories = 0;
+    var carbs = 0;
+    var protein = 0;
+    var fat = 0;
+
+    for (final food in _currentFoods) {
+      calories += food.calories;
+      carbs += food.macros.carbs;
+      protein += food.macros.protein;
+      fat += food.macros.fat;
+    }
+
+    return (Macros(carbs: carbs, protein: protein, fat: fat), calories);
+  }
+
+  void _saveTemplate({String? name}) {
+    final templateName = name?.trim().isNotEmpty == true
+        ? name!.trim()
+        : _templateNameController.text.trim().isNotEmpty
+            ? _templateNameController.text.trim()
+            : _titleController.text.trim();
+
+    if (templateName.isEmpty || _currentFoods.isEmpty) return;
+
+    setState(() {
+      _mealTemplates[templateName] = _currentFoods
+          .map(
+            (e) => _MealFoodSelection(
+              item: e.item,
+              grams: e.grams,
+              macros: e.macros,
+              calories: e.calories,
+            ),
+          )
+          .toList();
+      _activeTemplateName = templateName;
+    });
+  }
+
+  void _loadTemplate(String name) {
+    final items = _mealTemplates[name];
+    if (items == null) return;
+
+    setState(() {
+      _currentFoods
+        ..clear()
+        ..addAll(
+          items
+              .map(
+                (e) => _MealFoodSelection(
+                  item: e.item,
+                  grams: e.grams,
+                  macros: e.macros,
+                  calories: e.calories,
+                ),
+              )
+              .toList(),
+        );
+      _titleController.text = name;
+      _templateNameController.text = name;
+      _activeTemplateName = name;
+    });
+
+    _syncTotalsWithFoods();
   }
 
   void _recalculateDailyTotals() {
@@ -472,10 +619,6 @@ class _NutritionProScreenState extends State<NutritionProScreen> {
                         }
                       },
                     ),
-                  ],
-                ),
-              ),
-            ),
             const SizedBox(height: 16),
             Card(
               child: Padding(
@@ -530,10 +673,74 @@ class _NutritionProScreenState extends State<NutritionProScreen> {
                         ),
                       ],
                     ),
+                    const SizedBox(height: 12),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: FilledButton.icon(
+                        onPressed: _selectedFood == null ? null : _addFoodToMeal,
+                        icon: const Icon(Icons.playlist_add_rounded),
+                        label: const Text('Agregar a la comida'),
+                      ),
+                    ),
                   ],
                 ),
               ),
             ),
+            if (_currentFoods.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Alimentos en la comida', style: textTheme.titleMedium),
+                      const SizedBox(height: 12),
+                      ...[for (int i = 0; i < _currentFoods.length; i++) i]
+                          .map(
+                        (index) => Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 6),
+                          child: ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: Text(_currentFoods[index].item.name),
+                            subtitle: Text(
+                              '${_currentFoods[index].grams} g · '
+                              '${_currentFoods[index].calories} kcal · '
+                              '${_currentFoods[index].macros.carbs}C/'
+                              '${_currentFoods[index].macros.protein}P/'
+                              '${_currentFoods[index].macros.fat}G',
+                            ),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.remove_circle_outline),
+                                  onPressed: () => _updateFoodPortion(
+                                    index,
+                                    (_currentFoods[index].grams - 25).clamp(25, 500),
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.add_circle_outline),
+                                  onPressed: () => _updateFoodPortion(
+                                    index,
+                                    (_currentFoods[index].grams + 25).clamp(25, 1000),
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.delete_outline_rounded),
+                                  onPressed: () => _removeFood(index),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
             const SizedBox(height: 16),
             Card(
               child: Padding(
@@ -557,10 +764,45 @@ class _NutritionProScreenState extends State<NutritionProScreen> {
                       maxLines: 3,
                     ),
                     const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _templateNameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Nombre de plantilla (opcional)',
+                        prefixIcon: Icon(Icons.bookmark_add_outlined),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        ElevatedButton.icon(
+                          onPressed: _currentFoods.isEmpty ? null : () => _saveTemplate(),
+                          icon: const Icon(Icons.save_outlined),
+                          label: const Text('Guardar como plantilla'),
+                        ),
+                        ElevatedButton.icon(
+                          onPressed: _activeTemplateName == null || _currentFoods.isEmpty
+                              ? null
+                              : () => _saveTemplate(name: _activeTemplateName),
+                          icon: const Icon(Icons.update_rounded),
+                          label: const Text('Actualizar plantilla'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
                     TemplateSelector(
                       title: 'Plantillas detalladas',
-                      templates: _templates,
+                      templates: _mealTemplates.keys.toList(),
                       onSelected: _applyTemplate,
+                      onDeleted: (template) {
+                        setState(() {
+                          _mealTemplates.remove(template);
+                          if (_activeTemplateName == template) {
+                            _activeTemplateName = null;
+                          }
+                        });
+                      },
                     ),
                   ],
                 ),
@@ -571,17 +813,22 @@ class _NutritionProScreenState extends State<NutritionProScreen> {
             const SizedBox(height: 20),
             FilledButton.icon(
               onPressed: () async {
+                final totals = _currentFoods.isEmpty ? null : _calculateCurrentTotals();
                 final entry = MealEntry(
                   id: DateTime.now().toIso8601String(),
-                  title: _titleController.text,
-                  calories: int.tryParse(_caloriesController.text) ?? 0,
-                  macros: Macros(
-                    carbs: int.tryParse(_carbsController.text) ?? 0,
-                    protein: int.tryParse(_proteinController.text) ?? 0,
-                    fat: int.tryParse(_fatController.text) ?? 0,
-                  ),
+                  title: _titleController.text.isNotEmpty
+                      ? _titleController.text
+                      : 'Comida profesional',
+                  calories:
+                      totals?.$2 ?? int.tryParse(_caloriesController.text) ?? 0,
+                  macros: totals?.$1 ??
+                      Macros(
+                        carbs: int.tryParse(_carbsController.text) ?? 0,
+                        protein: int.tryParse(_proteinController.text) ?? 0,
+                        fat: int.tryParse(_fatController.text) ?? 0,
+                      ),
                   notes: _notesController.text,
-                  template: _titleController.text,
+                  template: _activeTemplateName ?? _titleController.text,
                 );
                 setState(() => _loggedMeals.add(entry));
                 _recalculateDailyTotals();
@@ -605,6 +852,34 @@ class _NutritionProScreenState extends State<NutritionProScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _MealFoodSelection {
+  _MealFoodSelection({
+    required this.item,
+    required this.grams,
+    required this.macros,
+    required this.calories,
+  });
+
+  final FoodItem item;
+  final int grams;
+  final Macros macros;
+  final int calories;
+
+  _MealFoodSelection copyWith({
+    FoodItem? item,
+    int? grams,
+    Macros? macros,
+    int? calories,
+  }) {
+    return _MealFoodSelection(
+      item: item ?? this.item,
+      grams: grams ?? this.grams,
+      macros: macros ?? this.macros,
+      calories: calories ?? this.calories,
     );
   }
 }

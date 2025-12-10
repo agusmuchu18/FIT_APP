@@ -6,11 +6,13 @@ class TemplateSelector extends StatelessWidget {
     required this.templates,
     required this.onSelected,
     this.title = 'Plantillas',
+    this.onDeleted,
   });
 
   final List<String> templates;
   final ValueChanged<String> onSelected;
   final String title;
+  final ValueChanged<String>? onDeleted;
 
   @override
   Widget build(BuildContext context) {
@@ -23,11 +25,15 @@ class TemplateSelector extends StatelessWidget {
         Wrap(
           spacing: 8,
           children: templates
-              .map((template) => ChoiceChip(
-                    label: Text(template),
-                    selected: false,
-                    onSelected: (_) => onSelected(template),
-                  ))
+              .map(
+                (template) => InputChip(
+                  label: Text(template),
+                  onPressed: () => onSelected(template),
+                  onDeleted: onDeleted == null
+                      ? null
+                      : () => onDeleted!(template),
+                ),
+              )
               .toList(),
         ),
       ],
