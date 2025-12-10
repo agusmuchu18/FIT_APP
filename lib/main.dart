@@ -11,35 +11,43 @@ import 'features/sleep/sleep_screens.dart';
 import 'features/workout/workout_screens.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+
   final repository = FitnessRepository(
     local: LocalStorageService(),
     remote: const RemoteSyncService(),
     statistics: StatisticsService(),
   );
 
-  runApp(RepositoryScope(
-    repository: repository,
-    child: const FitApp(),
-  ));
+  runApp(FitApp(repository: repository));
 }
 
 class FitApp extends StatelessWidget {
-  const FitApp({super.key});
+  const FitApp({
+    super.key,
+    required this.repository,
+  });
+
+  final FitnessRepository repository;
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'FIT App',
-      theme: AppTheme.light,
-      routes: {
-        '/': (_) => const OnboardingScreen(),
-        '/workout/lite': (_) => const WorkoutLiteScreen(),
-        '/workout/pro': (_) => const WorkoutProScreen(),
-        '/nutrition/lite': (_) => const NutritionLiteScreen(),
-        '/nutrition/pro': (_) => const NutritionProScreen(),
-        '/sleep/lite': (_) => const SleepLiteScreen(),
-        '/sleep/pro': (_) => const SleepProScreen(),
-      },
+    return RepositoryScope(
+      repository: repository,
+      child: MaterialApp(
+        title: 'FIT App',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.light,
+        routes: {
+          '/': (_) => const OnboardingScreen(),
+          '/workout/lite': (_) => const WorkoutLiteScreen(),
+          '/workout/pro': (_) => const WorkoutProScreen(),
+          '/nutrition/lite': (_) => const NutritionLiteScreen(),
+          '/nutrition/pro': (_) => const NutritionProScreen(),
+          '/sleep/lite': (_) => const SleepLiteScreen(),
+          '/sleep/pro': (_) => const SleepProScreen(),
+        },
+      ),
     );
   }
 }
