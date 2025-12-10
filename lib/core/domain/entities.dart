@@ -87,6 +87,11 @@ class SleepEntry {
     required this.quality,
     this.notes,
     this.template,
+    this.bedtime,
+    this.wakeTime,
+    this.screenUsageBeforeSleep,
+    this.stressLevel,
+    this.wakeEnergy,
   });
 
   final String id;
@@ -94,12 +99,22 @@ class SleepEntry {
   final String quality;
   final String? notes;
   final String? template;
+  final String? bedtime;
+  final String? wakeTime;
+  final bool? screenUsageBeforeSleep;
+  final int? stressLevel;
+  final int? wakeEnergy;
 
   SleepEntry copyWith({
     double? hours,
     String? quality,
     String? notes,
     String? template,
+    String? bedtime,
+    String? wakeTime,
+    bool? screenUsageBeforeSleep,
+    int? stressLevel,
+    int? wakeEnergy,
   }) {
     return SleepEntry(
       id: id,
@@ -107,6 +122,12 @@ class SleepEntry {
       quality: quality ?? this.quality,
       notes: notes ?? this.notes,
       template: template ?? this.template,
+      bedtime: bedtime ?? this.bedtime,
+      wakeTime: wakeTime ?? this.wakeTime,
+      screenUsageBeforeSleep:
+          screenUsageBeforeSleep ?? this.screenUsageBeforeSleep,
+      stressLevel: stressLevel ?? this.stressLevel,
+      wakeEnergy: wakeEnergy ?? this.wakeEnergy,
     );
   }
 }
