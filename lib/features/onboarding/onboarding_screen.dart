@@ -48,6 +48,12 @@ class OnboardingScreen extends StatelessWidget {
         route: '/analytics/overview',
         icon: Icons.bar_chart_rounded,
       ),
+      _NavTile(
+        title: 'Grupos de atletas',
+        subtitle: 'Crea equipos y analiza su estado',
+        route: '/groups/list',
+        icon: Icons.groups_2_rounded,
+      ),
     ];
 
     return Scaffold(
