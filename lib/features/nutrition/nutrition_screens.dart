@@ -13,8 +13,10 @@ class NutritionLiteScreen extends StatefulWidget {
 
 class _NutritionLiteScreenState extends State<NutritionLiteScreen> {
   final TextEditingController _titleController = TextEditingController();
-  final TextEditingController _caloriesController = TextEditingController(text: '500');
-  final TextEditingController _templateEditorController = TextEditingController();
+  final TextEditingController _caloriesController =
+      TextEditingController(text: '500');
+  final TextEditingController _templateEditorController =
+      TextEditingController();
   final List<String> _templates = ['Desayuno rápido', 'Snack proteico', 'Smoothie verde'];
 
   @override
@@ -74,10 +76,11 @@ class _NutritionLiteScreenState extends State<NutritionLiteScreen> {
   }
 
   Widget _buildEditableTemplates() {
+    final textTheme = Theme.of(context).textTheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Plantillas editables', style: Theme.of(context).textTheme.titleMedium),
+        Text('Plantillas editables', style: textTheme.titleMedium),
         const SizedBox(height: 8),
         Wrap(
           spacing: 8,
@@ -100,7 +103,10 @@ class _NutritionLiteScreenState extends State<NutritionLiteScreen> {
             Expanded(
               child: TextField(
                 controller: _templateEditorController,
-                decoration: const InputDecoration(labelText: 'Agregar nueva plantilla'),
+                decoration: const InputDecoration(
+                  labelText: 'Agregar nueva plantilla',
+                  prefixIcon: Icon(Icons.add_rounded),
+                ),
                 onSubmitted: (_) => _addTemplate(),
               ),
             ),
@@ -117,47 +123,107 @@ class _NutritionLiteScreenState extends State<NutritionLiteScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
     return Scaffold(
       appBar: AppBar(title: const Text('Nutrición Lite')),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            TextFormField(
-              controller: _titleController,
-              decoration: const InputDecoration(labelText: 'Título de la comida'),
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _caloriesController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'Calorías'),
-            ),
-            const SizedBox(height: 12),
-            TemplateSelector(
-              templates: _templates,
-              onSelected: _applyTemplate,
-            ),
-            const SizedBox(height: 12),
-            _buildEditableTemplates(),
-            const Spacer(),
-            FilledButton(
-              onPressed: () {
-                final entry = MealEntry(
-                  id: DateTime.now().toIso8601String(),
-                  title: _titleController.text,
-                  calories: int.tryParse(_caloriesController.text) ?? 0,
-                  macros: Macros(carbs: 0, protein: 0, fat: 0),
-                );
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Guardado: ${entry.title}')),
-                );
-              },
-              child: const Text('Guardar rápido'),
-            ),
-          ],
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _NutritionHeader(
+                icon: Icons.local_dining_rounded,
+                title: 'Registro express',
+                description: 'Comidas rápidas en menos de 1 minuto, con estilo limpio.',
+                colorScheme: colorScheme,
+                textTheme: textTheme,
+              ),
+              const SizedBox(height: 16),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Datos esenciales', style: textTheme.titleMedium),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _titleController,
+                        decoration: const InputDecoration(
+                          labelText: 'Título de la comida',
+                          prefixIcon: Icon(Icons.restaurant_menu_rounded),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _caloriesController,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Calorías estimadas',
+                          prefixIcon: Icon(Icons.local_fire_department_rounded),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Plantillas rápidas', style: textTheme.titleMedium),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Usa chips para seleccionar o mantén presionado para editar.',
+                        style: textTheme.bodyMedium,
+                      ),
+                      const SizedBox(height: 12),
+                      TemplateSelector(
+                        templates: _templates,
+                        onSelected: _applyTemplate,
+                      ),
+                      const SizedBox(height: 12),
+                      _buildEditableTemplates(),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: () => _saveQuickMeal(context),
+                  icon: const Icon(Icons.check_circle_rounded),
+                  label: const Text('Guardar en menos de 1 minuto'),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
+    );
+  }
+
+  Future<void> _saveQuickMeal(BuildContext context) async {
+    final entry = MealEntry(
+      id: DateTime.now().toIso8601String(),
+      title: _titleController.text,
+      calories: int.tryParse(_caloriesController.text) ?? 0,
+      macros: Macros(carbs: 0, protein: 0, fat: 0),
+    );
+
+    final repository = RepositoryScope.of(context);
+    await repository.saveMeal(entry, sync: true);
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Guardado: ${entry.title}')),
     );
   }
 }
@@ -275,13 +341,14 @@ class _NutritionProScreenState extends State<NutritionProScreen> {
   }
 
   Widget _buildDailySummary() {
+    final textTheme = Theme.of(context).textTheme;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Macros diarios', style: Theme.of(context).textTheme.titleMedium),
+            Text('Macros diarios', style: textTheme.titleMedium),
             const SizedBox(height: 8),
             Text('Calorías: $_dailyCalories kcal'),
             Text('Carbohidratos: ${_dailyMacros.carbs} g'),
@@ -295,134 +362,211 @@ class _NutritionProScreenState extends State<NutritionProScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
     return Scaffold(
       appBar: AppBar(title: const Text('Nutrición Pro')),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            RawAutocomplete<FoodItem>(
-              textEditingController: _titleController,
-              focusNode: _foodSearchFocus,
-              optionsBuilder: (textEditingValue) {
-                if (textEditingValue.text.isEmpty) return _catalog;
-                final query = textEditingValue.text.toLowerCase();
-                return _catalog.where(
-                  (item) => item.name.toLowerCase().contains(query),
-                );
-              },
-              displayStringForOption: (option) => option.name,
-              onSelected: _onFoodSelected,
-              optionsViewBuilder: (
-                context,
-                onSelected,
-                options,
-              ) {
-                return Align(
-                  alignment: Alignment.topLeft,
-                  child: Material(
-                    elevation: 4,
-                    child: SizedBox(
-                      height: 200,
-                      child: ListView.builder(
-                        padding: EdgeInsets.zero,
-                        itemCount: options.length,
-                        itemBuilder: (context, index) {
-                          final option = options.elementAt(index);
-                          return ListTile(
-                            title: Text(option.name),
-                            subtitle: Text(
-                              '${option.caloriesPer100g} kcal · '
-                              '${option.macros.carbs}C/${option.macros.protein}P/${option.macros.fat}G',
+            _NutritionHeader(
+              icon: Icons.auto_awesome_rounded,
+              title: 'Modo profesional',
+              description:
+                  'Control completo para atletas: porciones, macros y notas.',
+              colorScheme: colorScheme,
+              textTheme: textTheme,
+            ),
+            const SizedBox(height: 16),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Buscar alimento', style: textTheme.titleMedium),
+                    const SizedBox(height: 12),
+                    RawAutocomplete<FoodItem>(
+                      textEditingController: _titleController,
+                      focusNode: _foodSearchFocus,
+                      optionsBuilder: (textEditingValue) {
+                        if (textEditingValue.text.isEmpty) return _catalog;
+                        final query = textEditingValue.text.toLowerCase();
+                        return _catalog.where(
+                          (item) => item.name.toLowerCase().contains(query),
+                        );
+                      },
+                      displayStringForOption: (option) => option.name,
+                      onSelected: _onFoodSelected,
+                      optionsViewBuilder: (
+                        context,
+                        onSelected,
+                        options,
+                      ) {
+                        return Align(
+                          alignment: Alignment.topLeft,
+                          child: Material(
+                            elevation: 4,
+                            child: SizedBox(
+                              height: 220,
+                              child: ListView.builder(
+                                padding: EdgeInsets.zero,
+                                itemCount: options.length,
+                                itemBuilder: (context, index) {
+                                  final option = options.elementAt(index);
+                                  return ListTile(
+                                    title: Text(option.name),
+                                    subtitle: Text(
+                                      '${option.caloriesPer100g} kcal · '
+                                      '${option.macros.carbs}C/${option.macros.protein}P/${option.macros.fat}G',
+                                    ),
+                                    onTap: () => onSelected(option),
+                                  );
+                                },
+                              ),
                             ),
-                            onTap: () => onSelected(option),
-                          );
-                        },
+                          ),
+                        );
+                      },
+                      fieldViewBuilder: (
+                        context,
+                        controller,
+                        focusNode,
+                        onFieldSubmitted,
+                      ) {
+                        return TextFormField(
+                          controller: controller,
+                          focusNode: focusNode,
+                          decoration: const InputDecoration(
+                            labelText: 'Buscar alimento o receta',
+                            prefixIcon: Icon(Icons.search_rounded),
+                          ),
+                          onFieldSubmitted: (_) => onFieldSubmitted(),
+                        );
+                      },
+                    ),
+                    if (_selectedFood != null) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        'Por 100g: ${_selectedFood!.caloriesPer100g} kcal · '
+                        '${_selectedFood!.macros.carbs}C/${_selectedFood!.macros.protein}P/${_selectedFood!.macros.fat}G',
+                        style: textTheme.bodyMedium,
+                      ),
+                    ],
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<int>(
+                      value: _portionSize,
+                      decoration: const InputDecoration(labelText: 'Porción (gramos)'),
+                      items: const [
+                        DropdownMenuItem(value: 50, child: Text('50 g')),
+                        DropdownMenuItem(value: 100, child: Text('100 g')),
+                        DropdownMenuItem(value: 150, child: Text('150 g')),
+                        DropdownMenuItem(value: 200, child: Text('200 g')),
+                      ],
+                      onChanged: (value) {
+                        if (value != null) {
+                          _updatePortion(grams: value);
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Macros y calorías', style: textTheme.titleMedium),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _caloriesController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'Calorías totales',
+                        prefixIcon: Icon(Icons.local_fire_department_outlined),
                       ),
                     ),
-                  ),
-                );
-              },
-              fieldViewBuilder: (
-                context,
-                controller,
-                focusNode,
-                onFieldSubmitted,
-              ) {
-                return TextFormField(
-                  controller: controller,
-                  focusNode: focusNode,
-                  decoration: const InputDecoration(labelText: 'Buscar alimento'),
-                  onFieldSubmitted: (_) => onFieldSubmitted(),
-                );
-              },
-            ),
-            const SizedBox(height: 12),
-            if (_selectedFood != null)
-              Text('Por 100g: ${_selectedFood!.caloriesPer100g} kcal, '
-                  '${_selectedFood!.macros.carbs}C/${_selectedFood!.macros.protein}P/${_selectedFood!.macros.fat}G'),
-            DropdownButtonFormField<int>(
-              value: _portionSize,
-              decoration: const InputDecoration(labelText: 'Porción (gramos)'),
-              items: const [
-                DropdownMenuItem(value: 50, child: Text('50 g')),
-                DropdownMenuItem(value: 100, child: Text('100 g')),
-                DropdownMenuItem(value: 150, child: Text('150 g')),
-                DropdownMenuItem(value: 200, child: Text('200 g')),
-              ],
-              onChanged: (value) {
-                if (value != null) {
-                  _updatePortion(grams: value);
-                }
-              },
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _caloriesController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'Calorías totales'),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    controller: _carbsController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: 'Carbs (g)'),
-                  ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: _carbsController,
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(
+                              labelText: 'Carbs (g)',
+                              prefixIcon: Icon(Icons.grain_rounded),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextFormField(
+                            controller: _proteinController,
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(
+                              labelText: 'Proteína (g)',
+                              prefixIcon: Icon(Icons.egg_alt_rounded),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextFormField(
+                            controller: _fatController,
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(
+                              labelText: 'Grasa (g)',
+                              prefixIcon: Icon(Icons.opacity_rounded),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: TextFormField(
-                    controller: _proteinController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: 'Proteína (g)'),
-                  ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Notas y plantillas', style: textTheme.titleMedium),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Añade contexto de preparación, timing o sensaciones.',
+                      style: textTheme.bodyMedium,
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _notesController,
+                      decoration: const InputDecoration(
+                        labelText: 'Notas de preparación',
+                        prefixIcon: Icon(Icons.note_alt_rounded),
+                      ),
+                      maxLines: 3,
+                    ),
+                    const SizedBox(height: 12),
+                    TemplateSelector(
+                      title: 'Plantillas detalladas',
+                      templates: _templates,
+                      onSelected: _applyTemplate,
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: TextFormField(
-                    controller: _fatController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: 'Grasa (g)'),
-                  ),
-                ),
-              ],
+              ),
             ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _notesController,
-              decoration: const InputDecoration(labelText: 'Notas de preparación'),
-              maxLines: 3,
-            ),
-            const SizedBox(height: 12),
-            TemplateSelector(
-              title: 'Plantillas detalladas',
-              templates: _templates,
-              onSelected: _applyTemplate,
-            ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             _buildDailySummary(),
             const SizedBox(height: 20),
             FilledButton.icon(
@@ -446,6 +590,7 @@ class _NutritionProScreenState extends State<NutritionProScreen> {
                 await repository.saveMeal(entry, sync: true);
                 await _exportDailyMetrics(context);
 
+                if (!mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(
@@ -456,6 +601,54 @@ class _NutritionProScreenState extends State<NutritionProScreen> {
               },
               icon: const Icon(Icons.save_alt),
               label: const Text('Guardar plantilla'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _NutritionHeader extends StatelessWidget {
+  const _NutritionHeader({
+    required this.icon,
+    required this.title,
+    required this.description,
+    required this.colorScheme,
+    required this.textTheme,
+  });
+
+  final IconData icon;
+  final String title;
+  final String description;
+  final ColorScheme colorScheme;
+  final TextTheme textTheme;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: colorScheme.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(icon, color: colorScheme.primary, size: 28),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: textTheme.titleMedium),
+                  const SizedBox(height: 6),
+                  Text(description, style: textTheme.bodyMedium),
+                ],
+              ),
             ),
           ],
         ),
