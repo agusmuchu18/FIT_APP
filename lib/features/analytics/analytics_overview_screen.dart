@@ -2,6 +2,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/data/repositories.dart';
+import '../../core/data/statistics_service.dart';
 import '../../core/domain/entities.dart';
 import '../../main.dart';
 

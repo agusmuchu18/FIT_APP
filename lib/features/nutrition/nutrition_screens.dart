@@ -619,6 +619,10 @@ class _NutritionProScreenState extends State<NutritionProScreen> {
                         }
                       },
                     ),
+                  ],
+                ),
+              ),
+            ),
             const SizedBox(height: 16),
             Card(
               child: Padding(
