@@ -42,6 +42,12 @@ class OnboardingScreen extends StatelessWidget {
         route: '/sleep/pro',
         icon: Icons.night_shelter,
       ),
+      _NavTile(
+        title: 'Estadísticas',
+        subtitle: 'Resumen de salud y rendimiento',
+        route: '/analytics/overview',
+        icon: Icons.bar_chart_rounded,
+      ),
     ];
 
     return Scaffold(
