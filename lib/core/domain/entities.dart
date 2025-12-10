@@ -135,23 +135,40 @@ class SleepEntry {
 class UserPreferences {
   UserPreferences({
     required this.id,
-    required this.dailyStepGoal,
-    required this.targetCalories,
-    required this.preferredSleep,
+    required this.primaryGoal,
+    required this.experienceLevel,
+    required this.targetSessionsPerWeek,
+    required this.modePreference,
+    this.dailyStepGoal,
+    this.targetCalories,
+    this.preferredSleep,
   });
 
   final String id;
-  final int dailyStepGoal;
-  final int targetCalories;
-  final double preferredSleep;
+  final String primaryGoal;
+  final String experienceLevel;
+  final int targetSessionsPerWeek;
+  final String modePreference;
+  final int? dailyStepGoal;
+  final int? targetCalories;
+  final double? preferredSleep;
 
   UserPreferences copyWith({
+    String? primaryGoal,
+    String? experienceLevel,
+    int? targetSessionsPerWeek,
+    String? modePreference,
     int? dailyStepGoal,
     int? targetCalories,
     double? preferredSleep,
   }) {
     return UserPreferences(
       id: id,
+      primaryGoal: primaryGoal ?? this.primaryGoal,
+      experienceLevel: experienceLevel ?? this.experienceLevel,
+      targetSessionsPerWeek:
+          targetSessionsPerWeek ?? this.targetSessionsPerWeek,
+      modePreference: modePreference ?? this.modePreference,
       dailyStepGoal: dailyStepGoal ?? this.dailyStepGoal,
       targetCalories: targetCalories ?? this.targetCalories,
       preferredSleep: preferredSleep ?? this.preferredSleep,
