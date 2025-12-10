@@ -29,7 +29,7 @@ class AppTheme {
           ),
         ),
         inputDecorationTheme: _inputDecorationTheme(_lightColorScheme),
-        cardTheme: CardTheme(
+        cardTheme: CardThemeData(
           color: _lightColorScheme.surface,
           elevation: 1,
           shape: RoundedRectangleBorder(
@@ -63,7 +63,7 @@ class AppTheme {
           ),
         ),
         inputDecorationTheme: _inputDecorationTheme(_darkColorScheme),
-        cardTheme: CardTheme(
+        cardTheme: CardThemeData(
           color: _darkColorScheme.surface,
           elevation: 1,
           shape: RoundedRectangleBorder(
@@ -73,12 +73,12 @@ class AppTheme {
         ),
       );
 
-  static const ColorScheme _lightColorScheme = ColorScheme.fromSeed(
+  static final ColorScheme _lightColorScheme = ColorScheme.fromSeed(
     seedColor: _seedColor,
     brightness: Brightness.light,
   );
 
-  static const ColorScheme _darkColorScheme = ColorScheme.fromSeed(
+  static final ColorScheme _darkColorScheme = ColorScheme.fromSeed(
     seedColor: _seedColor,
     brightness: Brightness.dark,
   );
