@@ -130,10 +130,17 @@ class SleepProScreen extends StatefulWidget {
 }
 
 class _SleepProScreenState extends State<SleepProScreen> {
-  final TextEditingController _hoursController = TextEditingController();
+  final TextEditingController _hoursController = TextEditingController(text: '8');
   final TextEditingController _qualityController =
       TextEditingController(text: 'Buena');
   final TextEditingController _notesController = TextEditingController();
+  final TextEditingController _bedtimeController =
+      TextEditingController(text: '23:00');
+  final TextEditingController _wakeTimeController =
+      TextEditingController(text: '07:00');
+  bool _usedScreensBeforeSleep = false;
+  int _stressLevel = 3;
+  int _energyLevel = 3;
   final List<String> _templates = const ['Rutina circadiana', 'Recuperación', 'Jet lag'];
 
   @override
@@ -141,6 +148,8 @@ class _SleepProScreenState extends State<SleepProScreen> {
     _hoursController.dispose();
     _qualityController.dispose();
     _notesController.dispose();
+    _bedtimeController.dispose();
+    _wakeTimeController.dispose();
     super.dispose();
   }
 
@@ -217,6 +226,67 @@ class _SleepProScreenState extends State<SleepProScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      Text('Cuestionario diario', style: textTheme.titleMedium),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _bedtimeController,
+                        decoration: const InputDecoration(
+                          labelText: 'Hora a la que fuiste a dormir',
+                          prefixIcon: Icon(Icons.hotel_rounded),
+                          hintText: '23:15',
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _wakeTimeController,
+                        decoration: const InputDecoration(
+                          labelText: 'Hora de despertar',
+                          prefixIcon: Icon(Icons.wb_sunny_rounded),
+                          hintText: '07:00',
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      SwitchListTile.adaptive(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('¿Usaste pantallas antes de dormir?'),
+                        value: _usedScreensBeforeSleep,
+                        onChanged: (value) =>
+                            setState(() => _usedScreensBeforeSleep = value),
+                      ),
+                      const SizedBox(height: 8),
+                      Text('Nivel de estrés (1-5)', style: textTheme.titleSmall),
+                      Slider(
+                        value: _stressLevel.toDouble(),
+                        min: 1,
+                        max: 5,
+                        divisions: 4,
+                        label: '$_stressLevel',
+                        onChanged: (value) =>
+                            setState(() => _stressLevel = value.round()),
+                      ),
+                      const SizedBox(height: 8),
+                      Text('Energía al despertar (1-5)',
+                          style: textTheme.titleSmall),
+                      Slider(
+                        value: _energyLevel.toDouble(),
+                        min: 1,
+                        max: 5,
+                        divisions: 4,
+                        label: '$_energyLevel',
+                        onChanged: (value) =>
+                            setState(() => _energyLevel = value.round()),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Text('Notas y rituales', style: textTheme.titleMedium),
                       const SizedBox(height: 8),
                       Text(
@@ -276,6 +346,11 @@ class _SleepProScreenState extends State<SleepProScreen> {
       quality: _qualityController.text,
       notes: _notesController.text,
       template: _notesController.text,
+      bedtime: _bedtimeController.text,
+      wakeTime: _wakeTimeController.text,
+      screenUsageBeforeSleep: _usedScreensBeforeSleep,
+      stressLevel: _stressLevel,
+      wakeEnergy: _energyLevel,
     );
 
     final repository = RepositoryScope.of(context);

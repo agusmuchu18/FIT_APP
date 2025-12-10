@@ -32,6 +32,7 @@ class FitnessRepository {
 
   Future<void> saveSleep(SleepEntry entry, {bool sync = false}) async {
     await _local.saveSleep(entry);
+    await _statistics.recordSleepInsights(entry);
     if (sync) await _remote.syncSleep(entry);
   }
 
