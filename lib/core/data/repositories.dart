@@ -58,4 +58,37 @@ class FitnessRepository {
   Future<NutritionMetrics?> getDailyNutritionStats(DateTime date) {
     return _statistics.getNutritionMetrics(date);
   }
+
+  Future<List<NutritionMetrics>> getWeeklyNutritionStats({int days = 7}) {
+    return _statistics.getNutritionHistory(days: days);
+  }
+
+  Future<Macros> getMacroDistribution({int days = 7}) {
+    return _statistics.getMacroDistribution(days: days);
+  }
+
+  Future<List<SleepEntry>> getRecentSleep({int days = 7}) {
+    return _statistics.getSleepEntries(days: days);
+  }
+
+  Future<Map<DateTime, int>> getWorkoutDurationByDay({int days = 7}) async {
+    final workouts = await _local.fetchWorkouts();
+    final now = DateTime.now();
+    final startDate = DateTime(now.year, now.month, now.day)
+        .subtract(Duration(days: days - 1));
+
+    final Map<DateTime, int> minutesByDay = {};
+    for (final workout in workouts) {
+      final date = _safeParseDate(workout.id);
+      if (date.isBefore(startDate) || date.isAfter(now)) continue;
+      final day = DateTime(date.year, date.month, date.day);
+      minutesByDay[day] = (minutesByDay[day] ?? 0) + workout.durationMinutes;
+    }
+
+    return minutesByDay;
+  }
+
+  DateTime _safeParseDate(String raw) {
+    return DateTime.tryParse(raw) ?? DateTime.now();
+  }
 }
