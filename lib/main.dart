@@ -7,6 +7,7 @@ import 'core/data/repositories.dart';
 import 'core/data/statistics_service.dart';
 import 'features/analytics/analytics_overview_screen.dart';
 import 'features/groups/presentation/pages/groups_list_screen.dart';
+import 'features/home/home_screen.dart';
 import 'features/nutrition/nutrition_screens.dart';
 import 'features/onboarding/onboarding_screen.dart';
 import 'features/sleep/sleep_screens.dart';
@@ -42,6 +43,7 @@ class FitApp extends StatelessWidget {
         theme: AppTheme.light,
         routes: {
           '/': (_) => const OnboardingScreen(),
+          '/home': (_) => const HomeScreen(),
           '/workout/lite': (_) => const WorkoutLiteScreen(),
           '/workout/pro': (_) => const WorkoutProScreen(),
           '/nutrition/lite': (_) => const NutritionLiteScreen(),
