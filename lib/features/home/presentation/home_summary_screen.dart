@@ -17,6 +17,13 @@ class HomeSummaryScreen extends StatefulWidget {
 
 class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
   final FoodRepository _foodRepository = FoodRepository();
+  late Future<_HomeSummaryData> _summaryFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _summaryFuture = _loadSummaryData();
+  }
 
   Future<_HomeSummaryData> _loadSummaryData() async {
     final repository = RepositoryScope.of(context);
@@ -183,6 +190,12 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
     );
   }
 
+  void _refreshSummary() {
+    setState(() {
+      _summaryFuture = _loadSummaryData();
+    });
+  }
+
   DateTime _dateOnly(DateTime date) => DateTime(date.year, date.month, date.day);
 
   DateTime _safeParseDate(String raw) {
@@ -206,7 +219,7 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
         child: Container(
           color: AppColors.background,
           child: FutureBuilder<_HomeSummaryData>(
-            future: _loadSummaryData(),
+            future: _summaryFuture,
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(
@@ -240,8 +253,9 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
                         _StreakCard(
                           activeDays: data.activeStreak,
                           dots: data.streakDots,
-                          onTap: () {
-                            Navigator.pushNamed(context, '/streak');
+                          onTap: () async {
+                            await Navigator.pushNamed(context, '/streak');
+                            _refreshSummary();
                           },
                         ),
                         const SizedBox(height: 20),
@@ -253,11 +267,12 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
                                 secondaryValue:
                                     'Promedio semanal: ${data.trainingWeeklyAvg} min',
                                 distribution: data.trainingWeeklyDistribution,
-                                onTap: () {
-                                  Navigator.pushNamed(
+                                onTap: () async {
+                                  await Navigator.pushNamed(
                                     context,
                                     '/workout/lite',
                                   );
+                                  _refreshSummary();
                                 },
                               ),
                             ),
@@ -266,11 +281,12 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
                               child: _MetricCard.nutrition(
                                 calories: data.caloriesToday,
                                 macros: data.macrosToday,
-                                onTap: () {
-                                  Navigator.pushNamed(
+                                onTap: () async {
+                                  await Navigator.pushNamed(
                                     context,
                                     '/nutrition/lite',
                                   );
+                                  _refreshSummary();
                                 },
                               ),
                             ),
@@ -283,11 +299,12 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
                               child: _SleepInfoCard(
                                 avgSleepHours: data.avgSleepDuration,
                                 avgSleepDelta: data.avgSleepDelta,
-                                onTap: () {
-                                  Navigator.pushNamed(
+                                onTap: () async {
+                                  await Navigator.pushNamed(
                                     context,
                                     '/sleep/lite',
                                   );
+                                  _refreshSummary();
                                 },
                               ),
                             ),
