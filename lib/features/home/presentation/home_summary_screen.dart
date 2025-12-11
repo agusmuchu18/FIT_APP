@@ -240,6 +240,9 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
                         _StreakCard(
                           activeDays: data.activeStreak,
                           dots: data.streakDots,
+                          onTap: () {
+                            Navigator.pushNamed(context, '/streak');
+                          },
                         ),
                         const SizedBox(height: 20),
                         Row(
@@ -298,7 +301,11 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
                           ],
                         ),
                         const SizedBox(height: 26),
-                        const _RegisterActivityButton(),
+                        _GroupsCard(
+                          onTap: () {
+                            Navigator.pushNamed(context, '/groups/list');
+                          },
+                        ),
                       ],
                     ),
                   ),
@@ -452,26 +459,35 @@ class _StreakCard extends StatelessWidget {
   const _StreakCard({
     required this.activeDays,
     required this.dots,
+    required this.onTap,
   });
 
   final int activeDays;
   final List<bool> dots;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return SummaryCard(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          const _StreakIcon(),
-          const SizedBox(width: 16),
-          Expanded(
-            child: _StreakDetails(
-              activeDays: activeDays,
-              dots: dots,
-            ),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(22),
+        onTap: onTap,
+        child: SummaryCard(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              const _StreakIcon(),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _StreakDetails(
+                  activeDays: activeDays,
+                  dots: dots,
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -1048,31 +1064,68 @@ class _SleepMetricsCard extends StatelessWidget {
   }
 }
 
-class _RegisterActivityButton extends StatelessWidget {
-  const _RegisterActivityButton();
+class _GroupsCard extends StatelessWidget {
+  const _GroupsCard({required this.onTap});
+
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      child: OutlinedButton.icon(
-        onPressed: () {},
-        style: OutlinedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(vertical: 18),
-          side: BorderSide(color: Colors.white.withOpacity(0.4)),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          foregroundColor: Colors.white,
-        ),
-        icon: const Icon(
-          Icons.add_rounded,
-          color: Color(0xFF7CF4FF),
-        ),
-        label: const Text(
-          '+ Registrar Actividad',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            fontFamily: 'Inter',
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(22),
+        onTap: onTap,
+        child: SummaryCard(
+          padding: const EdgeInsets.all(18),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0x1A7CF4FF),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Icon(
+                  Icons.group,
+                  color: Color(0xFF7CF4FF),
+                  size: 30,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: const [
+                    Text(
+                      'Grupos',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                        fontFamily: 'Inter',
+                      ),
+                    ),
+                    SizedBox(height: 6),
+                    Text(
+                      'Gestiona y analiza tus grupos de usuarios',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Color(0xFF9BA7B4),
+                        fontWeight: FontWeight.w500,
+                        fontFamily: 'Inter',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(
+                Icons.arrow_forward_ios_rounded,
+                color: Color(0xFF6F7C93),
+                size: 18,
+              ),
+            ],
           ),
         ),
       ),
