@@ -561,6 +561,7 @@ class _NutritionProScreenState extends State<NutritionProScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
     return Scaffold(
       appBar: AppBar(title: const Text('Nutrición Pro')),
       body: SingleChildScrollView(
