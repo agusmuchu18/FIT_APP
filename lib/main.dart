@@ -11,7 +11,9 @@ import 'features/auth/presentation/signup_screen.dart';
 import 'features/home/presentation/home_summary_screen.dart';
 import 'features/groups/presentation/pages/groups_list_screen.dart';
 import 'features/nutrition/nutrition_screens.dart';
+import 'features/onboarding/onboarding_screen.dart';
 import 'features/sleep/sleep_screens.dart';
+import 'features/sleep/presentation/sleep_regularity_screen.dart';
 import 'features/streak/presentation/streak_screen.dart';
 import 'features/workout/workout_screens.dart';
 
@@ -54,9 +56,11 @@ class FitApp extends StatelessWidget {
           '/nutrition/pro': (_) => const NutritionProScreen(),
           '/sleep/lite': (_) => const SleepLiteScreen(),
           '/sleep/pro': (_) => const SleepProScreen(),
+          '/sleep/regularity': (_) => const SleepRegularityScreen(),
           '/analytics/overview': (_) => const AnalyticsOverviewScreen(),
           '/groups/list': (_) => const GroupsListScreen(),
           '/streak': (_) => const StreakScreen(),
+          '/onboarding': (_) => const OnboardingScreen(),
         },
       ),
     );
