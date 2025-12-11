@@ -6,10 +6,11 @@ import 'core/data/remote_sync_service.dart';
 import 'core/data/repositories.dart';
 import 'core/data/statistics_service.dart';
 import 'features/analytics/analytics_overview_screen.dart';
+import 'features/auth/presentation/login_screen.dart';
+import 'features/auth/presentation/signup_screen.dart';
 import 'features/home/presentation/home_summary_screen.dart';
 import 'features/groups/presentation/pages/groups_list_screen.dart';
 import 'features/nutrition/nutrition_screens.dart';
-import 'features/onboarding/onboarding_screen.dart';
 import 'features/sleep/sleep_screens.dart';
 import 'features/streak/presentation/streak_screen.dart';
 import 'features/workout/workout_screens.dart';
@@ -43,8 +44,10 @@ class FitApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         theme: AppTheme.dark,
         routes: {
-          '/': (_) => const OnboardingScreen(),
+          '/': (_) => const LoginScreen(),
           '/home': (_) => const HomeSummaryScreen(),
+          '/auth/login': (_) => const LoginScreen(),
+          '/auth/signup': (_) => const SignupScreen(),
           '/workout/lite': (_) => const WorkoutLiteScreen(),
           '/workout/pro': (_) => const WorkoutProScreen(),
           '/nutrition/lite': (_) => const NutritionLiteScreen(),
