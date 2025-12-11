@@ -2,48 +2,202 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import '../../../core/data/repositories.dart';
 import '../../../core/domain/entities.dart';
 import '../../../main.dart';
+import '../../nutrition/data/food_repository.dart';
 
-class HomeSummaryScreen extends StatelessWidget {
+class HomeSummaryScreen extends StatefulWidget {
   const HomeSummaryScreen({super.key});
 
-  Future<_HomeSummaryData> _loadSummary(FitnessRepository repository) async {
+  @override
+  State<HomeSummaryScreen> createState() => _HomeSummaryScreenState();
+}
+
+class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
+  final FoodRepository _foodRepository = FoodRepository();
+
+  Future<_HomeSummaryData> _loadSummaryData() async {
+    final repository = RepositoryScope.of(context);
     final now = DateTime.now();
-    final todayKey = DateTime(now.year, now.month, now.day);
+    final today = DateTime(now.year, now.month, now.day);
+    final lastWeekStart = today.subtract(const Duration(days: 6));
+    final previousWeekStart = today.subtract(const Duration(days: 13));
+    final previousWeekEnd = today.subtract(const Duration(days: 7));
 
-    final nutritionToday = await repository.getDailyNutritionStats(now);
-    final macros = await repository.getMacroDistribution(days: 7);
-    final workoutDurations = await repository.getWorkoutDurationByDay(days: 7);
-    final sleepEntries = await repository.getRecentSleep(days: 7);
+    final workoutsFuture = repository.getWorkouts();
+    final mealsFuture = repository.getMeals();
+    final sleepFuture = repository.getSleep();
+    final nutritionTodayFuture = repository.getDailyNutritionStats(today);
+    final workoutDurationsFuture =
+        repository.getWorkoutDurationByDay(days: 14);
 
-    final todayMinutes = workoutDurations[todayKey] ?? 0;
-    final weeklyMinutes =
-        workoutDurations.values.fold<int>(0, (sum, value) => sum + value);
-    final averageMinutes = workoutDurations.isEmpty
-        ? 0
-        : (weeklyMinutes / workoutDurations.length).round();
+    final meals = await mealsFuture;
+    final workouts = await workoutsFuture;
+    final sleepEntries = await sleepFuture;
+    final nutritionToday = await nutritionTodayFuture;
+    final workoutDurations = await workoutDurationsFuture;
 
-    final averageSleepHours = sleepEntries.isEmpty
-        ? 0.0
-        : sleepEntries
-                .map((entry) => entry.hours)
-                .reduce((a, b) => a + b) /
-            sleepEntries.length;
+    // Active streak calculation based on any logged activity.
+    final activityDays = <DateTime>{};
+    for (final workout in workouts) {
+      activityDays.add(_dateOnly(_safeParseDate(workout.id)));
+    }
+    for (final meal in meals) {
+      activityDays.add(_dateOnly(_safeParseDate(meal.id)));
+    }
+    for (final sleep in sleepEntries) {
+      activityDays.add(_dateOnly(_safeParseDate(sleep.id)));
+    }
+
+    var streak = 0;
+    final streakDots = <bool>[];
+    for (var i = 11; i >= 0; i--) {
+      final day = today.subtract(Duration(days: i));
+      final isActive = activityDays.contains(day);
+      streakDots.add(isActive);
+    }
+    for (var i = 0;; i++) {
+      final day = today.subtract(Duration(days: i));
+      if (activityDays.contains(day)) {
+        streak++;
+      } else {
+        break;
+      }
+    }
+
+    // Training stats.
+    final trainingToday = workoutDurations[today] ?? 0;
+    final recentTrainingMinutes = <int>[];
+    for (var i = 0; i < 7; i++) {
+      final day = today.subtract(Duration(days: 6 - i));
+      recentTrainingMinutes.add(workoutDurations[day] ?? 0);
+    }
+    final trainingWeekTotal =
+        recentTrainingMinutes.fold<int>(0, (sum, value) => sum + value);
+    final trainingWeeklyAvg = (trainingWeekTotal / 7).round();
+
+    // Nutrition stats with FoodRepository support.
+    final catalog = await _foodRepository.loadLocalCatalog();
+    var caloriesToday = 0;
+    var macrosToday = Macros(carbs: 0, protein: 0, fat: 0);
+    for (final meal in meals) {
+      final entryDate = _dateOnly(_safeParseDate(meal.id));
+      if (entryDate != today) continue;
+
+      final matchingFood = catalog.firstWhere(
+        (item) =>
+            item.name.toLowerCase() == meal.title.toLowerCase() ||
+            meal.title.toLowerCase().contains(item.name.toLowerCase()),
+        orElse: () => FoodItem(
+          name: meal.title,
+          caloriesPer100g: meal.calories,
+          macros: meal.macros,
+        ),
+      );
+
+      final calories = meal.calories > 0
+          ? meal.calories
+          : matchingFood.caloriesPer100g;
+      final macros = meal.macros.carbs + meal.macros.protein + meal.macros.fat >
+              0
+          ? meal.macros
+          : matchingFood.macros;
+
+      caloriesToday += calories;
+      macrosToday = Macros(
+        carbs: macrosToday.carbs + macros.carbs,
+        protein: macrosToday.protein + macros.protein,
+        fat: macrosToday.fat + macros.fat,
+      );
+    }
+
+    if (caloriesToday == 0 && nutritionToday != null) {
+      caloriesToday = nutritionToday.totalCalories;
+      macrosToday = nutritionToday.macros;
+    }
+
+    // Sleep metrics for current and previous week.
+    double _averageHoursForRange(
+      DateTime start,
+      DateTime end,
+      List<SleepEntry> entries,
+    ) {
+      final filtered = entries.where((entry) {
+        final date = _dateOnly(_safeParseDate(entry.id));
+        return !date.isBefore(start) && !date.isAfter(end);
+      }).toList();
+      if (filtered.isEmpty) return 0;
+      final total =
+          filtered.fold<double>(0, (sum, entry) => sum + entry.hours);
+      return total / filtered.length;
+    }
+
+    double _regularityStdDev(DateTime start, DateTime end) {
+      final times = <int>[];
+      for (final entry in sleepEntries) {
+        final date = _dateOnly(_safeParseDate(entry.id));
+        if (date.isBefore(start) || date.isAfter(end)) continue;
+        final bedMinutes = _parseMinutes(entry.bedtime);
+        final wakeMinutes = _parseMinutes(entry.wakeTime);
+        if (bedMinutes != null) times.add(bedMinutes);
+        if (wakeMinutes != null) times.add(wakeMinutes);
+      }
+      if (times.length < 2) return 0;
+      final mean = times.reduce((a, b) => a + b) / times.length;
+      final variance = times
+              .map((t) => math.pow(t - mean, 2))
+              .reduce((a, b) => a + b) /
+          times.length;
+      return math.sqrt(variance);
+    }
+
+    final avgSleepDuration =
+        _averageHoursForRange(lastWeekStart, today, sleepEntries);
+    final previousSleepAvg =
+        _averageHoursForRange(previousWeekStart, previousWeekEnd, sleepEntries);
+    final avgSleepDelta = avgSleepDuration - previousSleepAvg;
+
+    final regularityScore =
+        _regularityStdDev(lastWeekStart, today).clamp(0, double.infinity);
+    final previousRegularity = _regularityStdDev(
+      previousWeekStart,
+      previousWeekEnd,
+    ).clamp(0, double.infinity);
+    final regularityWeekDelta = regularityScore - previousRegularity;
 
     return _HomeSummaryData(
-      calories: nutritionToday?.totalCalories ?? 0,
-      macros: macros,
-      trainingMinutes: todayMinutes,
-      secondaryTrainingMinutes: averageMinutes,
-      sleepHours: averageSleepHours,
+      activeStreak: streak,
+      streakDots: streakDots,
+      trainingToday: trainingToday,
+      trainingWeeklyAvg: trainingWeeklyAvg,
+      trainingWeeklyDistribution: recentTrainingMinutes,
+      caloriesToday: caloriesToday,
+      macrosToday: macrosToday,
+      avgSleepDuration: avgSleepDuration,
+      avgSleepDelta: avgSleepDelta,
+      regularityScore: regularityScore,
+      regularityWeekDelta: regularityWeekDelta,
     );
+  }
+
+  DateTime _dateOnly(DateTime date) => DateTime(date.year, date.month, date.day);
+
+  DateTime _safeParseDate(String raw) {
+    return DateTime.tryParse(raw) ?? DateTime.now();
+  }
+
+  int? _parseMinutes(String? time) {
+    if (time == null || time.isEmpty) return null;
+    final parts = time.split(':');
+    if (parts.length < 2) return null;
+    final hours = int.tryParse(parts[0]);
+    final minutes = int.tryParse(parts[1]);
+    if (hours == null || minutes == null) return null;
+    return hours * 60 + minutes;
   }
 
   @override
   Widget build(BuildContext context) {
-    final repository = RepositoryScope.of(context);
     const backgroundColor = Color(0xFF0E1624);
 
     return Scaffold(
@@ -51,7 +205,7 @@ class HomeSummaryScreen extends StatelessWidget {
         child: Container(
           color: backgroundColor,
           child: FutureBuilder<_HomeSummaryData>(
-            future: _loadSummary(repository),
+            future: _loadSummaryData(),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(
@@ -59,14 +213,7 @@ class HomeSummaryScreen extends StatelessWidget {
                 );
               }
 
-              final data = snapshot.data ??
-                  _HomeSummaryData(
-                    calories: 0,
-                    macros: Macros(carbs: 1, protein: 1, fat: 1),
-                    trainingMinutes: 0,
-                    secondaryTrainingMinutes: 0,
-                    sleepHours: 0,
-                  );
+              final data = snapshot.data ?? _HomeSummaryData.empty();
 
               return SingleChildScrollView(
                 child: Padding(
@@ -89,21 +236,26 @@ class HomeSummaryScreen extends StatelessWidget {
                       children: [
                         const _HeaderSection(),
                         const SizedBox(height: 24),
-                        const _StreakCard(),
+                        _StreakCard(
+                          activeDays: data.activeStreak,
+                          dots: data.streakDots,
+                        ),
                         const SizedBox(height: 20),
                         Row(
                           children: [
                             Expanded(
                               child: _MetricCard.training(
-                                primaryValue: '${data.trainingMinutes} min',
-                                secondaryValue: '${data.secondaryTrainingMinutes} min',
+                                primaryValue: '${data.trainingToday} min',
+                                secondaryValue:
+                                    'Promedio semanal: ${data.trainingWeeklyAvg} min',
+                                distribution: data.trainingWeeklyDistribution,
                               ),
                             ),
                             const SizedBox(width: 16),
                             Expanded(
                               child: _MetricCard.nutrition(
-                                calories: data.calories,
-                                macros: data.macros,
+                                calories: data.caloriesToday,
+                                macros: data.macrosToday,
                               ),
                             ),
                           ],
@@ -111,11 +263,17 @@ class HomeSummaryScreen extends StatelessWidget {
                         const SizedBox(height: 20),
                         Row(
                           children: [
-                            const Expanded(child: _SleepInfoCard()),
+                            Expanded(
+                              child: _SleepInfoCard(
+                                avgSleepHours: data.avgSleepDuration,
+                                avgSleepDelta: data.avgSleepDelta,
+                              ),
+                            ),
                             const SizedBox(width: 16),
                             Expanded(
                               child: _SleepMetricsCard(
-                                hours: data.sleepHours,
+                                regularityScore: data.regularityScore,
+                                regularityDelta: data.regularityWeekDelta,
                               ),
                             ),
                           ],
@@ -137,18 +295,46 @@ class HomeSummaryScreen extends StatelessWidget {
 
 class _HomeSummaryData {
   _HomeSummaryData({
-    required this.calories,
-    required this.macros,
-    required this.trainingMinutes,
-    required this.secondaryTrainingMinutes,
-    required this.sleepHours,
+    required this.activeStreak,
+    required this.streakDots,
+    required this.trainingToday,
+    required this.trainingWeeklyAvg,
+    required this.trainingWeeklyDistribution,
+    required this.caloriesToday,
+    required this.macrosToday,
+    required this.avgSleepDuration,
+    required this.avgSleepDelta,
+    required this.regularityScore,
+    required this.regularityWeekDelta,
   });
 
-  final int calories;
-  final Macros macros;
-  final int trainingMinutes;
-  final int secondaryTrainingMinutes;
-  final double sleepHours;
+  factory _HomeSummaryData.empty() {
+    return _HomeSummaryData(
+      activeStreak: 0,
+      streakDots: List.filled(12, false),
+      trainingToday: 0,
+      trainingWeeklyAvg: 0,
+      trainingWeeklyDistribution: List.filled(7, 0),
+      caloriesToday: 0,
+      macrosToday: Macros(carbs: 1, protein: 1, fat: 1),
+      avgSleepDuration: 0,
+      avgSleepDelta: 0,
+      regularityScore: 0,
+      regularityWeekDelta: 0,
+    );
+  }
+
+  final int activeStreak;
+  final List<bool> streakDots;
+  final int trainingToday;
+  final int trainingWeeklyAvg;
+  final List<int> trainingWeeklyDistribution;
+  final int caloriesToday;
+  final Macros macrosToday;
+  final double avgSleepDuration;
+  final double avgSleepDelta;
+  final double regularityScore;
+  final double regularityWeekDelta;
 }
 
 class SummaryCard extends StatelessWidget {
@@ -244,17 +430,28 @@ class _HeaderSection extends StatelessWidget {
 }
 
 class _StreakCard extends StatelessWidget {
-  const _StreakCard();
+  const _StreakCard({
+    required this.activeDays,
+    required this.dots,
+  });
+
+  final int activeDays;
+  final List<bool> dots;
 
   @override
   Widget build(BuildContext context) {
     return SummaryCard(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
-        children: const [
-          _StreakIcon(),
-          SizedBox(width: 16),
-          Expanded(child: _StreakDetails()),
+        children: [
+          const _StreakIcon(),
+          const SizedBox(width: 16),
+          Expanded(
+            child: _StreakDetails(
+              activeDays: activeDays,
+              dots: dots,
+            ),
+          ),
         ],
       ),
     );
@@ -282,14 +479,20 @@ class _StreakIcon extends StatelessWidget {
 }
 
 class _StreakDetails extends StatelessWidget {
-  const _StreakDetails();
+  const _StreakDetails({
+    required this.activeDays,
+    required this.dots,
+  });
+
+  final int activeDays;
+  final List<bool> dots;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: const [
-        Text(
+      children: [
+        const Text(
           'Racha activa',
           style: TextStyle(
             fontSize: 18,
@@ -298,25 +501,27 @@ class _StreakDetails extends StatelessWidget {
             fontFamily: 'Inter',
           ),
         ),
-        SizedBox(height: 4),
+        const SizedBox(height: 4),
         Text(
-          '12 días',
-          style: TextStyle(
+          '$activeDays días',
+          style: const TextStyle(
             fontSize: 28,
             fontWeight: FontWeight.w600,
             color: Colors.white,
             fontFamily: 'Inter',
           ),
         ),
-        SizedBox(height: 14),
-        _StreakDotsRow(),
+        const SizedBox(height: 14),
+        _StreakDotsRow(dots: dots),
       ],
     );
   }
 }
 
 class _StreakDotsRow extends StatelessWidget {
-  const _StreakDotsRow();
+  const _StreakDotsRow({required this.dots});
+
+  final List<bool> dots;
 
   @override
   Widget build(BuildContext context) {
@@ -337,12 +542,15 @@ class _StreakDotsRow extends StatelessWidget {
 
     return Row(
       children: List.generate(12, (index) {
+        final isActive = index < dots.length ? dots[index] : false;
         return Container(
           width: 8,
           height: 8,
           margin: EdgeInsets.only(right: index == 11 ? 0 : 6),
           decoration: BoxDecoration(
-            color: gradientColors[index],
+            color: isActive
+                ? gradientColors[index]
+                : const Color(0xFF2A3546),
             borderRadius: BorderRadius.circular(4),
           ),
         );
@@ -362,12 +570,16 @@ class _MetricCard extends StatelessWidget {
   factory _MetricCard.training({
     required String primaryValue,
     required String secondaryValue,
+    required List<int> distribution,
   }) {
     return _MetricCard._(
       title: 'Entrenamiento',
       value: primaryValue,
       valueColor: const Color(0xFF2AF5D2),
-      content: _TrainingChart(secondaryValue: secondaryValue),
+      content: _TrainingChart(
+        secondaryValue: secondaryValue,
+        distribution: distribution,
+      ),
     );
   }
 
@@ -423,27 +635,38 @@ class _MetricCard extends StatelessWidget {
 }
 
 class _TrainingChart extends StatelessWidget {
-  const _TrainingChart({required this.secondaryValue});
+  const _TrainingChart({
+    required this.secondaryValue,
+    required this.distribution,
+  });
 
   final String secondaryValue;
+  final List<int> distribution;
 
   @override
   Widget build(BuildContext context) {
+    final effectiveDistribution = distribution.isEmpty
+        ? List.filled(7, 0)
+        : distribution;
+    final maxMinutes =
+        effectiveDistribution.fold<int>(0, (max, value) => value > max ? value : max);
+    const maxHeight = 40.0;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SizedBox(
-          height: 36,
+          height: 44,
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.end,
-            children: const [
-              _MiniBar(height: 12),
-              _MiniBar(height: 28),
-              _MiniBar(height: 20),
-              _MiniBar(height: 32),
-              _MiniBar(height: 16),
-              _MiniBar(height: 24),
-            ],
+            children: List.generate(effectiveDistribution.length, (index) {
+              final value = effectiveDistribution[index];
+              final normalized = maxMinutes == 0
+                  ? 0.2
+                  : (value / maxMinutes).clamp(0.2, 1.0);
+              final barHeight = maxHeight * normalized;
+              return _MiniBar(height: barHeight);
+            }),
           ),
         ),
         const SizedBox(height: 8),
@@ -495,6 +718,9 @@ class _NutritionCharts extends StatelessWidget {
     final carbsFlex = math.max((carbsRatio * 1000).round(), 1);
     final proteinFlex = math.max((proteinRatio * 1000).round(), 1);
     final fatFlex = math.max((fatRatio * 1000).round(), 1);
+    final carbsPct = (carbsRatio * 100).round();
+    final proteinPct = (proteinRatio * 100).round();
+    final fatPct = (fatRatio * 100).round();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -533,18 +759,69 @@ class _NutritionCharts extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        const SizedBox(
-          height: 28,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              _MiniBarNeutral(height: 10),
-              _MiniBarNeutral(height: 16),
-              _MiniBarNeutral(height: 6),
-              _MiniBarNeutral(height: 18),
-              _MiniBarNeutral(height: 12),
-              _MiniBarNeutral(height: 20),
-            ],
+        Wrap(
+          spacing: 10,
+          runSpacing: 6,
+          children: [
+            _MacroLegend(
+              label: 'Carbs',
+              grams: macros.carbs,
+              percent: carbsPct,
+              color: const Color(0xFFFFD438),
+            ),
+            _MacroLegend(
+              label: 'Proteína',
+              grams: macros.protein,
+              percent: proteinPct,
+              color: const Color(0xFF6D7B44),
+            ),
+            _MacroLegend(
+              label: 'Grasas',
+              grams: macros.fat,
+              percent: fatPct,
+              color: const Color(0xFF3FA7FF),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _MacroLegend extends StatelessWidget {
+  const _MacroLegend({
+    required this.label,
+    required this.grams,
+    required this.percent,
+    required this.color,
+  });
+
+  final String label;
+  final int grams;
+  final int percent;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 10,
+          height: 10,
+          margin: const EdgeInsets.only(right: 6),
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(4),
+          ),
+        ),
+        Text(
+          '$label · ${grams}g (${percent}%)',
+          style: const TextStyle(
+            fontSize: 12,
+            color: Color(0xFF9BA7B4),
+            fontWeight: FontWeight.w500,
+            fontFamily: 'Inter',
           ),
         ),
       ],
@@ -552,37 +829,31 @@ class _NutritionCharts extends StatelessWidget {
   }
 }
 
-class _MiniBarNeutral extends StatelessWidget {
-  const _MiniBarNeutral({required this.height});
-
-  final double height;
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 2),
-        height: height,
-        decoration: BoxDecoration(
-          color: const Color(0xFF5F6A7A),
-          borderRadius: BorderRadius.circular(4),
-        ),
-      ),
-    );
-  }
-}
-
 class _SleepInfoCard extends StatelessWidget {
-  const _SleepInfoCard();
+  const _SleepInfoCard({
+    required this.avgSleepHours,
+    required this.avgSleepDelta,
+  });
+
+  final double avgSleepHours;
+  final double avgSleepDelta;
 
   @override
   Widget build(BuildContext context) {
-    return const SummaryCard(
-      padding: EdgeInsets.all(16),
+    final hoursPart = avgSleepHours.floor();
+    final minutesPart = ((avgSleepHours - hoursPart) * 60).round();
+    final formattedHours =
+        '${hoursPart.toString()} h ${minutesPart.toString().padLeft(2, '0')} min';
+    final deltaPositive = avgSleepDelta >= 0;
+    final deltaText =
+        '${deltaPositive ? '+' : '-'}${avgSleepDelta.abs().toStringAsFixed(1)} h vs semana previa';
+
+    return SummaryCard(
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
+          const Text(
             'Sueño',
             style: TextStyle(
               fontSize: 15,
@@ -591,17 +862,49 @@ class _SleepInfoCard extends StatelessWidget {
               fontFamily: 'Inter',
             ),
           ),
-          SizedBox(height: 12),
-          _SleepBulletItem(
-            color: Color(0xFF7B5CFF),
-            title: 'Entrenamiento',
-            highlight: 'Semanal',
+          const SizedBox(height: 12),
+          Text(
+            formattedHours,
+            style: const TextStyle(
+              fontSize: 24,
+              color: Color(0xFFA4A7FF),
+              fontWeight: FontWeight.w700,
+              fontFamily: 'Inter',
+            ),
           ),
-          SizedBox(height: 8),
-          _SleepBulletItem(
-            color: Color(0xFF8F9AE6),
-            title: 'Regularidad',
-            highlight: 'del Sueño',
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Icon(
+                deltaPositive
+                    ? Icons.arrow_upward_rounded
+                    : Icons.arrow_downward_rounded,
+                color: deltaPositive
+                    ? const Color(0xFF7CF4FF)
+                    : const Color(0xFFFF6A6A),
+                size: 18,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                deltaText,
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: Color(0xFF9BA7B4),
+                  fontWeight: FontWeight.w500,
+                  fontFamily: 'Inter',
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          const Text(
+            'Promedio últimos 7 días',
+            style: TextStyle(
+              fontSize: 12,
+              color: Color(0xFF6F7C93),
+              fontWeight: FontWeight.w500,
+              fontFamily: 'Inter',
+            ),
           ),
         ],
       ),
@@ -609,69 +912,20 @@ class _SleepInfoCard extends StatelessWidget {
   }
 }
 
-class _SleepBulletItem extends StatelessWidget {
-  const _SleepBulletItem({
-    required this.color,
-    required this.title,
-    required this.highlight,
+class _SleepMetricsCard extends StatelessWidget {
+  const _SleepMetricsCard({
+    required this.regularityScore,
+    required this.regularityDelta,
   });
 
-  final Color color;
-  final String title;
-  final String highlight;
+  final double regularityScore;
+  final double regularityDelta;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Container(
-          width: 12,
-          height: 12,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-          ),
-        ),
-        const SizedBox(width: 10),
-        RichText(
-          text: TextSpan(
-            style: const TextStyle(
-              fontSize: 14,
-              color: Color(0xFF7785A0),
-              fontWeight: FontWeight.w400,
-              fontFamily: 'Inter',
-            ),
-            children: [
-              TextSpan(
-                text: '$title ',
-                style: const TextStyle(color: Color(0xFF92A0C0)),
-              ),
-              TextSpan(
-                text: highlight,
-                style: const TextStyle(
-                  color: Color(0xFF5E7CFF),
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _SleepMetricsCard extends StatelessWidget {
-  const _SleepMetricsCard({required this.hours});
-
-  final double hours;
-
-  @override
-  Widget build(BuildContext context) {
-    final hoursPart = hours.floor();
-    final minutesPart = ((hours - hoursPart) * 60).round();
-    final formattedHours =
-        '${hoursPart.toString()} h ${minutesPart.toString().padLeft(2, '0')} min';
+    final improved = regularityDelta <= 0;
+    final variability = regularityScore.round();
+    final deltaMinutes = regularityDelta.abs().round();
 
     return SummaryCard(
       padding: const EdgeInsets.all(16),
@@ -680,8 +934,8 @@ class _SleepMetricsCard extends StatelessWidget {
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: const [
-              Flexible(
+            children: [
+              const Flexible(
                 child: Text(
                   'Regularidad del Sueño',
                   style: TextStyle(
@@ -693,15 +947,19 @@ class _SleepMetricsCard extends StatelessWidget {
                 ),
               ),
               Icon(
-                Icons.arrow_upward_rounded,
-                color: Color(0xFF34D27B),
+                improved
+                    ? Icons.trending_up_rounded
+                    : Icons.trending_down_rounded,
+                color: improved
+                    ? const Color(0xFF34D27B)
+                    : const Color(0xFFFF6A6A),
                 size: 20,
               ),
             ],
           ),
           const SizedBox(height: 12),
           const Text(
-            'Tendencias',
+            'Variabilidad de horario',
             style: TextStyle(
               fontSize: 13,
               color: Color(0xFF9BA7B4),
@@ -713,19 +971,33 @@ class _SleepMetricsCard extends StatelessWidget {
           Row(
             children: [
               Text(
-                formattedHours,
+                '${variability} min',
                 style: const TextStyle(
-                  fontSize: 16,
-                  color: Color(0xFFA4A7FF),
-                  fontWeight: FontWeight.w600,
+                  fontSize: 18,
+                  color: Color(0xFF7CF4FF),
+                  fontWeight: FontWeight.w700,
                   fontFamily: 'Inter',
                 ),
               ),
-              const SizedBox(width: 6),
-              const Icon(
-                Icons.arrow_downward_rounded,
-                color: Color(0xFF7B5CFF),
+              const SizedBox(width: 8),
+              Icon(
+                improved
+                    ? Icons.arrow_downward_rounded
+                    : Icons.arrow_upward_rounded,
+                color: improved
+                    ? const Color(0xFF34D27B)
+                    : const Color(0xFFFF6A6A),
                 size: 18,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                '${deltaMinutes} min vs semana previa',
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: Color(0xFF9BA7B4),
+                  fontWeight: FontWeight.w500,
+                  fontFamily: 'Inter',
+                ),
               ),
             ],
           ),
