@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import '../../core/domain/entities.dart';
 import '../../main.dart';
 import '../../shared/template_selector.dart';
+import '../common/theme/app_colors.dart';
+import '../common/widgets/primary_button.dart';
+import '../common/widgets/summary_card.dart';
 
 class WorkoutLiteScreen extends StatefulWidget {
   const WorkoutLiteScreen({super.key});
@@ -14,6 +17,20 @@ class _WorkoutLiteScreenState extends State<WorkoutLiteScreen> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _durationController = TextEditingController(text: '30');
   final List<String> _templates = const ['Full-body rápido', 'HIIT 15', 'Cardio ligero'];
+
+  InputDecoration _inputDecoration(String label, IconData icon) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: const TextStyle(color: AppColors.textMuted),
+      prefixIcon: Icon(icon, color: AppColors.textMuted),
+      filled: true,
+      fillColor: AppColors.surface,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide.none,
+      ),
+    );
+  }
 
   @override
   void dispose() {
@@ -30,85 +47,94 @@ class _WorkoutLiteScreenState extends State<WorkoutLiteScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-
     return Scaffold(
-      appBar: AppBar(title: const Text('Workout Lite')),
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        backgroundColor: AppColors.background,
+        elevation: 0,
+        title: const Text(
+          'Workout Lite',
+          style: TextStyle(
+            color: AppColors.textPrimary,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        iconTheme: const IconThemeData(color: AppColors.textPrimary),
+      ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _PremiumHeader(
-                icon: Icons.flash_on_rounded,
-                title: 'Registro express',
-                description: 'Completa en menos de 1 minuto con solo lo esencial.',
-                colorScheme: colorScheme,
-                textTheme: textTheme,
-              ),
-              const SizedBox(height: 16),
-              Card(
-                child: Padding(
+        child: Container(
+          color: AppColors.background,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const _PremiumHeader(
+                  icon: Icons.flash_on_rounded,
+                  title: 'Registro express',
+                  description:
+                      'Completa en menos de 1 minuto con solo lo esencial.',
+                ),
+                const SizedBox(height: 18),
+                SummaryCard(
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Detalles básicos', style: textTheme.titleMedium),
+                      const _SectionTitle('Detalles básicos'),
                       const SizedBox(height: 12),
                       TextFormField(
                         controller: _nameController,
-                        decoration: const InputDecoration(
-                          labelText: 'Nombre del workout',
-                          prefixIcon: Icon(Icons.edit_rounded),
-                        ),
+                        decoration:
+                            _inputDecoration('Nombre del workout', Icons.edit_rounded),
                       ),
                       const SizedBox(height: 12),
                       TextFormField(
                         controller: _durationController,
                         keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          labelText: 'Duración (min)',
-                          prefixIcon: Icon(Icons.timer_rounded),
+                        decoration: _inputDecoration(
+                          'Duración (min)',
+                          Icons.timer_rounded,
                         ),
                       ),
                     ],
                   ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              Card(
-                child: Padding(
+                const SizedBox(height: 18),
+                SummaryCard(
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Sugerencias rápidas', style: textTheme.titleMedium),
-                      const SizedBox(height: 8),
+                    children: const [
+                      _SectionTitle('Sugerencias rápidas'),
+                      SizedBox(height: 8),
                       Text(
                         'Elige una plantilla y ajústala. Pensado para cerrar tu registro sin distracciones.',
-                        style: textTheme.bodyMedium,
+                        style: TextStyle(
+                          color: AppColors.textMuted,
+                          height: 1.4,
+                        ),
                       ),
-                      const SizedBox(height: 12),
-                      TemplateSelector(
-                        templates: _templates,
-                        onSelected: _applyTemplate,
-                      ),
+                      SizedBox(height: 12),
                     ],
                   ),
                 ),
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  onPressed: () => _saveQuickEntry(context),
-                  icon: const Icon(Icons.check_rounded),
-                  label: const Text('Guardar en menos de 1 minuto'),
+                const SizedBox(height: 12),
+                SummaryCard(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: TemplateSelector(
+                    templates: _templates,
+                    onSelected: _applyTemplate,
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 24),
+                PrimaryButton(
+                  onPressed: () => _saveQuickEntry(context),
+                  icon: Icons.check_rounded,
+                  label: 'Guardar en menos de 1 minuto',
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -175,12 +201,10 @@ class _WorkoutProScreenState extends State<WorkoutProScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _PremiumHeader(
+              const _PremiumHeader(
                 icon: Icons.auto_graph_rounded,
                 title: 'Modo profesional',
                 description: 'Más campos para planificar como atleta o coach.',
-                colorScheme: colorScheme,
-                textTheme: textTheme,
               ),
               const SizedBox(height: 16),
               Card(
@@ -322,44 +346,71 @@ class _PremiumHeader extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.description,
-    required this.colorScheme,
-    required this.textTheme,
   });
 
   final IconData icon;
   final String title;
   final String description;
-  final ColorScheme colorScheme;
-  final TextTheme textTheme;
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: colorScheme.primary.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Icon(icon, color: colorScheme.primary, size: 28),
+    return SummaryCard(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1E2A3D),
+              borderRadius: BorderRadius.circular(16),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: textTheme.titleMedium),
-                  const SizedBox(height: 6),
-                  Text(description, style: textTheme.bodyMedium),
-                ],
-              ),
+            child: Icon(icon, color: AppColors.accentSecondary, size: 28),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    fontFamily: 'Inter',
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  description,
+                  style: const TextStyle(
+                    color: AppColors.textMuted,
+                    height: 1.4,
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SectionTitle extends StatelessWidget {
+  const _SectionTitle(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: const TextStyle(
+        color: AppColors.textSecondary,
+        fontSize: 16,
+        fontWeight: FontWeight.w700,
+        fontFamily: 'Inter',
       ),
     );
   }

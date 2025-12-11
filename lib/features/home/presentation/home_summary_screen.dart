@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 
 import '../../../core/domain/entities.dart';
 import '../../../main.dart';
+import '../../common/theme/app_colors.dart';
+import '../../common/widgets/summary_card.dart';
 import '../../nutrition/data/food_repository.dart';
 
 class HomeSummaryScreen extends StatefulWidget {
@@ -199,12 +201,10 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    const backgroundColor = Color(0xFF0E1624);
-
     return Scaffold(
       body: SafeArea(
         child: Container(
-          color: backgroundColor,
+          color: AppColors.background,
           child: FutureBuilder<_HomeSummaryData>(
             future: _loadSummaryData(),
             builder: (context, snapshot) {
@@ -361,39 +361,6 @@ class _HomeSummaryData {
   final double avgSleepDelta;
   final double regularityScore;
   final double regularityWeekDelta;
-}
-
-class SummaryCard extends StatelessWidget {
-  const SummaryCard({
-    super.key,
-    required this.child,
-    this.padding = const EdgeInsets.all(20),
-  });
-
-  final Widget child;
-  final EdgeInsets padding;
-
-  @override
-  Widget build(BuildContext context) {
-    const cardColor = Color(0xFF161F2C);
-    return Container(
-      decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(22),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.18),
-            blurRadius: 18,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: padding,
-        child: child,
-      ),
-    );
-  }
 }
 
 class _HeaderSection extends StatelessWidget {
