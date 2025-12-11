@@ -6,6 +6,7 @@ import '../../../core/domain/entities.dart';
 import '../../../main.dart';
 import '../../common/theme/app_colors.dart';
 import '../../common/widgets/summary_card.dart';
+import '../../home/domain/goal_insight_service.dart';
 import '../../nutrition/data/food_repository.dart';
 
 class HomeSummaryScreen extends StatefulWidget {
@@ -36,14 +37,20 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
     final workoutsFuture = repository.getWorkouts();
     final mealsFuture = repository.getMeals();
     final sleepFuture = repository.getSleep();
+    final preferencesFuture = repository.getPreferences();
     final nutritionTodayFuture = repository.getDailyNutritionStats(today);
+    final weeklyNutritionFuture = repository.getWeeklyNutritionStats(days: 7);
+    final macroDistributionFuture = repository.getMacroDistribution(days: 7);
     final workoutDurationsFuture =
         repository.getWorkoutDurationByDay(days: 14);
 
     final meals = await mealsFuture;
     final workouts = await workoutsFuture;
     final sleepEntries = await sleepFuture;
+    final preferences = await preferencesFuture;
     final nutritionToday = await nutritionTodayFuture;
+    final weeklyNutrition = await weeklyNutritionFuture;
+    final macroDistribution = await macroDistributionFuture;
     final workoutDurations = await workoutDurationsFuture;
 
     // Active streak calculation based on any logged activity.
@@ -84,6 +91,8 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
     final trainingWeekTotal =
         recentTrainingMinutes.fold<int>(0, (sum, value) => sum + value);
     final trainingWeeklyAvg = (trainingWeekTotal / 7).round();
+    final trainingDays = recentTrainingMinutes.where((m) => m > 0).length;
+    final targetSessions = preferences?.targetSessionsPerWeek ?? 3;
 
     // Nutrition stats with FoodRepository support.
     final catalog = await _foodRepository.loadLocalCatalog();
@@ -175,6 +184,32 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
     ).clamp(0, double.infinity).toDouble();
     final regularityWeekDelta = regularityScore - previousRegularity;
 
+    var averageCalories = 0.0;
+    if (weeklyNutrition.isNotEmpty) {
+      final totalCalories = weeklyNutrition
+          .fold<int>(0, (sum, entry) => sum + entry.totalCalories);
+      averageCalories = totalCalories / weeklyNutrition.length;
+    } else if (nutritionToday != null) {
+      averageCalories = nutritionToday.totalCalories.toDouble();
+    }
+
+    final averageDailyMacros = Macros(
+      carbs: (macroDistribution.carbs / 7).round(),
+      protein: (macroDistribution.protein / 7).round(),
+      fat: (macroDistribution.fat / 7).round(),
+    );
+
+    final goalInsight = GoalInsightService().buildInsight(
+      preferences: preferences,
+      weeklyTrainingMinutes: trainingWeekTotal,
+      trainingDays: trainingDays,
+      targetSessions: targetSessions,
+      averageSleepHours: avgSleepDuration,
+      sleepRegularityMinutes: regularityScore,
+      averageCalories: averageCalories,
+      averageDailyMacros: averageDailyMacros,
+    );
+
     return _HomeSummaryData(
       activeStreak: streak,
       streakDots: streakDots,
@@ -187,6 +222,7 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
       avgSleepDelta: avgSleepDelta,
       regularityScore: regularityScore,
       regularityWeekDelta: regularityWeekDelta,
+      goalInsight: goalInsight,
     );
   }
 
@@ -317,6 +353,8 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
                             ),
                           ],
                         ),
+                        const SizedBox(height: 20),
+                        _GoalInsightCard(data: data.goalInsight),
                         const SizedBox(height: 26),
                         _GroupsCard(
                           onTap: () {
@@ -349,6 +387,7 @@ class _HomeSummaryData {
     required this.avgSleepDelta,
     required this.regularityScore,
     required this.regularityWeekDelta,
+    required this.goalInsight,
   });
 
   factory _HomeSummaryData.empty() {
@@ -364,6 +403,12 @@ class _HomeSummaryData {
       avgSleepDelta: 0,
       regularityScore: 0,
       regularityWeekDelta: 0,
+      goalInsight: GoalInsightData(
+        title: 'Objetivo pendiente',
+        subtitle: 'Completa tu onboarding',
+        metricPills: const <String>[],
+        insightText: 'Configura tu objetivo para ver recomendaciones.',
+      ),
     );
   }
 
@@ -378,6 +423,7 @@ class _HomeSummaryData {
   final double avgSleepDelta;
   final double regularityScore;
   final double regularityWeekDelta;
+  final GoalInsightData goalInsight;
 }
 
 class _HeaderSection extends StatelessWidget {
@@ -435,6 +481,117 @@ class _HeaderSection extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _GoalInsightCard extends StatelessWidget {
+  const _GoalInsightCard({required this.data});
+
+  final GoalInsightData data;
+
+  @override
+  Widget build(BuildContext context) {
+    return SummaryCard(
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      data.title,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                        fontFamily: 'Inter',
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      data.subtitle,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF9BA7B4),
+                        fontWeight: FontWeight.w500,
+                        fontFamily: 'Inter',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(
+                Icons.auto_awesome_rounded,
+                color: Color(0xFF7CF4FF),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: data.metricPills
+                .map((pill) => _InsightPill(label: pill))
+                .toList(),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(
+                Icons.lightbulb_outline_rounded,
+                color: Color(0xFFA4A7FF),
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  data.insightText,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Color(0xFFE4E8EE),
+                    fontWeight: FontWeight.w500,
+                    fontFamily: 'Inter',
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InsightPill extends StatelessWidget {
+  const _InsightPill({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1F2834),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFF2F3B4C)),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          fontSize: 13,
+          color: Color(0xFFE4E8EE),
+          fontWeight: FontWeight.w600,
+          fontFamily: 'Inter',
+        ),
+      ),
     );
   }
 }
@@ -1031,13 +1188,18 @@ class _SleepMetricsCard extends StatelessWidget {
                 size: 18,
               ),
               const SizedBox(width: 4),
-              Text(
-                '${deltaMinutes} min vs semana previa',
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Color(0xFF9BA7B4),
-                  fontWeight: FontWeight.w500,
-                  fontFamily: 'Inter',
+              Expanded(
+                child: Text(
+                  '${deltaMinutes} min vs semana previa',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF9BA7B4),
+                    fontWeight: FontWeight.w500,
+                    fontFamily: 'Inter',
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                  softWrap: false,
                 ),
               ),
             ],
