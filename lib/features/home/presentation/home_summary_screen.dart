@@ -157,12 +157,13 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
         _averageHoursForRange(previousWeekStart, previousWeekEnd, sleepEntries);
     final avgSleepDelta = avgSleepDuration - previousSleepAvg;
 
-    final regularityScore =
-        _regularityStdDev(lastWeekStart, today).clamp(0, double.infinity);
+    final regularityScore = _regularityStdDev(lastWeekStart, today)
+        .clamp(0, double.infinity)
+        .toDouble();
     final previousRegularity = _regularityStdDev(
       previousWeekStart,
       previousWeekEnd,
-    ).clamp(0, double.infinity);
+    ).clamp(0, double.infinity).toDouble();
     final regularityWeekDelta = regularityScore - previousRegularity;
 
     return _HomeSummaryData(
