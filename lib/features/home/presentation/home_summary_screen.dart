@@ -199,6 +199,10 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
       fat: (macroDistribution.fat / 7).round(),
     );
 
+    final hasUserGoal = (preferences?.primaryGoal?.isNotEmpty ?? false) ||
+        (preferences?.targetCalories != null &&
+            (preferences?.targetCalories ?? 0) > 0);
+
     final goalInsight = GoalInsightService().buildInsight(
       preferences: preferences,
       weeklyTrainingMinutes: trainingWeekTotal,
@@ -223,6 +227,7 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
       regularityScore: regularityScore,
       regularityWeekDelta: regularityWeekDelta,
       goalInsight: goalInsight,
+      hasUserGoal: hasUserGoal,
     );
   }
 
@@ -349,13 +354,26 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
                               child: _SleepMetricsCard(
                                 regularityScore: data.regularityScore,
                                 regularityDelta: data.regularityWeekDelta,
+                                onTap: () {
+                                  Navigator.pushNamed(
+                                    context,
+                                    '/sleep/regularity',
+                                  );
+                                },
                               ),
                             ),
                           ],
                         ),
                         const SizedBox(height: 20),
-                        _GoalInsightCard(data: data.goalInsight),
-                        const SizedBox(height: 26),
+                        if (!data.hasUserGoal)
+                          _PendingGoalCard(
+                            onTap: () {
+                              Navigator.pushNamed(context, '/onboarding');
+                            },
+                          )
+                        else
+                          _GoalInsightCard(data: data.goalInsight),
+                        const SizedBox(height: 20),
                         _GroupsCard(
                           onTap: () {
                             Navigator.pushNamed(context, '/groups/list');
@@ -388,6 +406,7 @@ class _HomeSummaryData {
     required this.regularityScore,
     required this.regularityWeekDelta,
     required this.goalInsight,
+    required this.hasUserGoal,
   });
 
   factory _HomeSummaryData.empty() {
@@ -409,6 +428,7 @@ class _HomeSummaryData {
         metricPills: const <String>[],
         insightText: 'Configura tu objetivo para ver recomendaciones.',
       ),
+      hasUserGoal: false,
     );
   }
 
@@ -424,6 +444,7 @@ class _HomeSummaryData {
   final double regularityScore;
   final double regularityWeekDelta;
   final GoalInsightData goalInsight;
+  final bool hasUserGoal;
 }
 
 class _HeaderSection extends StatelessWidget {
@@ -493,6 +514,7 @@ class _GoalInsightCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SummaryCard(
+      minHeight: 150,
       padding: const EdgeInsets.all(18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -556,6 +578,78 @@ class _GoalInsightCard extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 14,
                     color: Color(0xFFE4E8EE),
+                    fontWeight: FontWeight.w500,
+                    fontFamily: 'Inter',
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PendingGoalCard extends StatelessWidget {
+  const _PendingGoalCard({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return SummaryCard(
+      minHeight: 150,
+      padding: const EdgeInsets.all(18),
+      onTap: onTap,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: const [
+              Text(
+                'Objetivo pendiente',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                  fontFamily: 'Inter',
+                ),
+              ),
+              Icon(
+                Icons.auto_awesome,
+                color: Color(0xFF7CF4FF),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Completa tu onboarding',
+            style: TextStyle(
+              fontSize: 14,
+              color: Color(0xFFE4E8EE),
+              fontWeight: FontWeight.w600,
+              fontFamily: 'Inter',
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: const [
+              Icon(
+                Icons.psychology_alt_outlined,
+                size: 16,
+                color: Color(0xFF9BA7B4),
+              ),
+              SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  'Configura tu objetivo para ver recomendaciones.',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Color(0xFF9BA7B4),
                     fontWeight: FontWeight.w500,
                     fontFamily: 'Inter',
                   ),
@@ -784,40 +878,35 @@ class _MetricCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(22),
-        onTap: onTap,
-        child: SummaryCard(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: Color(0xFF9BA7B4),
-                  fontWeight: FontWeight.w400,
-                  fontFamily: 'Inter',
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                value,
-                style: TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.w500,
-                  color: valueColor,
-                  fontFamily: 'Inter',
-                ),
-              ),
-              const SizedBox(height: 12),
-              content,
-            ],
+    return SummaryCard(
+      minHeight: 160,
+      padding: const EdgeInsets.all(16),
+      onTap: onTap,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 14,
+              color: Color(0xFF9BA7B4),
+              fontWeight: FontWeight.w400,
+              fontFamily: 'Inter',
+            ),
           ),
-        ),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 26,
+              fontWeight: FontWeight.w500,
+              color: valueColor,
+              fontFamily: 'Inter',
+            ),
+          ),
+          const SizedBox(height: 12),
+          content,
+        ],
       ),
     );
   }
@@ -1039,72 +1128,67 @@ class _SleepInfoCard extends StatelessWidget {
     final deltaText =
         '${deltaPositive ? '+' : '-'}${avgSleepDelta.abs().toStringAsFixed(1)} h vs semana previa';
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(22),
-        onTap: onTap,
-        child: SummaryCard(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return SummaryCard(
+      minHeight: 160,
+      padding: const EdgeInsets.all(16),
+      onTap: onTap,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Sueño',
+            style: TextStyle(
+              fontSize: 15,
+              color: Color(0xFFE4E8EE),
+              fontWeight: FontWeight.w500,
+              fontFamily: 'Inter',
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            formattedHours,
+            style: const TextStyle(
+              fontSize: 24,
+              color: Color(0xFFA4A7FF),
+              fontWeight: FontWeight.w700,
+              fontFamily: 'Inter',
+            ),
+          ),
+          const SizedBox(height: 6),
+          Row(
             children: [
-              const Text(
-                'Sueño',
-                style: TextStyle(
-                  fontSize: 15,
-                  color: Color(0xFFE4E8EE),
-                  fontWeight: FontWeight.w500,
-                  fontFamily: 'Inter',
-                ),
+              Icon(
+                deltaPositive
+                    ? Icons.arrow_upward_rounded
+                    : Icons.arrow_downward_rounded,
+                color: deltaPositive
+                    ? const Color(0xFF7CF4FF)
+                    : const Color(0xFFFF6A6A),
+                size: 18,
               ),
-              const SizedBox(height: 12),
+              const SizedBox(width: 6),
               Text(
-                formattedHours,
+                deltaText,
                 style: const TextStyle(
-                  fontSize: 24,
-                  color: Color(0xFFA4A7FF),
-                  fontWeight: FontWeight.w700,
-                  fontFamily: 'Inter',
-                ),
-              ),
-              const SizedBox(height: 6),
-              Row(
-                children: [
-                  Icon(
-                    deltaPositive
-                        ? Icons.arrow_upward_rounded
-                        : Icons.arrow_downward_rounded,
-                    color: deltaPositive
-                        ? const Color(0xFF7CF4FF)
-                        : const Color(0xFFFF6A6A),
-                    size: 18,
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    deltaText,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: Color(0xFF9BA7B4),
-                      fontWeight: FontWeight.w500,
-                      fontFamily: 'Inter',
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              const Text(
-                'Promedio últimos 7 días',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Color(0xFF6F7C93),
+                  fontSize: 13,
+                  color: Color(0xFF9BA7B4),
                   fontWeight: FontWeight.w500,
                   fontFamily: 'Inter',
                 ),
               ),
             ],
           ),
-        ),
+          const SizedBox(height: 10),
+          const Text(
+            'Promedio últimos 7 días',
+            style: TextStyle(
+              fontSize: 12,
+              color: Color(0xFF6F7C93),
+              fontWeight: FontWeight.w500,
+              fontFamily: 'Inter',
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1114,10 +1198,12 @@ class _SleepMetricsCard extends StatelessWidget {
   const _SleepMetricsCard({
     required this.regularityScore,
     required this.regularityDelta,
+    required this.onTap,
   });
 
   final double regularityScore;
   final double regularityDelta;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -1126,7 +1212,9 @@ class _SleepMetricsCard extends StatelessWidget {
     final deltaMinutes = regularityDelta.abs().round();
 
     return SummaryCard(
+      minHeight: 160,
       padding: const EdgeInsets.all(16),
+      onTap: onTap,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1217,63 +1305,58 @@ class _GroupsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(22),
-        onTap: onTap,
-        child: SummaryCard(
-          padding: const EdgeInsets.all(18),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0x1A7CF4FF),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Icon(
-                  Icons.group,
-                  color: Color(0xFF7CF4FF),
-                  size: 30,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
-                    Text(
-                      'Grupos',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                        fontFamily: 'Inter',
-                      ),
-                    ),
-                    SizedBox(height: 6),
-                    Text(
-                      'Gestiona y analiza tus grupos de usuarios',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Color(0xFF9BA7B4),
-                        fontWeight: FontWeight.w500,
-                        fontFamily: 'Inter',
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Icon(
-                Icons.arrow_forward_ios_rounded,
-                color: Color(0xFF6F7C93),
-                size: 18,
-              ),
-            ],
+    return SummaryCard(
+      minHeight: 150,
+      padding: const EdgeInsets.all(18),
+      onTap: onTap,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0x1A7CF4FF),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Icon(
+              Icons.group,
+              color: Color(0xFF7CF4FF),
+              size: 30,
+            ),
           ),
-        ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: const [
+                Text(
+                  'Grupos',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                    fontFamily: 'Inter',
+                  ),
+                ),
+                SizedBox(height: 6),
+                Text(
+                  'Gestiona y analiza tus grupos de usuarios',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Color(0xFF9BA7B4),
+                    fontWeight: FontWeight.w500,
+                    fontFamily: 'Inter',
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Icon(
+            Icons.arrow_forward_ios_rounded,
+            color: Color(0xFF6F7C93),
+            size: 18,
+          ),
+        ],
       ),
     );
   }
