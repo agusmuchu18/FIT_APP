@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import '../../core/domain/entities.dart';
 import '../../main.dart';
 import '../../shared/template_selector.dart';
+import '../common/theme/app_colors.dart';
+import '../common/widgets/primary_button.dart';
+import '../common/widgets/summary_card.dart';
 import 'data/food_repository.dart';
 
 class NutritionLiteScreen extends StatefulWidget {
@@ -18,6 +21,20 @@ class _NutritionLiteScreenState extends State<NutritionLiteScreen> {
   final TextEditingController _templateEditorController =
       TextEditingController();
   final List<String> _templates = ['Desayuno rápido', 'Snack proteico', 'Smoothie verde'];
+
+  InputDecoration _inputDecoration(String label, IconData icon) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: const TextStyle(color: AppColors.textMuted),
+      prefixIcon: Icon(icon, color: AppColors.textMuted),
+      filled: true,
+      fillColor: AppColors.surface,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide.none,
+      ),
+    );
+  }
 
   @override
   void dispose() {
@@ -76,11 +93,10 @@ class _NutritionLiteScreenState extends State<NutritionLiteScreen> {
   }
 
   Widget _buildEditableTemplates() {
-    final textTheme = Theme.of(context).textTheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Plantillas editables', style: textTheme.titleMedium),
+        const _SectionTitle('Plantillas editables'),
         const SizedBox(height: 8),
         Wrap(
           spacing: 8,
@@ -90,9 +106,21 @@ class _NutritionLiteScreenState extends State<NutritionLiteScreen> {
               GestureDetector(
                 onLongPress: () => _editTemplate(i),
                 child: InputChip(
-                  label: Text(_templates[i]),
+                  label: Text(
+                    _templates[i],
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                   onPressed: () => _applyTemplate(_templates[i]),
                   onDeleted: () => setState(() => _templates.removeAt(i)),
+                  backgroundColor: AppColors.surface,
+                  selectedColor: AppColors.card,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18),
+                    side: const BorderSide(color: Colors.transparent),
+                  ),
                 ),
               ),
           ],
@@ -103,15 +131,24 @@ class _NutritionLiteScreenState extends State<NutritionLiteScreen> {
             Expanded(
               child: TextField(
                 controller: _templateEditorController,
-                decoration: const InputDecoration(
-                  labelText: 'Agregar nueva plantilla',
-                  prefixIcon: Icon(Icons.add_rounded),
+                decoration: _inputDecoration(
+                  'Agregar nueva plantilla',
+                  Icons.add_rounded,
                 ),
                 onSubmitted: (_) => _addTemplate(),
               ),
             ),
             const SizedBox(width: 8),
-            ElevatedButton(
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF1E6EEB),
+                foregroundColor: Colors.white,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
               onPressed: _addTemplate,
               child: const Text('Añadir'),
             ),
@@ -123,67 +160,85 @@ class _NutritionLiteScreenState extends State<NutritionLiteScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-
     return Scaffold(
-      appBar: AppBar(title: const Text('Nutrición Lite')),
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        backgroundColor: AppColors.background,
+        elevation: 0,
+        title: const Text(
+          'Nutrición Lite',
+          style: TextStyle(
+            color: AppColors.textPrimary,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        iconTheme: const IconThemeData(color: AppColors.textPrimary),
+      ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _NutritionHeader(
-                icon: Icons.local_dining_rounded,
-                title: 'Registro express',
-                description: 'Comidas rápidas en menos de 1 minuto, con estilo limpio.',
-                colorScheme: colorScheme,
-                textTheme: textTheme,
-              ),
-              const SizedBox(height: 16),
-              Card(
-                child: Padding(
+        child: Container(
+          color: AppColors.background,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const _NutritionHeader(
+                  icon: Icons.local_dining_rounded,
+                  title: 'Registro express',
+                  description: 'Comidas rápidas en menos de 1 minuto, con estilo limpio.',
+                ),
+                const SizedBox(height: 18),
+                SummaryCard(
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Datos esenciales', style: textTheme.titleMedium),
+                      const _SectionTitle('Datos esenciales'),
                       const SizedBox(height: 12),
                       TextFormField(
                         controller: _titleController,
-                        decoration: const InputDecoration(
-                          labelText: 'Título de la comida',
-                          prefixIcon: Icon(Icons.restaurant_menu_rounded),
+                        decoration: _inputDecoration(
+                          'Título de la comida',
+                          Icons.restaurant_menu_rounded,
                         ),
                       ),
                       const SizedBox(height: 12),
                       TextFormField(
                         controller: _caloriesController,
                         keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          labelText: 'Calorías estimadas',
-                          prefixIcon: Icon(Icons.local_fire_department_rounded),
+                        decoration: _inputDecoration(
+                          'Calorías estimadas',
+                          Icons.local_fire_department_rounded,
                         ),
                       ),
                     ],
                   ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              Card(
-                child: Padding(
+                const SizedBox(height: 18),
+                SummaryCard(
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Plantillas rápidas', style: textTheme.titleMedium),
-                      const SizedBox(height: 8),
+                    children: const [
+                      _SectionTitle('Plantillas rápidas'),
+                      SizedBox(height: 8),
                       Text(
                         'Usa chips para seleccionar o mantén presionado para editar.',
-                        style: textTheme.bodyMedium,
+                        style: TextStyle(
+                          color: AppColors.textMuted,
+                          height: 1.4,
+                        ),
                       ),
-                      const SizedBox(height: 12),
+                      SizedBox(height: 12),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SummaryCard(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       TemplateSelector(
                         templates: _templates,
                         onSelected: _applyTemplate,
@@ -193,17 +248,14 @@ class _NutritionLiteScreenState extends State<NutritionLiteScreen> {
                     ],
                   ),
                 ),
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
+                const SizedBox(height: 24),
+                PrimaryButton(
                   onPressed: () => _saveQuickMeal(context),
-                  icon: const Icon(Icons.check_circle_rounded),
-                  label: const Text('Guardar en menos de 1 minuto'),
+                  icon: Icons.check_circle_rounded,
+                  label: 'Guardar en menos de 1 minuto',
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -509,9 +561,6 @@ class _NutritionProScreenState extends State<NutritionProScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-
     return Scaffold(
       appBar: AppBar(title: const Text('Nutrición Pro')),
       body: SingleChildScrollView(
@@ -519,13 +568,10 @@ class _NutritionProScreenState extends State<NutritionProScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _NutritionHeader(
+            const _NutritionHeader(
               icon: Icons.auto_awesome_rounded,
               title: 'Modo profesional',
-              description:
-                  'Control completo para atletas: porciones, macros y notas.',
-              colorScheme: colorScheme,
-              textTheme: textTheme,
+              description: 'Control completo para atletas: porciones, macros y notas.',
             ),
             const SizedBox(height: 16),
             Card(
@@ -893,44 +939,71 @@ class _NutritionHeader extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.description,
-    required this.colorScheme,
-    required this.textTheme,
   });
 
   final IconData icon;
   final String title;
   final String description;
-  final ColorScheme colorScheme;
-  final TextTheme textTheme;
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: colorScheme.primary.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Icon(icon, color: colorScheme.primary, size: 28),
+    return SummaryCard(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1E2A3D),
+              borderRadius: BorderRadius.circular(16),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: textTheme.titleMedium),
-                  const SizedBox(height: 6),
-                  Text(description, style: textTheme.bodyMedium),
-                ],
-              ),
+            child: Icon(icon, color: AppColors.accentSecondary, size: 28),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    fontFamily: 'Inter',
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  description,
+                  style: const TextStyle(
+                    color: AppColors.textMuted,
+                    height: 1.4,
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SectionTitle extends StatelessWidget {
+  const _SectionTitle(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: const TextStyle(
+        color: AppColors.textSecondary,
+        fontSize: 16,
+        fontWeight: FontWeight.w700,
+        fontFamily: 'Inter',
       ),
     );
   }
