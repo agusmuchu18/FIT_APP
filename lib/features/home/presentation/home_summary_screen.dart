@@ -26,7 +26,7 @@ class HomeSummaryScreen extends StatelessWidget {
         : (weeklyMinutes / workoutDurations.length).round();
 
     final averageSleepHours = sleepEntries.isEmpty
-        ? 0
+        ? 0.0
         : sleepEntries
                 .map((entry) => entry.hours)
                 .reduce((a, b) => a + b) /
