@@ -6,40 +6,8 @@ import '../../../core/data/repositories.dart';
 import '../../../core/domain/entities.dart';
 import '../../../main.dart';
 
-class HomeSummaryScreen extends StatefulWidget {
+class HomeSummaryScreen extends StatelessWidget {
   const HomeSummaryScreen({super.key});
-
-  @override
-  State<HomeSummaryScreen> createState() => _HomeSummaryScreenState();
-}
-
-class _HomeSummaryScreenState extends State<HomeSummaryScreen>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-  late final Animation<double> _fade;
-  late final Animation<Offset> _slide;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 420),
-    );
-    _fade = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
-    _slide = Tween<Offset>(
-      begin: const Offset(0, 0.04),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
-
-    _controller.forward();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
 
   Future<_HomeSummaryData> _loadSummary(FitnessRepository repository) async {
     final now = DateTime.now();
@@ -103,50 +71,58 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen>
               return SingleChildScrollView(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-                  child: FadeTransition(
-                    opacity: _fade,
-                    child: SlideTransition(
-                      position: _slide,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const _HeaderSection(),
-                          const SizedBox(height: 24),
-                          const _StreakCard(),
-                          const SizedBox(height: 20),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _MetricCard.training(
-                                  primaryValue: '${data.trainingMinutes} min',
-                                  secondaryValue: '${data.secondaryTrainingMinutes} min',
-                                ),
+                  child: TweenAnimationBuilder<double>(
+                    duration: const Duration(milliseconds: 420),
+                    tween: Tween<double>(begin: 0, end: 1),
+                    curve: Curves.easeInOut,
+                    builder: (context, value, child) {
+                      return Opacity(
+                        opacity: value,
+                        child: Transform.translate(
+                          offset: Offset(0, (1 - value) * 16),
+                          child: child,
+                        ),
+                      );
+                    },
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const _HeaderSection(),
+                        const SizedBox(height: 24),
+                        const _StreakCard(),
+                        const SizedBox(height: 20),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _MetricCard.training(
+                                primaryValue: '${data.trainingMinutes} min',
+                                secondaryValue: '${data.secondaryTrainingMinutes} min',
                               ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: _MetricCard.nutrition(
-                                  calories: data.calories,
-                                  macros: data.macros,
-                                ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: _MetricCard.nutrition(
+                                calories: data.calories,
+                                macros: data.macros,
                               ),
-                            ],
-                          ),
-                          const SizedBox(height: 20),
-                          Row(
-                            children: [
-                              const Expanded(child: _SleepInfoCard()),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: _SleepMetricsCard(
-                                  hours: data.sleepHours,
-                                ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        Row(
+                          children: [
+                            const Expanded(child: _SleepInfoCard()),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: _SleepMetricsCard(
+                                hours: data.sleepHours,
                               ),
-                            ],
-                          ),
-                          const SizedBox(height: 26),
-                          const _RegisterActivityButton(),
-                        ],
-                      ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 26),
+                        const _RegisterActivityButton(),
+                      ],
                     ),
                   ),
                 ),
