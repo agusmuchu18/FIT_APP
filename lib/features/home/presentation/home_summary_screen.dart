@@ -250,6 +250,12 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
                                 secondaryValue:
                                     'Promedio semanal: ${data.trainingWeeklyAvg} min',
                                 distribution: data.trainingWeeklyDistribution,
+                                onTap: () {
+                                  Navigator.pushNamed(
+                                    context,
+                                    '/workout/lite',
+                                  );
+                                },
                               ),
                             ),
                             const SizedBox(width: 16),
@@ -257,6 +263,12 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
                               child: _MetricCard.nutrition(
                                 calories: data.caloriesToday,
                                 macros: data.macrosToday,
+                                onTap: () {
+                                  Navigator.pushNamed(
+                                    context,
+                                    '/nutrition/lite',
+                                  );
+                                },
                               ),
                             ),
                           ],
@@ -268,6 +280,12 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
                               child: _SleepInfoCard(
                                 avgSleepHours: data.avgSleepDuration,
                                 avgSleepDelta: data.avgSleepDelta,
+                                onTap: () {
+                                  Navigator.pushNamed(
+                                    context,
+                                    '/sleep/lite',
+                                  );
+                                },
                               ),
                             ),
                             const SizedBox(width: 16),
@@ -566,12 +584,14 @@ class _MetricCard extends StatelessWidget {
     required this.value,
     required this.valueColor,
     required this.content,
+    required this.onTap,
   });
 
   factory _MetricCard.training({
     required String primaryValue,
     required String secondaryValue,
     required List<int> distribution,
+    required VoidCallback onTap,
   }) {
     return _MetricCard._(
       title: 'Entrenamiento',
@@ -581,18 +601,21 @@ class _MetricCard extends StatelessWidget {
         secondaryValue: secondaryValue,
         distribution: distribution,
       ),
+      onTap: onTap,
     );
   }
 
   factory _MetricCard.nutrition({
     required int calories,
     required Macros macros,
+    required VoidCallback onTap,
   }) {
     return _MetricCard._(
       title: 'Alimentación',
       value: '${calories.toString()} kcal',
       valueColor: Colors.white,
       content: _NutritionCharts(macros: macros),
+      onTap: onTap,
     );
   }
 
@@ -600,36 +623,44 @@ class _MetricCard extends StatelessWidget {
   final String value;
   final Color valueColor;
   final Widget content;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return SummaryCard(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 14,
-              color: Color(0xFF9BA7B4),
-              fontWeight: FontWeight.w400,
-              fontFamily: 'Inter',
-            ),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(22),
+        onTap: onTap,
+        child: SummaryCard(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: Color(0xFF9BA7B4),
+                  fontWeight: FontWeight.w400,
+                  fontFamily: 'Inter',
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.w500,
+                  color: valueColor,
+                  fontFamily: 'Inter',
+                ),
+              ),
+              const SizedBox(height: 12),
+              content,
+            ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 26,
-              fontWeight: FontWeight.w500,
-              color: valueColor,
-              fontFamily: 'Inter',
-            ),
-          ),
-          const SizedBox(height: 12),
-          content,
-        ],
+        ),
       ),
     );
   }
@@ -834,10 +865,12 @@ class _SleepInfoCard extends StatelessWidget {
   const _SleepInfoCard({
     required this.avgSleepHours,
     required this.avgSleepDelta,
+    required this.onTap,
   });
 
   final double avgSleepHours;
   final double avgSleepDelta;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -849,65 +882,72 @@ class _SleepInfoCard extends StatelessWidget {
     final deltaText =
         '${deltaPositive ? '+' : '-'}${avgSleepDelta.abs().toStringAsFixed(1)} h vs semana previa';
 
-    return SummaryCard(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Sueño',
-            style: TextStyle(
-              fontSize: 15,
-              color: Color(0xFFE4E8EE),
-              fontWeight: FontWeight.w500,
-              fontFamily: 'Inter',
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            formattedHours,
-            style: const TextStyle(
-              fontSize: 24,
-              color: Color(0xFFA4A7FF),
-              fontWeight: FontWeight.w700,
-              fontFamily: 'Inter',
-            ),
-          ),
-          const SizedBox(height: 6),
-          Row(
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(22),
+        onTap: onTap,
+        child: SummaryCard(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(
-                deltaPositive
-                    ? Icons.arrow_upward_rounded
-                    : Icons.arrow_downward_rounded,
-                color: deltaPositive
-                    ? const Color(0xFF7CF4FF)
-                    : const Color(0xFFFF6A6A),
-                size: 18,
+              const Text(
+                'Sueño',
+                style: TextStyle(
+                  fontSize: 15,
+                  color: Color(0xFFE4E8EE),
+                  fontWeight: FontWeight.w500,
+                  fontFamily: 'Inter',
+                ),
               ),
-              const SizedBox(width: 6),
+              const SizedBox(height: 12),
               Text(
-                deltaText,
+                formattedHours,
                 style: const TextStyle(
-                  fontSize: 13,
-                  color: Color(0xFF9BA7B4),
+                  fontSize: 24,
+                  color: Color(0xFFA4A7FF),
+                  fontWeight: FontWeight.w700,
+                  fontFamily: 'Inter',
+                ),
+              ),
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  Icon(
+                    deltaPositive
+                        ? Icons.arrow_upward_rounded
+                        : Icons.arrow_downward_rounded,
+                    color: deltaPositive
+                        ? const Color(0xFF7CF4FF)
+                        : const Color(0xFFFF6A6A),
+                    size: 18,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    deltaText,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: Color(0xFF9BA7B4),
+                      fontWeight: FontWeight.w500,
+                      fontFamily: 'Inter',
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                'Promedio últimos 7 días',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Color(0xFF6F7C93),
                   fontWeight: FontWeight.w500,
                   fontFamily: 'Inter',
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
-          const Text(
-            'Promedio últimos 7 días',
-            style: TextStyle(
-              fontSize: 12,
-              color: Color(0xFF6F7C93),
-              fontWeight: FontWeight.w500,
-              fontFamily: 'Inter',
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
