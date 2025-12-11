@@ -41,7 +41,7 @@ class FitApp extends StatelessWidget {
       child: MaterialApp(
         title: 'FIT App',
         debugShowCheckedModeBanner: false,
-        theme: AppTheme.light,
+        theme: AppTheme.dark,
         routes: {
           '/': (_) => const OnboardingScreen(),
           '/home': (_) => const HomeSummaryScreen(),
