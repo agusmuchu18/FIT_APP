@@ -42,7 +42,7 @@ class FitApp extends StatelessWidget {
         theme: AppTheme.light,
         routes: {
           '/': (_) => const OnboardingScreen(),
-          '/home': (_) => const HomeScreen(),
+          '/home': (_) => const HomeSummaryScreen(),
           '/workout/lite': (_) => const WorkoutLiteScreen(),
           '/workout/pro': (_) => const WorkoutProScreen(),
           '/nutrition/lite': (_) => const NutritionLiteScreen(),
