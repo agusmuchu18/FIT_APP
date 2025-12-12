@@ -15,6 +15,7 @@ import 'features/onboarding/onboarding_screen.dart';
 import 'features/sleep/sleep_screens.dart';
 import 'features/sleep/presentation/sleep_regularity_screen.dart';
 import 'features/streak/presentation/streak_screen.dart';
+import 'features/workout/pro/workout_pro_screen.dart';
 import 'features/workout/workout_screens.dart';
 
 void main() {
