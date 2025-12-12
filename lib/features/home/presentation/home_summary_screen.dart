@@ -255,7 +255,11 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    const horizontalPadding = 20.0;
+    const verticalSectionSpacing = 20.0;
+
     return Scaffold(
+      floatingActionButton: _QuickActionsFab(onRefresh: _refreshSummary),
       body: SafeArea(
         child: Container(
           color: AppColors.background,
@@ -272,7 +276,12 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
 
               return SingleChildScrollView(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                  padding: const EdgeInsets.fromLTRB(
+                    horizontalPadding,
+                    20,
+                    horizontalPadding,
+                    20,
+                  ),
                   child: TweenAnimationBuilder<double>(
                     duration: const Duration(milliseconds: 420),
                     tween: Tween<double>(begin: 0, end: 1),
@@ -299,7 +308,7 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
                             _refreshSummary();
                           },
                         ),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: verticalSectionSpacing),
                         Row(
                           children: [
                             Expanded(
@@ -333,7 +342,7 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: verticalSectionSpacing),
                         Row(
                           children: [
                             Expanded(
@@ -364,7 +373,7 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: verticalSectionSpacing),
                         if (!data.hasUserGoal)
                           _PendingGoalCard(
                             onTap: () {
@@ -373,7 +382,7 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
                           )
                         else
                           _GoalInsightCard(data: data.goalInsight),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: verticalSectionSpacing),
                         _GroupsCard(
                           onTap: () {
                             Navigator.pushNamed(context, '/groups/list');
@@ -447,11 +456,87 @@ class _HomeSummaryData {
   final bool hasUserGoal;
 }
 
+class _QuickActionsFab extends StatefulWidget {
+  const _QuickActionsFab({required this.onRefresh});
+
+  final VoidCallback onRefresh;
+
+  @override
+  State<_QuickActionsFab> createState() => _QuickActionsFabState();
+}
+
+class _QuickActionsFabState extends State<_QuickActionsFab> {
+  @override
+  Widget build(BuildContext context) {
+    return FloatingActionButton(
+      backgroundColor: const Color(0xFF1D6C6F),
+      onPressed: () {
+        showModalBottomSheet(
+          context: context,
+          backgroundColor: AppColors.card,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          builder: (context) {
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                  ),
+                  _FabAction(
+                    icon: Icons.fitness_center_rounded,
+                    label: 'Registrar actividad',
+                    onTap: () async {
+                      Navigator.pop(context);
+                      await Navigator.pushNamed(context, '/workout/lite');
+                      widget.onRefresh();
+                    },
+                  ),
+                  _FabAction(
+                    icon: Icons.auto_graph_rounded,
+                    label: 'Ver estadísticas',
+                    onTap: () async {
+                      Navigator.pop(context);
+                      await Navigator.pushNamed(context, '/analytics/overview');
+                      widget.onRefresh();
+                    },
+                  ),
+                  _FabAction(
+                    icon: Icons.group_rounded,
+                    label: 'Ir a grupos',
+                    onTap: () async {
+                      Navigator.pop(context);
+                      await Navigator.pushNamed(context, '/groups/list');
+                    },
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+      child: const Icon(Icons.add_rounded),
+    );
+  }
+}
+
 class _HeaderSection extends StatelessWidget {
   const _HeaderSection();
 
   @override
   Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final nameGreeting = 'Hola';
     final now = DateTime.now();
     final weekdayNames = [
       'lunes',
@@ -483,22 +568,27 @@ class _HeaderSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          formattedDate,
-          style: const TextStyle(
-            fontSize: 14,
-            color: Color(0xFF9BA7B4),
-            fontWeight: FontWeight.w400,
-            fontFamily: 'Inter',
+          'Hoy · $formattedDate',
+          style: textTheme.labelMedium?.copyWith(
+            color: const Color(0xFF9BA7B4),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          '$nameGreeting 👋',
+          style: textTheme.headlineMedium?.copyWith(
+            color: Colors.white,
+            fontWeight: FontWeight.w700,
+            fontSize: 30,
           ),
         ),
         const SizedBox(height: 4),
-        const Text(
-          'Resumen',
-          style: TextStyle(
-            fontSize: 28,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-            fontFamily: 'Inter',
+        Text(
+          'Este es tu resumen de hoy',
+          style: textTheme.bodySmall?.copyWith(
+            color: const Color(0xFF9BA7B4),
+            fontWeight: FontWeight.w500,
           ),
         ),
       ],
@@ -567,7 +657,7 @@ class _GoalInsightCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Icon(
-                Icons.lightbulb_outline_rounded,
+                Icons.lightbulb_rounded,
                 color: Color(0xFFA4A7FF),
                 size: 20,
               ),
@@ -618,7 +708,7 @@ class _PendingGoalCard extends StatelessWidget {
                 ),
               ),
               Icon(
-                Icons.auto_awesome,
+                Icons.auto_awesome_rounded,
                 color: Color(0xFF7CF4FF),
               ),
             ],
@@ -637,7 +727,7 @@ class _PendingGoalCard extends StatelessWidget {
           Row(
             children: const [
               Icon(
-                Icons.psychology_alt_outlined,
+                Icons.psychology_alt_rounded,
                 size: 16,
                 color: Color(0xFF9BA7B4),
               ),
@@ -703,46 +793,73 @@ class _StreakCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final gradient = _streakGradient(activeDays);
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(26),
         onTap: onTap,
-        child: SummaryCard(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 420),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(26),
+            gradient: gradient,
+          ),
+          child: Stack(
             children: [
-              const _StreakIcon(),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _StreakDetails(
-                  activeDays: activeDays,
-                  dots: dots,
+              Positioned(
+                top: -24,
+                right: -30,
+                child: Icon(
+                  Icons.local_fire_department_rounded,
+                  color: Colors.white.withOpacity(0.07),
+                  size: 140,
+                ),
+              ),
+              Positioned(
+                bottom: -30,
+                left: -20,
+                child: Container(
+                  width: 120,
+                  height: 120,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withOpacity(0.05),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    _BreathingIcon(
+                      child: Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white.withOpacity(0.16),
+                        ),
+                        child: const Icon(
+                          Icons.local_fire_department_rounded,
+                          color: Colors.white,
+                          size: 34,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 18),
+                    Expanded(
+                      child: _StreakDetails(
+                        activeDays: activeDays,
+                        dots: dots,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _StreakIcon extends StatelessWidget {
-  const _StreakIcon();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(13),
-      decoration: const BoxDecoration(
-        shape: BoxShape.circle,
-        color: Color(0x1AFF4A25),
-      ),
-      child: const Icon(
-        Icons.local_fire_department_rounded,
-        color: Color(0xFFFF4A25),
-        size: 42,
       ),
     );
   }
@@ -759,74 +876,197 @@ class _StreakDetails extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
           'Racha activa',
           style: TextStyle(
-            fontSize: 18,
-            color: Color(0xFFE4E8EE),
-            fontWeight: FontWeight.w500,
-            fontFamily: 'Inter',
+            fontSize: 13,
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
           ),
         ),
         const SizedBox(height: 4),
         Text(
           '$activeDays días',
-          style: const TextStyle(
-            fontSize: 28,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-            fontFamily: 'Inter',
-          ),
+          style: textTheme.displaySmall?.copyWith(
+                fontSize: 30,
+                fontWeight: FontWeight.w800,
+                color: Colors.white,
+              ) ??
+              const TextStyle(fontSize: 30, color: Colors.white),
         ),
         const SizedBox(height: 14),
-        _StreakDotsRow(dots: dots),
+        _StreakDots(dots: dots),
       ],
     );
   }
 }
 
-class _StreakDotsRow extends StatelessWidget {
-  const _StreakDotsRow({required this.dots});
+class _StreakDots extends StatelessWidget {
+  const _StreakDots({required this.dots});
 
   final List<bool> dots;
 
   @override
   Widget build(BuildContext context) {
     final gradientColors = [
-      const Color(0xFFFF7A2F),
-      const Color(0xFFFF6A2A),
-      const Color(0xFFFF5D26),
-      const Color(0xFFFF4F23),
-      const Color(0xFFEE4122),
-      const Color(0xFFE33522),
-      const Color(0xFFD72D21),
-      const Color(0xFFCD2620),
-      const Color(0xFFC22020),
-      const Color(0xFFB71A1F),
-      const Color(0xFFAE151E),
-      const Color(0xFFA6101D),
+      const Color(0xFFFF8864),
+      const Color(0xFFFF7B4F),
+      const Color(0xFFFF6E3B),
+      const Color(0xFFFF632C),
+      const Color(0xFFFF5A24),
+      const Color(0xFFF74F27),
+      const Color(0xFFE7462A),
+      const Color(0xFFD83C30),
+      const Color(0xFFC83235),
+      const Color(0xFFB92A3A),
+      const Color(0xFFA9233F),
+      const Color(0xFF9B1C43),
     ];
 
-    return Row(
-      children: List.generate(12, (index) {
-        final isActive = index < dots.length ? dots[index] : false;
-        return Container(
-          width: 8,
-          height: 8,
-          margin: EdgeInsets.only(right: index == 11 ? 0 : 6),
-          decoration: BoxDecoration(
-            color: isActive
-                ? gradientColors[index]
-                : const Color(0xFF2A3546),
-            borderRadius: BorderRadius.circular(4),
-          ),
-        );
-      }),
+    final activeCount = dots.where((active) => active).length;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '$activeCount/12 días recientes activos',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Colors.white.withOpacity(0.9),
+                fontWeight: FontWeight.w600,
+              ) ??
+              const TextStyle(fontSize: 12, color: Colors.white),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: List.generate(12, (index) {
+            final isActive = index < dots.length ? dots[index] : false;
+            return Container(
+              width: 10,
+              height: 10,
+              margin: EdgeInsets.only(right: index == 11 ? 0 : 8),
+              decoration: BoxDecoration(
+                color: isActive
+                    ? gradientColors[index]
+                    : Colors.white.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(6),
+              ),
+            );
+          }),
+        ),
+      ],
     );
   }
+}
+
+class _BreathingIcon extends StatefulWidget {
+  const _BreathingIcon({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_BreathingIcon> createState() => _BreathingIconState();
+}
+
+class _BreathingIconState extends State<_BreathingIcon>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3),
+      lowerBound: 0.0,
+      upperBound: 1.0,
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        final scale = 0.98 + (_controller.value * 0.04);
+        return Transform.scale(
+          scale: scale,
+          child: child,
+        );
+      },
+      child: widget.child,
+    );
+  }
+}
+
+class _FabAction extends StatelessWidget {
+  const _FabAction({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.06),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Icon(
+          icon,
+          color: Colors.white,
+        ),
+      ),
+      title: Text(
+        label,
+        style: textTheme.titleMedium?.copyWith(
+          color: Colors.white,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      onTap: onTap,
+    );
+  }
+}
+
+LinearGradient _streakGradient(int activeDays) {
+  if (activeDays <= 3) {
+    return const LinearGradient(
+      colors: [Color(0xFF3D1A24), Color(0xFF742B2F), Color(0xFFFF6E3B)],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    );
+  }
+  if (activeDays <= 10) {
+    return const LinearGradient(
+      colors: [Color(0xFF2B1F35), Color(0xFF8B3E2F), Color(0xFFFFB347)],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    );
+  }
+  return const LinearGradient(
+    colors: [Color(0xFF123E55), Color(0xFF1D6C6F), Color(0xFF7CF4B5)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
 }
 
 class _MetricCard extends StatelessWidget {
@@ -835,6 +1075,7 @@ class _MetricCard extends StatelessWidget {
     required this.value,
     required this.valueColor,
     required this.content,
+    required this.trend,
     required this.onTap,
   });
 
@@ -844,6 +1085,13 @@ class _MetricCard extends StatelessWidget {
     required List<int> distribution,
     required VoidCallback onTap,
   }) {
+    final trainingToday = int.tryParse(primaryValue.split(' ').first) ?? 0;
+    final weeklyTotal = distribution.fold<int>(0, (sum, v) => sum + v);
+    final weeklyAvg = distribution.isNotEmpty
+        ? (weeklyTotal / distribution.length).clamp(0, double.infinity)
+        : 0;
+    final difference =
+        weeklyAvg == 0 ? 0 : ((trainingToday - weeklyAvg) / weeklyAvg) * 100;
     return _MetricCard._(
       title: 'Entrenamiento',
       value: primaryValue,
@@ -852,6 +1100,7 @@ class _MetricCard extends StatelessWidget {
         secondaryValue: secondaryValue,
         distribution: distribution,
       ),
+      trend: TrendChipData.fromDelta(difference.round()),
       onTap: onTap,
     );
   }
@@ -861,11 +1110,26 @@ class _MetricCard extends StatelessWidget {
     required Macros macros,
     required VoidCallback onTap,
   }) {
+    final delta = calories > 0 ? (calories - 2000) / 2000 * 100 : 0;
     return _MetricCard._(
       title: 'Alimentación',
       value: '${calories.toString()} kcal',
       valueColor: Colors.white,
       content: _NutritionCharts(macros: macros),
+      trend: TrendChipData(
+        label: calories == 0
+            ? 'Sin registros hoy'
+            : delta.abs() <= 10
+                ? 'En rango'
+                : delta > 0
+                    ? '+${delta.round()}% vs objetivo'
+                    : '${delta.round()}% vs objetivo',
+        tone: delta.abs() <= 10
+            ? TrendTone.neutral
+            : delta > 0
+                ? TrendTone.positive
+                : TrendTone.negative,
+      ),
       onTap: onTap,
     );
   }
@@ -874,35 +1138,43 @@ class _MetricCard extends StatelessWidget {
   final String value;
   final Color valueColor;
   final Widget content;
+  final TrendChipData trend;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
     return SummaryCard(
-      minHeight: 160,
-      padding: const EdgeInsets.all(16),
+      minHeight: 170,
+      padding: const EdgeInsets.all(18),
       onTap: onTap,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             title,
-            style: const TextStyle(
-              fontSize: 14,
-              color: Color(0xFF9BA7B4),
-              fontWeight: FontWeight.w400,
-              fontFamily: 'Inter',
+            style: textTheme.titleMedium?.copyWith(
+              fontSize: 17,
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             value,
-            style: TextStyle(
+            style: textTheme.headlineSmall?.copyWith(
               fontSize: 26,
-              fontWeight: FontWeight.w500,
+              fontWeight: FontWeight.w700,
               color: valueColor,
-              fontFamily: 'Inter',
             ),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _TrendChip(data: trend),
+            ],
           ),
           const SizedBox(height: 12),
           content,
@@ -958,6 +1230,67 @@ class _TrainingChart extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+enum TrendTone { positive, neutral, negative }
+
+class TrendChipData {
+  const TrendChipData({required this.label, required this.tone});
+
+  factory TrendChipData.fromDelta(int delta) {
+    if (delta == 0) return const TrendChipData(label: 'En rango', tone: TrendTone.neutral);
+    if (delta > 0) {
+      return TrendChipData(label: '+$delta% esta semana', tone: TrendTone.positive);
+    }
+    return TrendChipData(label: '$delta% esta semana', tone: TrendTone.negative);
+  }
+
+  final String label;
+  final TrendTone tone;
+}
+
+class _TrendChip extends StatelessWidget {
+  const _TrendChip({required this.data});
+
+  final TrendChipData data;
+
+  Color _background(BuildContext context) {
+    switch (data.tone) {
+      case TrendTone.positive:
+        return const Color(0x332AD27A);
+      case TrendTone.neutral:
+        return Colors.amber.withOpacity(0.18);
+      case TrendTone.negative:
+        return const Color(0x33FF6A6A);
+    }
+  }
+
+  Color _foreground(BuildContext context) {
+    switch (data.tone) {
+      case TrendTone.positive:
+        return const Color(0xFF34D27B);
+      case TrendTone.neutral:
+        return const Color(0xFFFFD166);
+      case TrendTone.negative:
+        return const Color(0xFFFF6A6A);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final textStyle = Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: _foreground(context),
+          fontWeight: FontWeight.w600,
+        );
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: _background(context),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(data.label, style: textStyle),
     );
   }
 }
@@ -1127,34 +1460,44 @@ class _SleepInfoCard extends StatelessWidget {
     final deltaPositive = avgSleepDelta >= 0;
     final deltaText =
         '${deltaPositive ? '+' : '-'}${avgSleepDelta.abs().toStringAsFixed(1)} h vs semana previa';
+    final tone = deltaPositive
+        ? TrendTone.positive
+        : avgSleepDelta.abs() < 0.3
+            ? TrendTone.neutral
+            : TrendTone.negative;
+    final trend = TrendChipData(
+      label: deltaPositive ? 'Mejorando descanso' : 'Por debajo del objetivo',
+      tone: tone,
+    );
+    final textTheme = Theme.of(context).textTheme;
 
     return SummaryCard(
-      minHeight: 160,
-      padding: const EdgeInsets.all(16),
+      minHeight: 170,
+      padding: const EdgeInsets.all(18),
       onTap: onTap,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Sueño',
-            style: TextStyle(
-              fontSize: 15,
-              color: Color(0xFFE4E8EE),
-              fontWeight: FontWeight.w500,
-              fontFamily: 'Inter',
+            style: textTheme.titleMedium?.copyWith(
+              fontSize: 17,
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
             ),
           ),
           const SizedBox(height: 12),
           Text(
             formattedHours,
-            style: const TextStyle(
+            style: textTheme.headlineSmall?.copyWith(
               fontSize: 24,
-              color: Color(0xFFA4A7FF),
+              color: const Color(0xFFA4A7FF),
               fontWeight: FontWeight.w700,
-              fontFamily: 'Inter',
             ),
           ),
           const SizedBox(height: 6),
+          _TrendChip(data: trend),
+          const SizedBox(height: 10),
           Row(
             children: [
               Icon(
@@ -1179,13 +1522,11 @@ class _SleepInfoCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 10),
-          const Text(
+          Text(
             'Promedio últimos 7 días',
-            style: TextStyle(
-              fontSize: 12,
-              color: Color(0xFF6F7C93),
-              fontWeight: FontWeight.w500,
-              fontFamily: 'Inter',
+            style: textTheme.bodySmall?.copyWith(
+              color: const Color(0xFF9BA7B4),
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],
@@ -1210,10 +1551,15 @@ class _SleepMetricsCard extends StatelessWidget {
     final improved = regularityDelta <= 0;
     final variability = regularityScore.round();
     final deltaMinutes = regularityDelta.abs().round();
+    final trend = TrendChipData(
+      label: improved ? 'En rango' : 'Por debajo del objetivo',
+      tone: improved ? TrendTone.positive : TrendTone.negative,
+    );
+    final textTheme = Theme.of(context).textTheme;
 
     return SummaryCard(
-      minHeight: 160,
-      padding: const EdgeInsets.all(16),
+      minHeight: 170,
+      padding: const EdgeInsets.all(18),
       onTap: onTap,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1221,14 +1567,13 @@ class _SleepMetricsCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Flexible(
+              Flexible(
                 child: Text(
                   'Regularidad del Sueño',
-                  style: TextStyle(
-                    fontSize: 15,
-                    color: Color(0xFFE4E8EE),
-                    fontWeight: FontWeight.w500,
-                    fontFamily: 'Inter',
+                  style: textTheme.titleMedium?.copyWith(
+                    fontSize: 17,
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
@@ -1244,13 +1589,13 @@ class _SleepMetricsCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          const Text(
+          _TrendChip(data: trend),
+          const SizedBox(height: 8),
+          Text(
             'Variabilidad de horario',
-            style: TextStyle(
-              fontSize: 13,
-              color: Color(0xFF9BA7B4),
-              fontWeight: FontWeight.w400,
-              fontFamily: 'Inter',
+            style: textTheme.bodySmall?.copyWith(
+              color: const Color(0xFF9BA7B4),
+              fontWeight: FontWeight.w600,
             ),
           ),
           const SizedBox(height: 4),
@@ -1258,12 +1603,12 @@ class _SleepMetricsCard extends StatelessWidget {
             children: [
               Text(
                 '${variability} min',
-                style: const TextStyle(
-                  fontSize: 18,
-                  color: Color(0xFF7CF4FF),
-                  fontWeight: FontWeight.w700,
-                  fontFamily: 'Inter',
-                ),
+                style: textTheme.headlineSmall?.copyWith(
+                      fontSize: 22,
+                      color: const Color(0xFF7CF4FF),
+                      fontWeight: FontWeight.w700,
+                    ) ??
+                    const TextStyle(fontSize: 22, color: Color(0xFF7CF4FF)),
               ),
               const SizedBox(width: 8),
               Icon(
@@ -1279,12 +1624,11 @@ class _SleepMetricsCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   '${deltaMinutes} min vs semana previa',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF9BA7B4),
-                    fontWeight: FontWeight.w500,
-                    fontFamily: 'Inter',
-                  ),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: const Color(0xFF9BA7B4),
+                        fontWeight: FontWeight.w600,
+                      ) ??
+                      const TextStyle(fontSize: 12, color: Color(0xFF9BA7B4)),
                   overflow: TextOverflow.ellipsis,
                   maxLines: 1,
                   softWrap: false,
@@ -1319,7 +1663,7 @@ class _GroupsCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(16),
             ),
             child: const Icon(
-              Icons.group,
+              Icons.group_rounded,
               color: Color(0xFF7CF4FF),
               size: 30,
             ),
@@ -1328,25 +1672,24 @@ class _GroupsCard extends StatelessWidget {
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
+              children: [
                 Text(
                   'Grupos',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                    fontFamily: 'Inter',
-                  ),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ) ??
+                      const TextStyle(fontSize: 18, color: Colors.white),
                 ),
-                SizedBox(height: 6),
+                const SizedBox(height: 6),
                 Text(
                   'Gestiona y analiza tus grupos de usuarios',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Color(0xFF9BA7B4),
-                    fontWeight: FontWeight.w500,
-                    fontFamily: 'Inter',
-                  ),
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: const Color(0xFF9BA7B4),
+                        fontWeight: FontWeight.w500,
+                      ) ??
+                      const TextStyle(fontSize: 14, color: Color(0xFF9BA7B4)),
                 ),
               ],
             ),
