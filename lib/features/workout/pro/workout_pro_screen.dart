@@ -4,8 +4,8 @@ import 'package:uuid/uuid.dart';
 
 import '../../../core/data/statistics_service.dart';
 import '../../../main.dart';
-import '../common/theme/app_colors.dart';
-import '../common/widgets/summary_card.dart';
+import '../../common/theme/app_colors.dart';
+import '../../common/widgets/summary_card.dart';
 import 'models/workout_models.dart';
 import 'providers/workout_pro_provider.dart';
 import 'widgets/exercise_card.dart';

@@ -26,6 +26,7 @@ class SetEntry {
   final int? restSeconds;
 
   SetEntry copyWith({
+    String? id,
     int? reps,
     double? weight,
     int? durationSeconds,
@@ -33,7 +34,7 @@ class SetEntry {
     int? restSeconds,
   }) {
     return SetEntry(
-      id: id,
+      id: id ?? this.id,
       reps: reps ?? this.reps,
       weight: weight ?? this.weight,
       durationSeconds: durationSeconds ?? this.durationSeconds,

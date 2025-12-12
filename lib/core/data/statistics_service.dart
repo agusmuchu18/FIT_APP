@@ -16,6 +16,12 @@ class StatisticsService {
   final Map<String, NutritionMetrics> _nutritionHistory = {};
   final List<SleepEntry> _sleepSamples = [];
 
+  static String formatShortDate(DateTime date) {
+    final month = date.month.toString().padLeft(2, '0');
+    final day = date.day.toString().padLeft(2, '0');
+    return '${date.year}-$month-$day';
+  }
+
   Future<void> recordNutritionMetrics(NutritionMetrics metrics) async {
     _nutritionHistory[_dateKey(metrics.date)] = metrics;
   }
