@@ -49,9 +49,10 @@ class WorkoutBottomBar extends StatelessWidget {
                     child: const Text('Guardar entrenamiento'),
                   ),
                   const SizedBox(height: 6),
-                  OutlinedButton(
+                  TextButton.icon(
                     onPressed: onFinish,
-                    child: const Text('Finalizar'),
+                    icon: const Icon(Icons.flag_outlined),
+                    label: const Text('Finalizar y limpiar'),
                   ),
                 ],
               ),

@@ -10,6 +10,8 @@ class ExerciseCard extends StatefulWidget {
     required this.onDelete,
     required this.onAddSet,
     required this.onCopySet,
+    required this.onBumpReps,
+    required this.onBumpWeight,
     required this.onUpdateSet,
     required this.onDeleteSet,
     required this.onUpdateNotes,
@@ -20,6 +22,8 @@ class ExerciseCard extends StatefulWidget {
   final VoidCallback onDelete;
   final VoidCallback onAddSet;
   final VoidCallback onCopySet;
+  final VoidCallback onBumpReps;
+  final VoidCallback onBumpWeight;
   final void Function(SetEntry set) onUpdateSet;
   final void Function(String setId) onDeleteSet;
   final void Function(String? notes) onUpdateNotes;
@@ -56,87 +60,108 @@ class _ExerciseCardState extends State<ExerciseCard> {
   Widget build(BuildContext context) {
     final summary = '${widget.exercise.sets.length} series · '
         '${widget.exercise.sets.fold<int>(0, (s, e) => s + (e.reps ?? 0))} reps';
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      child: ExpansionTile(
-        maintainState: true,
-        initiallyExpanded: expanded,
-        onExpansionChanged: (value) => setState(() => expanded = value),
-        title: Text(widget.exercise.name),
-        subtitle: Text(widget.exercise.muscleGroup ?? 'Sin grupo'),
-        trailing: Text(summary),
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    TextButton.icon(
-                      onPressed: widget.onAddSet,
-                      icon: const Icon(Icons.add),
-                      label: const Text('Agregar serie'),
-                    ),
-                    const SizedBox(width: 8),
-                    TextButton.icon(
-                      onPressed: widget.onCopySet,
-                      icon: const Icon(Icons.copy_all_outlined),
-                      label: const Text('Copiar anterior'),
-                    ),
-                    const Spacer(),
-                    PopupMenuButton<String>(
-                      onSelected: (value) {
-                        if (value == 'duplicate') {
-                          widget.onDuplicate();
-                        } else if (value == 'delete') {
-                          widget.onDelete();
-                        }
-                      },
-                      itemBuilder: (context) => const [
-                        PopupMenuItem(
-                          value: 'duplicate',
-                          child: Text('Duplicar ejercicio'),
+    final weightAvailable = widget.exercise.sets.any((s) => s.weight != null);
+    return AnimatedSize(
+      duration: const Duration(milliseconds: 200),
+      child: Card(
+        margin: const EdgeInsets.symmetric(vertical: 8),
+        child: ExpansionTile(
+          maintainState: true,
+          initiallyExpanded: expanded,
+          onExpansionChanged: (value) => setState(() => expanded = value),
+          title: Text(widget.exercise.name),
+          subtitle: Text(widget.exercise.muscleGroup ?? 'Sin grupo'),
+          trailing: Text(summary),
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: Column(
+                children: [
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
+                    children: [
+                      FilledButton.tonalIcon(
+                        onPressed: widget.onAddSet,
+                        icon: const Icon(Icons.add),
+                        label: const Text('+ Serie'),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: widget.onCopySet,
+                        icon: const Icon(Icons.copy_all_outlined),
+                        label: const Text('Copiar última'),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: widget.onBumpReps,
+                        icon: const Icon(Icons.fitness_center),
+                        label: const Text('+1 rep a todas'),
+                      ),
+                      if (weightAvailable)
+                        OutlinedButton.icon(
+                          onPressed: widget.onBumpWeight,
+                          icon: const Icon(Icons.scale),
+                          label: const Text('+2.5 kg a todas'),
                         ),
-                        PopupMenuItem(
-                          value: 'delete',
-                          child: Text('Eliminar'),
-                        ),
+                      PopupMenuButton<String>(
+                        onSelected: (value) {
+                          if (value == 'duplicate') {
+                            widget.onDuplicate();
+                          } else if (value == 'delete') {
+                            widget.onDelete();
+                          }
+                        },
+                        itemBuilder: (context) => const [
+                          PopupMenuItem(
+                            value: 'duplicate',
+                            child: Text('Duplicar ejercicio'),
+                          ),
+                          PopupMenuItem(
+                            value: 'delete',
+                            child: Text('Eliminar'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 200),
+                    child: Column(
+                      key: ValueKey(widget.exercise.sets.length),
+                      children: [
+                        for (var i = 0; i < widget.exercise.sets.length; i++)
+                          _SetRow(
+                            key: ValueKey(widget.exercise.sets[i].id),
+                            set: widget.exercise.sets[i],
+                            index: i,
+                            autofocus: (widget.exercise.sets[i].reps ??
+                                        widget.exercise.sets[i].weight ??
+                                        widget.exercise.sets[i].durationSeconds ??
+                                        widget.exercise.sets[i].rir ??
+                                        widget.exercise.sets[i].restSeconds) ==
+                                    null &&
+                                i == widget.exercise.sets.length - 1,
+                            onChanged: (updated) => widget.onUpdateSet(updated),
+                            onDelete: () => widget.onDeleteSet(widget.exercise.sets[i].id),
+                          ),
                       ],
                     ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: widget.exercise.sets.length,
-                  itemBuilder: (context, index) {
-                    final set = widget.exercise.sets[index];
-                    final isNewSet = (set.reps ?? set.weight ?? set.durationSeconds ?? set.rir ?? set.restSeconds) == null;
-                    return _SetRow(
-                      key: ValueKey(set.id),
-                      set: set,
-                      index: index,
-                      autofocus: isNewSet && index == widget.exercise.sets.length - 1,
-                      onChanged: (updated) => widget.onUpdateSet(updated),
-                      onDelete: () => widget.onDeleteSet(set.id),
-                    );
-                  },
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _notesController,
-                  decoration: const InputDecoration(
-                    labelText: 'Notas del ejercicio',
-                    prefixIcon: Icon(Icons.notes_outlined),
                   ),
-                  onChanged: widget.onUpdateNotes,
-                  maxLines: 2,
-                ),
-              ],
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _notesController,
+                    decoration: const InputDecoration(
+                      labelText: 'Notas del ejercicio',
+                      prefixIcon: Icon(Icons.notes_outlined),
+                    ),
+                    onChanged: widget.onUpdateNotes,
+                    maxLines: 2,
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
