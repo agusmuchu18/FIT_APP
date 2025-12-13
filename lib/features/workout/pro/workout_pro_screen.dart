@@ -3,9 +3,6 @@ import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../core/data/statistics_service.dart';
-import '../../../main.dart';
-import '../../common/theme/app_colors.dart';
-import '../../common/widgets/summary_card.dart';
 import 'models/workout_models.dart';
 import 'providers/workout_pro_provider.dart';
 import 'widgets/exercise_card.dart';
@@ -13,42 +10,34 @@ import 'widgets/template_section.dart';
 import 'widgets/workout_bottom_bar.dart';
 import 'widgets/workout_type_selector.dart';
 
-class WorkoutProScreen extends StatefulWidget {
+class WorkoutProScreen extends StatelessWidget {
   const WorkoutProScreen({super.key});
 
-  @override
-  State<WorkoutProScreen> createState() => _WorkoutProScreenState();
-}
-
-class _WorkoutProScreenState extends State<WorkoutProScreen> {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
       create: (_) => WorkoutProProvider()..initialize(),
-      child: const _WorkoutProView(),
+      child: const _WorkoutProContent(),
     );
   }
 }
 
-class _WorkoutProView extends StatefulWidget {
-  const _WorkoutProView();
+class _WorkoutProContent extends StatefulWidget {
+  const _WorkoutProContent();
 
   @override
-  State<_WorkoutProView> createState() => _WorkoutProViewState();
+  State<_WorkoutProContent> createState() => _WorkoutProContentState();
 }
 
-class _WorkoutProViewState extends State<_WorkoutProView> {
+class _WorkoutProContentState extends State<_WorkoutProContent> {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<WorkoutProProvider>();
 
     return Scaffold(
-      backgroundColor: AppColors.background,
       appBar: AppBar(
         titleSpacing: 0,
-        elevation: 0,
-        backgroundColor: AppColors.background,
-        title: _HeaderSummary(),
+        title: _AppBarTitle(dateLabel: StatisticsService.formatShortDate(DateTime.now())),
         actions: [
           PopupMenuButton<String>(
             onSelected: (value) => _handleMenuAction(context, provider, value),
@@ -64,38 +53,39 @@ class _WorkoutProViewState extends State<_WorkoutProView> {
       body: provider.initialized
           ? SafeArea(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 140),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    SummaryCard(
-                      padding: const EdgeInsets.all(14),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('Tipo de entrenamiento',
-                              style: TextStyle(fontWeight: FontWeight.w700)),
-                          const SizedBox(height: 12),
-                          WorkoutTypeSelector(
-                            selected: provider.selectedType,
-                            customName: provider.customTypeName,
-                            onCustomNameChanged: provider.setCustomTypeName,
-                            onSelected: (type) async {
-                              if (provider.selectedType == WorkoutType.strength &&
-                                  type != WorkoutType.strength &&
-                                  provider.exercises.isNotEmpty) {
-                                final confirmed = await _confirmDialog(
-                                  context,
-                                  'Cambiar tipo borrará ejercicios. ¿Continuar?',
-                                );
-                                if (!confirmed) return;
-                                provider.setType(type, force: true);
-                              } else {
-                                provider.setType(type);
-                              }
-                            },
-                          ),
-                        ],
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('Tipo de entrenamiento', style: TextStyle(fontWeight: FontWeight.w700)),
+                            const SizedBox(height: 12),
+                            WorkoutTypeSelector(
+                              selected: provider.selectedType,
+                              customName: provider.customTypeName,
+                              onCustomNameChanged: provider.setCustomTypeName,
+                              onSelected: (type) async {
+                                if (provider.selectedType == WorkoutType.strength &&
+                                    type != WorkoutType.strength &&
+                                    provider.exercises.isNotEmpty) {
+                                  final confirmed = await _confirmDialog(
+                                    context,
+                                    'Cambiar tipo borrará ejercicios. ¿Continuar?',
+                                  );
+                                  if (!confirmed) return;
+                                  provider.setType(type, force: true);
+                                } else {
+                                  provider.setType(type);
+                                }
+                              },
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -109,19 +99,15 @@ class _WorkoutProViewState extends State<_WorkoutProView> {
                     const SizedBox(height: 12),
                     _buildDynamicSection(provider),
                     const SizedBox(height: 12),
-                    _ClosingSection(provider: provider),
-                    const SizedBox(height: 12),
+                    ClosingSection(provider: provider),
                   ],
                 ),
               ),
             )
           : const Center(child: CircularProgressIndicator()),
       bottomNavigationBar: WorkoutBottomBar(
-        exerciseCount: provider.selectedType == WorkoutType.strength
-            ? provider.totalExercises
-            : 0,
-        setCount:
-            provider.selectedType == WorkoutType.strength ? provider.totalSets : 0,
+        exerciseCount: provider.selectedType == WorkoutType.strength ? provider.totalExercises : 0,
+        setCount: provider.selectedType == WorkoutType.strength ? provider.totalSets : 0,
         durationLabel: provider.getDurationLabel(),
         onSave: () => _saveSession(context, provider),
         onFinish: () => _saveSession(context, provider),
@@ -132,20 +118,31 @@ class _WorkoutProViewState extends State<_WorkoutProView> {
   Widget _buildDynamicSection(WorkoutProProvider provider) {
     switch (provider.selectedType) {
       case WorkoutType.strength:
-        return _StrengthSection(provider: provider);
+        return StrengthSection(provider: provider);
       case WorkoutType.cardio:
-        return _CardioSection(provider: provider);
+        return SimpleWorkoutSection(
+          provider: provider,
+          title: 'Cardio',
+        );
       case WorkoutType.functional:
-        return _FunctionalSection(provider: provider);
+        return SimpleWorkoutSection(
+          provider: provider,
+          title: 'Funcional',
+        );
       case WorkoutType.sport:
-        return _SportSection(provider: provider);
+        return SimpleWorkoutSection(
+          provider: provider,
+          title: 'Deporte',
+        );
       case WorkoutType.custom:
-        return _FunctionalSection(provider: provider);
+        return SimpleWorkoutSection(
+          provider: provider,
+          title: 'Otro',
+        );
     }
   }
 
-  Future<void> _saveSession(
-      BuildContext context, WorkoutProProvider provider) async {
+  Future<void> _saveSession(BuildContext context, WorkoutProProvider provider) async {
     final ok = await provider.saveSession();
     if (!mounted) return;
     if (!ok) {
@@ -179,6 +176,7 @@ class _WorkoutProViewState extends State<_WorkoutProView> {
       case 'load_template':
         await showModalBottomSheet(
           context: context,
+          showDragHandle: true,
           builder: (_) => TemplateSection(
             standardTemplates: provider.standardTemplates,
             userTemplates: provider.userTemplates,
@@ -250,6 +248,7 @@ class _WorkoutProViewState extends State<_WorkoutProView> {
         content: TextField(
           controller: controller,
           decoration: const InputDecoration(labelText: 'Nombre'),
+          autofocus: true,
         ),
         actions: [
           TextButton(
@@ -266,22 +265,25 @@ class _WorkoutProViewState extends State<_WorkoutProView> {
   }
 }
 
-class _HeaderSummary extends StatelessWidget {
+class _AppBarTitle extends StatelessWidget {
+  const _AppBarTitle({required this.dateLabel});
+
+  final String dateLabel;
+
   @override
   Widget build(BuildContext context) {
-    final today = StatisticsService.formatShortDate(DateTime.now());
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text('Entrenamiento', style: TextStyle(fontWeight: FontWeight.w700)),
-        Text(today, style: Theme.of(context).textTheme.bodySmall),
+        Text(dateLabel, style: Theme.of(context).textTheme.bodySmall),
       ],
     );
   }
 }
 
-class _StrengthSection extends StatelessWidget {
-  const _StrengthSection({required this.provider});
+class StrengthSection extends StatelessWidget {
+  const StrengthSection({required this.provider});
 
   final WorkoutProProvider provider;
 
@@ -299,46 +301,62 @@ class _StrengthSection extends StatelessWidget {
       'Extensión tríceps',
     ];
 
-    return SummaryCard(
-      padding: const EdgeInsets.all(14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Text('Ejercicios', style: TextStyle(fontWeight: FontWeight.w700)),
-              const Spacer(),
-              TextButton.icon(
-                onPressed: () => _openAddExercise(context, standardExercises),
-                icon: const Icon(Icons.add),
-                label: const Text('Agregar ejercicio'),
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Text('Ejercicios', style: TextStyle(fontWeight: FontWeight.w700)),
+                const Spacer(),
+                TextButton.icon(
+                  onPressed: () => _openAddExercise(context, standardExercises),
+                  icon: const Icon(Icons.add),
+                  label: const Text('Agregar ejercicio'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            if (provider.exercises.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Aún no agregaste ejercicios',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    const SizedBox(height: 6),
+                    FilledButton.tonal(
+                      onPressed: () => _openAddExercise(context, standardExercises),
+                      child: const Text('Agregar primer ejercicio'),
+                    ),
+                  ],
+                ),
               ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          if (provider.exercises.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 12),
-              child: Text('Aún no agregaste ejercicios'),
+            ...provider.exercises.map(
+              (exercise) => ExerciseCard(
+                key: ValueKey(exercise.id),
+                exercise: exercise,
+                onDuplicate: () => provider.duplicateExercise(exercise.id),
+                onDelete: () async {
+                  final confirm = await _confirmDelete(context);
+                  if (confirm) provider.removeExercise(exercise.id);
+                },
+                onAddSet: () => provider.addSet(exercise.id),
+                onCopySet: () => provider.copyPreviousSet(exercise.id),
+                onUpdateSet: (set) => provider.updateSet(exercise.id, set.id, set),
+                onDeleteSet: (setId) => provider.removeSet(exercise.id, setId),
+                onUpdateNotes: (notes) => provider.updateExerciseNotes(exercise.id, notes),
+              ),
             ),
-          ...provider.exercises.map(
-            (exercise) => ExerciseCard(
-              exercise: exercise,
-              onDuplicate: () => provider.duplicateExercise(exercise.id),
-              onDelete: () async {
-                final confirm = await _confirmDelete(context);
-                if (confirm) provider.removeExercise(exercise.id);
-              },
-              onAddSet: () => provider.addSet(exercise.id),
-              onCopySet: () => provider.copyPreviousSet(exercise.id),
-              onUpdateSet: (set) => provider.updateSet(exercise.id, set.id, set),
-              onDeleteSet: (setId) => provider.removeSet(exercise.id, setId),
-              onUpdateNotes: (notes) => provider.updateExerciseNotes(exercise.id, notes),
-            ),
-          ),
-          const SizedBox(height: 12),
-          _MetricsRow(provider: provider),
-        ],
+            const SizedBox(height: 12),
+            _MetricsRow(provider: provider),
+          ],
+        ),
       ),
     );
   }
@@ -434,279 +452,179 @@ class _MetricsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceVariant,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          _metric('Series', provider.totalSets.toString()),
-          _metric('Reps', provider.totalReps.toString()),
-          _metric('Volumen', provider.totalVolume.toStringAsFixed(1)),
-          _metric('RIR prom',
-              provider.averageRir != null ? provider.averageRir!.toStringAsFixed(1) : '--'),
-        ],
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            _metric(context, 'Series', provider.totalSets.toString()),
+            _metric(context, 'Reps', provider.totalReps.toString()),
+            _metric(context, 'Volumen', provider.totalVolume.toStringAsFixed(1)),
+            _metric(
+              context,
+              'RIR prom',
+              provider.averageRir != null ? provider.averageRir!.toStringAsFixed(1) : '--',
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _metric(String label, String value) {
+  Widget _metric(BuildContext context, String label, String value) {
     return Expanded(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(value, style: const TextStyle(fontWeight: FontWeight.w700)),
           const SizedBox(height: 4),
-          Text(label, style: const TextStyle(fontSize: 12)),
+          Text(label, style: Theme.of(context).textTheme.bodySmall),
         ],
       ),
     );
   }
 }
 
-class _CardioSection extends StatelessWidget {
-  const _CardioSection({required this.provider});
+class SimpleWorkoutSection extends StatefulWidget {
+  const SimpleWorkoutSection({required this.provider, required this.title});
 
   final WorkoutProProvider provider;
+  final String title;
 
   @override
-  Widget build(BuildContext context) {
-    return SummaryCard(
-      padding: const EdgeInsets.all(14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('Cardio', style: TextStyle(fontWeight: FontWeight.w700)),
-          const SizedBox(height: 12),
-          TextField(
-            decoration: const InputDecoration(
-              labelText: 'Tipo de cardio (running, bici, remo...)',
-              prefixIcon: Icon(Icons.directions_run),
-            ),
-            onChanged: provider.setActivityName,
-            controller: TextEditingController(text: provider.activityName)
-              ..selection = TextSelection.fromPosition(
-                TextPosition(offset: provider.activityName?.length ?? 0),
-              ),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  decoration: const InputDecoration(
-                    labelText: 'Duración (min)',
-                    prefixIcon: Icon(Icons.timer),
-                  ),
-                  keyboardType: TextInputType.number,
-                  onChanged: (v) => provider.setDuration(int.tryParse(v)),
-                  controller: TextEditingController(
-                    text: provider.durationMinutes?.toString() ?? '',
-                  )..selection = TextSelection.fromPosition(
-                      TextPosition(offset: provider.durationMinutes?.toString().length ?? 0),
-                    ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: TextField(
-                  decoration: const InputDecoration(
-                    labelText: 'Distancia (km)',
-                    prefixIcon: Icon(Icons.straighten),
-                  ),
-                  keyboardType: TextInputType.number,
-                  onChanged: (v) => provider.setDistance(double.tryParse(v)),
-                  controller: TextEditingController(
-                    text: provider.distanceKm?.toString() ?? '',
-                  )..selection = TextSelection.fromPosition(
-                      TextPosition(offset: provider.distanceKm?.toString().length ?? 0),
-                    ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          TextField(
-            decoration: const InputDecoration(
-              labelText: 'Ritmo/velocidad',
-              prefixIcon: Icon(Icons.speed),
-            ),
-            onChanged: provider.setPace,
-            controller: TextEditingController(text: provider.pace)
-              ..selection = TextSelection.fromPosition(
-                TextPosition(offset: provider.pace?.length ?? 0),
-              ),
-          ),
-          const SizedBox(height: 8),
-          _IntensityRow(provider: provider),
-          const SizedBox(height: 8),
-          TextField(
-            decoration: const InputDecoration(
-              labelText: 'Notas',
-              prefixIcon: Icon(Icons.notes_outlined),
-            ),
-            maxLines: 3,
-            onChanged: provider.setNotes,
-            controller: TextEditingController(text: provider.notes)
-              ..selection = TextSelection.fromPosition(
-                TextPosition(offset: provider.notes?.length ?? 0),
-              ),
-          ),
-        ],
-      ),
-    );
-  }
+  State<SimpleWorkoutSection> createState() => _SimpleWorkoutSectionState();
 }
 
-class _SportSection extends StatelessWidget {
-  const _SportSection({required this.provider});
-
-  final WorkoutProProvider provider;
+class _SimpleWorkoutSectionState extends State<SimpleWorkoutSection> {
+  late final TextEditingController _activityController;
+  late final TextEditingController _durationController;
+  late final TextEditingController _distanceController;
+  late final TextEditingController _paceController;
+  late final TextEditingController _notesController;
 
   @override
-  Widget build(BuildContext context) {
-    return SummaryCard(
-      padding: const EdgeInsets.all(14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('Deporte', style: TextStyle(fontWeight: FontWeight.w700)),
-          const SizedBox(height: 12),
-          TextField(
-            decoration: const InputDecoration(
-              labelText: 'Actividad / Deporte',
-              prefixIcon: Icon(Icons.sports_soccer),
-            ),
-            onChanged: provider.setActivityName,
-            controller: TextEditingController(text: provider.activityName)
-              ..selection = TextSelection.fromPosition(
-                TextPosition(offset: provider.activityName?.length ?? 0),
-              ),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  decoration: const InputDecoration(
-                    labelText: 'Duración (min)',
-                    prefixIcon: Icon(Icons.timer),
-                  ),
-                  keyboardType: TextInputType.number,
-                  onChanged: (v) => provider.setDuration(int.tryParse(v)),
-                  controller: TextEditingController(
-                    text: provider.durationMinutes?.toString() ?? '',
-                  )..selection = TextSelection.fromPosition(
-                      TextPosition(offset: provider.durationMinutes?.toString().length ?? 0),
-                    ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: TextField(
-                  decoration: const InputDecoration(
-                    labelText: 'Distancia (km)',
-                    prefixIcon: Icon(Icons.straighten),
-                  ),
-                  keyboardType: TextInputType.number,
-                  onChanged: (v) => provider.setDistance(double.tryParse(v)),
-                  controller: TextEditingController(
-                    text: provider.distanceKm?.toString() ?? '',
-                  )..selection = TextSelection.fromPosition(
-                      TextPosition(offset: provider.distanceKm?.toString().length ?? 0),
-                    ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          _IntensityRow(provider: provider),
-          const SizedBox(height: 8),
-          TextField(
-            decoration: const InputDecoration(
-              labelText: 'Notas',
-              prefixIcon: Icon(Icons.notes_outlined),
-            ),
-            maxLines: 3,
-            onChanged: provider.setNotes,
-            controller: TextEditingController(text: provider.notes)
-              ..selection = TextSelection.fromPosition(
-                TextPosition(offset: provider.notes?.length ?? 0),
-              ),
-          ),
-        ],
-      ),
+  void initState() {
+    super.initState();
+    _activityController = TextEditingController(text: widget.provider.activityName ?? '');
+    _durationController = TextEditingController(
+      text: widget.provider.durationMinutes?.toString() ?? '',
     );
+    _distanceController = TextEditingController(
+      text: widget.provider.distanceKm?.toString() ?? '',
+    );
+    _paceController = TextEditingController(text: widget.provider.pace ?? '');
+    _notesController = TextEditingController(text: widget.provider.notes ?? '');
   }
-}
 
-class _FunctionalSection extends StatelessWidget {
-  const _FunctionalSection({required this.provider});
+  @override
+  void didUpdateWidget(covariant SimpleWorkoutSection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.provider.activityName != _activityController.text) {
+      _activityController.text = widget.provider.activityName ?? '';
+    }
+    final durationText = widget.provider.durationMinutes?.toString() ?? '';
+    if (_durationController.text != durationText) {
+      _durationController.text = durationText;
+    }
+    final distanceText = widget.provider.distanceKm?.toString() ?? '';
+    if (_distanceController.text != distanceText) {
+      _distanceController.text = distanceText;
+    }
+    if (widget.provider.pace != _paceController.text) {
+      _paceController.text = widget.provider.pace ?? '';
+    }
+    if (widget.provider.notes != _notesController.text) {
+      _notesController.text = widget.provider.notes ?? '';
+    }
+  }
 
-  final WorkoutProProvider provider;
+  @override
+  void dispose() {
+    _activityController.dispose();
+    _durationController.dispose();
+    _distanceController.dispose();
+    _paceController.dispose();
+    _notesController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return SummaryCard(
-      padding: const EdgeInsets.all(14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(provider.selectedType == WorkoutType.custom ? 'Sesión personalizada' : 'Funcional',
-              style: const TextStyle(fontWeight: FontWeight.w700)),
-          const SizedBox(height: 12),
-          TextField(
-            decoration: const InputDecoration(
-              labelText: 'Nombre de la sesión',
-              prefixIcon: Icon(Icons.event_note),
-            ),
-            onChanged: provider.setActivityName,
-            controller: TextEditingController(text: provider.activityName)
-              ..selection = TextSelection.fromPosition(
-                TextPosition(offset: provider.activityName?.length ?? 0),
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(widget.title, style: const TextStyle(fontWeight: FontWeight.w700)),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _activityController,
+              decoration: const InputDecoration(
+                labelText: 'Nombre de la actividad',
+                prefixIcon: Icon(Icons.directions_run),
               ),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  decoration: const InputDecoration(
-                    labelText: 'Duración (min)',
-                    prefixIcon: Icon(Icons.timer),
-                  ),
-                  keyboardType: TextInputType.number,
-                  onChanged: (v) => provider.setDuration(int.tryParse(v)),
-                  controller: TextEditingController(
-                    text: provider.durationMinutes?.toString() ?? '',
-                  )..selection = TextSelection.fromPosition(
-                      TextPosition(offset: provider.durationMinutes?.toString().length ?? 0),
+              onChanged: widget.provider.setActivityName,
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _durationController,
+                    decoration: const InputDecoration(
+                      labelText: 'Duración (min)',
+                      prefixIcon: Icon(Icons.timer),
                     ),
+                    keyboardType: TextInputType.number,
+                    onChanged: (v) => widget.provider.setDuration(int.tryParse(v)),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _IntensityRow(provider: provider),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          TextField(
-            decoration: const InputDecoration(
-              labelText: 'Notas',
-              prefixIcon: Icon(Icons.notes_outlined),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextField(
+                    controller: _distanceController,
+                    decoration: const InputDecoration(
+                      labelText: 'Distancia (km)',
+                      prefixIcon: Icon(Icons.straighten),
+                    ),
+                    keyboardType: TextInputType.number,
+                    onChanged: (v) => widget.provider.setDistance(double.tryParse(v)),
+                  ),
+                ),
+              ],
             ),
-            maxLines: 3,
-            onChanged: provider.setNotes,
-            controller: TextEditingController(text: provider.notes)
-              ..selection = TextSelection.fromPosition(
-                TextPosition(offset: provider.notes?.length ?? 0),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _paceController,
+                    decoration: const InputDecoration(
+                      labelText: 'Ritmo / velocidad',
+                      prefixIcon: Icon(Icons.speed),
+                    ),
+                    onChanged: widget.provider.setPace,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _IntensityRow(provider: widget.provider),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _notesController,
+              decoration: const InputDecoration(
+                labelText: 'Notas',
+                prefixIcon: Icon(Icons.notes_outlined),
               ),
-          ),
-        ],
+              maxLines: 3,
+              onChanged: widget.provider.setNotes,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -755,85 +673,116 @@ class _IntensityRow extends StatelessWidget {
   }
 }
 
-class _ClosingSection extends StatelessWidget {
-  const _ClosingSection({required this.provider});
+class ClosingSection extends StatefulWidget {
+  const ClosingSection({required this.provider});
 
   final WorkoutProProvider provider;
 
   @override
+  State<ClosingSection> createState() => _ClosingSectionState();
+}
+
+class _ClosingSectionState extends State<ClosingSection> {
+  late final TextEditingController _durationController;
+  late final TextEditingController _notesController;
+
+  @override
+  void initState() {
+    super.initState();
+    _durationController = TextEditingController(
+      text: widget.provider.closingDuration?.toString() ?? '',
+    );
+    _notesController = TextEditingController(text: widget.provider.finalNotes ?? '');
+  }
+
+  @override
+  void didUpdateWidget(covariant ClosingSection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final durationText = widget.provider.closingDuration?.toString() ?? '';
+    if (_durationController.text != durationText) {
+      _durationController.text = durationText;
+    }
+    if (widget.provider.finalNotes != _notesController.text) {
+      _notesController.text = widget.provider.finalNotes ?? '';
+    }
+  }
+
+  @override
+  void dispose() {
+    _durationController.dispose();
+    _notesController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return SummaryCard(
-      padding: const EdgeInsets.all(14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('Cierre', style: TextStyle(fontWeight: FontWeight.w700)),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  decoration: const InputDecoration(
-                    labelText: 'Duración total (min)',
-                    prefixIcon: Icon(Icons.timer_outlined),
-                  ),
-                  keyboardType: TextInputType.number,
-                  onChanged: (v) => provider.setClosingDuration(int.tryParse(v)),
-                  controller: TextEditingController(
-                    text: provider.closingDuration?.toString() ?? '',
-                  )..selection = TextSelection.fromPosition(
-                      TextPosition(offset: provider.closingDuration?.toString().length ?? 0),
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Cierre de entrenamiento', style: TextStyle(fontWeight: FontWeight.w700)),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _durationController,
+                    decoration: const InputDecoration(
+                      labelText: 'Duración total (min)',
+                      prefixIcon: Icon(Icons.timer_outlined),
                     ),
+                    keyboardType: TextInputType.number,
+                    onChanged: (v) => widget.provider.setClosingDuration(int.tryParse(v)),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: DropdownButtonFormField<int>(
+                    decoration: const InputDecoration(labelText: 'Fatiga general (1-5)'),
+                    value: widget.provider.closingFatigue,
+                    items: List.generate(
+                      5,
+                      (index) => DropdownMenuItem(
+                        value: index + 1,
+                        child: Text('${index + 1}'),
+                      ),
+                    ),
+                    onChanged: (v) {
+                      if (v != null) widget.provider.setClosingFatigue(v);
+                    },
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<int>(
+              decoration: const InputDecoration(labelText: 'Rendimiento percibido (1-5)'),
+              value: widget.provider.closingPerformance,
+              items: List.generate(
+                5,
+                (index) => DropdownMenuItem(
+                  value: index + 1,
+                  child: Text('${index + 1}'),
                 ),
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: DropdownButtonFormField<int>(
-                  decoration: const InputDecoration(labelText: 'Fatiga general (1-5)'),
-                  value: provider.closingFatigue,
-                  items: List.generate(
-                    5,
-                    (index) => DropdownMenuItem(
-                      value: index + 1,
-                      child: Text('${index + 1}'),
-                    ),
-                  ),
-                  onChanged: (v) {
-                    if (v != null) provider.setClosingFatigue(v);
-                  },
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          DropdownButtonFormField<int>(
-            decoration: const InputDecoration(labelText: 'Rendimiento percibido (1-5)'),
-            value: provider.closingPerformance,
-            items: List.generate(
-              5,
-              (index) => DropdownMenuItem(
-                value: index + 1,
-                child: Text('${index + 1}'),
-              ),
+              onChanged: (v) {
+                if (v != null) widget.provider.setClosingPerformance(v);
+              },
             ),
-            onChanged: (v) {
-              if (v != null) provider.setClosingPerformance(v);
-            },
-          ),
-          const SizedBox(height: 8),
-          TextField(
-            decoration: const InputDecoration(
-              labelText: 'Notas finales',
-              prefixIcon: Icon(Icons.note_alt_outlined),
-            ),
-            maxLines: 3,
-            onChanged: provider.setFinalNotes,
-            controller: TextEditingController(text: provider.finalNotes)
-              ..selection = TextSelection.fromPosition(
-                TextPosition(offset: provider.finalNotes?.length ?? 0),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _notesController,
+              decoration: const InputDecoration(
+                labelText: 'Notas finales',
+                prefixIcon: Icon(Icons.note_alt_outlined),
               ),
-          ),
-        ],
+              maxLines: 3,
+              onChanged: widget.provider.setFinalNotes,
+            ),
+          ],
+        ),
       ),
     );
   }

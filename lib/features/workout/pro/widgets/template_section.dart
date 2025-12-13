@@ -151,31 +151,14 @@ class _TemplateChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceVariant,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.check_circle, color: Colors.green),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(template.name, style: const TextStyle(fontWeight: FontWeight.w700)),
-                const SizedBox(height: 4),
-                Text(
-                  template.origin == TemplateOrigin.user ? 'Mía' : 'Estándar',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ],
-            ),
-          ),
-        ],
+    final originLabel = template.origin == TemplateOrigin.user ? 'Mía' : 'Estándar';
+    return Card(
+      margin: EdgeInsets.zero,
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        leading: Icon(Icons.check_circle, color: Theme.of(context).colorScheme.primary),
+        title: Text(template.name, style: const TextStyle(fontWeight: FontWeight.w700)),
+        subtitle: Text(originLabel),
       ),
     );
   }
