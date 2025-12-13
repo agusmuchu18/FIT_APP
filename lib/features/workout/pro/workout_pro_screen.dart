@@ -144,7 +144,10 @@ class _WorkoutProContentState extends State<_WorkoutProContent> {
   Widget _buildDynamicSection(WorkoutProProvider provider) {
     switch (provider.selectedType) {
       case WorkoutType.strength:
-        return StrengthSection(provider: provider);
+        return StrengthSection(
+          provider: provider,
+          exerciseIndex: _exerciseIndex,
+        );
       case WorkoutType.cardio:
         return SimpleWorkoutSection(
           provider: provider,
@@ -509,9 +512,13 @@ class _SimpleWorkoutSectionState extends State<SimpleWorkoutSection> {
 }
 
 class StrengthSection extends StatelessWidget {
-  const StrengthSection({required this.provider});
+  const StrengthSection({
+    required this.provider,
+    required this.exerciseIndex,
+  });
 
   final WorkoutProProvider provider;
+  final ExerciseLibraryIndex exerciseIndex;
 
   @override
   Widget build(BuildContext context) {
@@ -564,25 +571,25 @@ class StrengthSection extends StatelessWidget {
                           (name) => ActionChip(
                             label: Text(name),
                             onPressed: () {
-                              final match = _exerciseIndex.findByQuery(name);
+                              final match = exerciseIndex.findByQuery(name);
                               final exercise = match != null
                                   ? provider.fromDefinition(match)
                                   : WorkoutExercise(
                                       id: const Uuid().v4(),
                                       name: name,
-                                      );
-                                provider.addExerciseWithDefaults(exercise);
-                              },
-                            ),
-                          )
-                          .toList(),
+                                    );
+                              provider.addExerciseWithDefaults(exercise);
+                            },
+                          ),
+                        )
+                        .toList(),
                     ),
                   ],
                 ),
               ),
             ...provider.exercises.map(
               (exercise) {
-                final definition = _exerciseIndex.findByQuery(exercise.name);
+                final definition = exerciseIndex.findByQuery(exercise.name);
                 return ExerciseCard(
                   key: ValueKey(exercise.id),
                   exercise: exercise,
