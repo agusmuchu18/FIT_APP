@@ -363,6 +363,143 @@ class _SessionSummary extends StatelessWidget {
   }
 }
 
+class SimpleWorkoutSection extends StatefulWidget {
+  const SimpleWorkoutSection({required this.provider, required this.title});
+
+  final WorkoutProProvider provider;
+  final String title;
+
+  @override
+  State<SimpleWorkoutSection> createState() => _SimpleWorkoutSectionState();
+}
+
+class _SimpleWorkoutSectionState extends State<SimpleWorkoutSection> {
+  late final TextEditingController _activityController;
+  late final TextEditingController _durationController;
+  late final TextEditingController _distanceController;
+  late final TextEditingController _paceController;
+  late final TextEditingController _notesController;
+
+  WorkoutProProvider get provider => widget.provider;
+
+  @override
+  void initState() {
+    super.initState();
+    _activityController = TextEditingController(text: provider.activityName ?? '');
+    _durationController =
+        TextEditingController(text: provider.durationMinutes?.toString() ?? '');
+    _distanceController =
+        TextEditingController(text: provider.distanceKm?.toString() ?? '');
+    _paceController = TextEditingController(text: provider.pace ?? '');
+    _notesController = TextEditingController(text: provider.notes ?? '');
+  }
+
+  @override
+  void didUpdateWidget(covariant SimpleWorkoutSection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_activityController.text != (provider.activityName ?? '')) {
+      _activityController.text = provider.activityName ?? '';
+    }
+    final durationText = provider.durationMinutes?.toString() ?? '';
+    if (_durationController.text != durationText) {
+      _durationController.text = durationText;
+    }
+    final distanceText = provider.distanceKm?.toString() ?? '';
+    if (_distanceController.text != distanceText) {
+      _distanceController.text = distanceText;
+    }
+    if (_paceController.text != (provider.pace ?? '')) {
+      _paceController.text = provider.pace ?? '';
+    }
+    if (_notesController.text != (provider.notes ?? '')) {
+      _notesController.text = provider.notes ?? '';
+    }
+  }
+
+  @override
+  void dispose() {
+    _activityController.dispose();
+    _durationController.dispose();
+    _distanceController.dispose();
+    _paceController.dispose();
+    _notesController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(widget.title, style: const TextStyle(fontWeight: FontWeight.w700)),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _activityController,
+              decoration: const InputDecoration(
+                labelText: 'Actividad',
+                prefixIcon: Icon(Icons.directions_run),
+              ),
+              onChanged: provider.setActivityName,
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _durationController,
+                    decoration: const InputDecoration(
+                      labelText: 'Duración (minutos)',
+                      prefixIcon: Icon(Icons.timer_outlined),
+                    ),
+                    keyboardType: TextInputType.number,
+                    onChanged: (v) => provider.setDuration(int.tryParse(v)),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextField(
+                    controller: _distanceController,
+                    decoration: const InputDecoration(
+                      labelText: 'Distancia (km)',
+                      prefixIcon: Icon(Icons.social_distance),
+                    ),
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    onChanged: (v) => provider.setDistance(double.tryParse(v)),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _paceController,
+              decoration: const InputDecoration(
+                labelText: 'Ritmo / Velocidad',
+                prefixIcon: Icon(Icons.speed),
+              ),
+              onChanged: provider.setPace,
+            ),
+            const SizedBox(height: 12),
+            _IntensityRow(provider: provider),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _notesController,
+              decoration: const InputDecoration(
+                labelText: 'Notas',
+                prefixIcon: Icon(Icons.note_alt_outlined),
+              ),
+              maxLines: 2,
+              onChanged: provider.setNotes,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class StrengthSection extends StatelessWidget {
   const StrengthSection({required this.provider});
 
@@ -477,6 +614,85 @@ class StrengthSection extends StatelessWidget {
     if (chosen == null) return;
 
     provider.addExerciseWithDefaults(chosen);
+  }
+}
+
+Future<bool> _confirmDelete(BuildContext context) async {
+  final result = await showDialog<bool>(
+    context: context,
+    builder: (_) => AlertDialog(
+      title: const Text('Eliminar ejercicio'),
+      content: const Text('¿Eliminar este ejercicio? Esta acción no se puede deshacer.'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(true),
+          child: const Text('Eliminar'),
+        ),
+      ],
+    ),
+  );
+
+  return result ?? false;
+}
+
+class _MetricsRow extends StatefulWidget {
+  const _MetricsRow({required this.provider});
+
+  final WorkoutProProvider provider;
+
+  @override
+  State<_MetricsRow> createState() => _MetricsRowState();
+}
+
+class _MetricsRowState extends State<_MetricsRow> {
+  late final TextEditingController _notesController;
+
+  WorkoutProProvider get provider => widget.provider;
+
+  @override
+  void initState() {
+    super.initState();
+    _notesController = TextEditingController(text: provider.notes ?? '');
+  }
+
+  @override
+  void didUpdateWidget(covariant _MetricsRow oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_notesController.text != (provider.notes ?? '')) {
+      _notesController.text = provider.notes ?? '';
+    }
+  }
+
+  @override
+  void dispose() {
+    _notesController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Métricas'),
+        const SizedBox(height: 8),
+        _IntensityRow(provider: provider),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _notesController,
+          decoration: const InputDecoration(
+            labelText: 'Notas generales',
+            prefixIcon: Icon(Icons.note_alt_outlined),
+          ),
+          maxLines: 2,
+          onChanged: provider.setNotes,
+        ),
+      ],
+    );
   }
 }
 
