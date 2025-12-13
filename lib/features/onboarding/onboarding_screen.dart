@@ -95,6 +95,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  _DeveloperAccessCard(
+                    onOpenLite: () {
+                      setState(() => _mode = 'Lite');
+                      Navigator.of(context).pushNamed('/workout/lite');
+                    },
+                    onOpenPro: () {
+                      setState(() => _mode = 'Pro');
+                      Navigator.of(context).pushNamed('/workout/pro');
+                    },
+                  ),
+                  const SizedBox(height: 18),
                   _Header(hasData: _existing != null),
                   const SizedBox(height: 18),
                   _QuestionCard(
@@ -258,6 +269,62 @@ class _Header extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _DeveloperAccessCard extends StatelessWidget {
+  const _DeveloperAccessCard({
+    required this.onOpenLite,
+    required this.onOpenPro,
+  });
+
+  final VoidCallback onOpenLite;
+  final VoidCallback onOpenPro;
+
+  @override
+  Widget build(BuildContext context) {
+    return SummaryCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Acceso desarrollador',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textSecondary,
+              fontFamily: 'Inter',
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Salta directo a la versión que quieres probar mientras seguimos afinando el onboarding.',
+            style: TextStyle(
+              color: AppColors.textMuted,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              FilledButton.icon(
+                onPressed: onOpenPro,
+                icon: const Icon(Icons.auto_graph_rounded),
+                label: const Text('Entrar versión Pro'),
+              ),
+              OutlinedButton.icon(
+                onPressed: onOpenLite,
+                icon: const Icon(Icons.flash_on_rounded),
+                label: const Text('Entrar versión Lite'),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

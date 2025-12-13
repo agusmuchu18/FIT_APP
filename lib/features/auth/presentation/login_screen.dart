@@ -55,6 +55,14 @@ class _LoginScreenState extends State<LoginScreen> {
     Navigator.pushNamed(context, '/auth/signup');
   }
 
+  void _openLite() {
+    Navigator.pushReplacementNamed(context, '/workout/lite');
+  }
+
+  void _openPro() {
+    Navigator.pushReplacementNamed(context, '/workout/pro');
+  }
+
   @override
   Widget build(BuildContext context) {
     return Theme(
@@ -158,6 +166,55 @@ class _LoginScreenState extends State<LoginScreen> {
                         child: const Text(
                           'Continuar sin cuenta',
                           style: TextStyle(color: AppColors.textMuted),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(14),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Acceso desarrollador',
+                              style: TextStyle(
+                                color: AppColors.textPrimary,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 16,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            const Text(
+                              'Ingresa directo a los flujos para probar la versión Pro o Lite.',
+                              style: TextStyle(
+                                color: AppColors.textMuted,
+                                height: 1.4,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Wrap(
+                              spacing: 12,
+                              runSpacing: 10,
+                              children: [
+                                FilledButton.icon(
+                                  onPressed: _openPro,
+                                  icon: const Icon(Icons.auto_graph_rounded),
+                                  label: const Text('Entrar versión Pro'),
+                                ),
+                                OutlinedButton.icon(
+                                  onPressed: _openLite,
+                                  icon: const Icon(Icons.flash_on_rounded),
+                                  label: const Text('Entrar versión Lite'),
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
                       ),
                     ),
