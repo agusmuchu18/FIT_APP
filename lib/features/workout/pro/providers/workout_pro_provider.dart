@@ -302,14 +302,16 @@ class WorkoutProProvider extends ChangeNotifier {
 
   void bumpWeight(String exerciseId, double delta) {
     final target = _exercises.firstWhere((e) => e.id == exerciseId, orElse: () => WorkoutExercise(id: '', name: ''));
-    if (target.id.isEmpty || target.sets.every((s) => s.weight == null)) {
+    if (target.id.isEmpty || target.sets.every((s) => s.externalLoadKg == null)) {
       return;
     }
     _exercises = _exercises.map((e) {
       if (e.id != exerciseId) return e;
       final updated = e.sets
           .map(
-            (s) => s.weight == null ? s : s.copyWith(weight: (s.weight ?? 0) + delta),
+            (s) => s.externalLoadKg == null
+                ? s
+                : s.copyWith(externalLoadKg: (s.externalLoadKg ?? 0) + delta),
           )
           .toList();
       return e.copyWith(sets: updated);
@@ -451,8 +453,7 @@ class WorkoutProProvider extends ChangeNotifier {
             sum +
             e.sets.fold(
                 0,
-                (s, set) =>
-                    s + ((set.weight ?? 0) * (set.reps != null ? set.reps! : 0))),
+                (s, set) => s + ((set.externalLoadKg ?? 0) * (set.reps ?? 0))),
       );
   double? get averageRir {
     final all = _exercises.expand((e) => e.sets).where((s) => s.rir != null);
@@ -462,10 +463,12 @@ class WorkoutProProvider extends ChangeNotifier {
   }
 
   String? get topSetLabel {
-    final sets = _exercises.expand((e) => e.sets).where((s) => s.weight != null && s.reps != null);
+    final sets =
+        _exercises.expand((e) => e.sets).where((s) => s.externalLoadKg != null && s.reps != null);
     if (sets.isEmpty) return null;
-    final top = sets.reduce((a, b) => (a.weight ?? 0) >= (b.weight ?? 0) ? a : b);
-    return '${top.weight?.toStringAsFixed(1)}kg x ${top.reps ?? 0}';
+    final top = sets.reduce((a, b) =>
+        (a.externalLoadKg ?? 0) >= (b.externalLoadKg ?? 0) ? a : b);
+    return '${top.externalLoadKg?.toStringAsFixed(1)}kg x ${top.reps ?? 0}';
   }
 
   WorkoutSession? get lastSession => _storedSessions.isEmpty ? null : _storedSessions.last;
