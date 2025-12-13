@@ -60,7 +60,7 @@ class _ExerciseCardState extends State<ExerciseCard> {
   Widget build(BuildContext context) {
     final summary = '${widget.exercise.sets.length} series · '
         '${widget.exercise.sets.fold<int>(0, (s, e) => s + (e.reps ?? 0))} reps';
-    final weightAvailable = widget.exercise.sets.any((s) => s.weight != null);
+    final weightAvailable = widget.exercise.sets.any((s) => s.externalLoadKg != null);
     return AnimatedSize(
       duration: const Duration(milliseconds: 200),
       child: Card(
@@ -97,11 +97,11 @@ class _ExerciseCardState extends State<ExerciseCard> {
                         label: const Text('+1 rep a todas'),
                       ),
                       if (weightAvailable)
-                        OutlinedButton.icon(
-                          onPressed: widget.onBumpWeight,
-                          icon: const Icon(Icons.scale),
-                          label: const Text('+2.5 kg a todas'),
-                        ),
+                      OutlinedButton.icon(
+                        onPressed: widget.onBumpWeight,
+                        icon: const Icon(Icons.scale),
+                        label: const Text('+2.5 kg a todas'),
+                      ),
                       PopupMenuButton<String>(
                         onSelected: (value) {
                           if (value == 'duplicate') {
@@ -135,7 +135,10 @@ class _ExerciseCardState extends State<ExerciseCard> {
                             set: widget.exercise.sets[i],
                             index: i,
                             autofocus: (widget.exercise.sets[i].reps ??
-                                        widget.exercise.sets[i].weight ??
+                                        widget.exercise.sets[i].externalLoadKg ??
+                                        widget.exercise.sets[i].assistanceKg ??
+                                        widget.exercise.sets[i].bodyweightKg ??
+                                        widget.exercise.sets[i].bodyweightFactor ??
                                         widget.exercise.sets[i].durationSeconds ??
                                         widget.exercise.sets[i].rir ??
                                         widget.exercise.sets[i].restSeconds) ==
@@ -189,7 +192,10 @@ class _SetRow extends StatefulWidget {
 
 class _SetRowState extends State<_SetRow> {
   late final TextEditingController _repsController;
-  late final TextEditingController _weightController;
+  late final TextEditingController _externalLoadController;
+  late final TextEditingController _assistanceController;
+  late final TextEditingController _bodyweightController;
+  late final TextEditingController _bodyweightFactorController;
   late final TextEditingController _durationController;
   late final TextEditingController _restController;
 
@@ -197,7 +203,14 @@ class _SetRowState extends State<_SetRow> {
   void initState() {
     super.initState();
     _repsController = TextEditingController(text: widget.set.reps?.toString() ?? '');
-    _weightController = TextEditingController(text: widget.set.weight?.toString() ?? '');
+    _externalLoadController =
+        TextEditingController(text: widget.set.externalLoadKg?.toString() ?? '');
+    _assistanceController =
+        TextEditingController(text: widget.set.assistanceKg?.toString() ?? '');
+    _bodyweightController =
+        TextEditingController(text: widget.set.bodyweightKg?.toString() ?? '');
+    _bodyweightFactorController =
+        TextEditingController(text: widget.set.bodyweightFactor?.toString() ?? '');
     _durationController = TextEditingController(text: widget.set.durationSeconds?.toString() ?? '');
     _restController = TextEditingController(text: widget.set.restSeconds?.toString() ?? '');
   }
@@ -209,9 +222,21 @@ class _SetRowState extends State<_SetRow> {
     if (_repsController.text != repsText) {
       _repsController.text = repsText;
     }
-    final weightText = widget.set.weight?.toString() ?? '';
-    if (_weightController.text != weightText) {
-      _weightController.text = weightText;
+    final externalText = widget.set.externalLoadKg?.toString() ?? '';
+    if (_externalLoadController.text != externalText) {
+      _externalLoadController.text = externalText;
+    }
+    final assistanceText = widget.set.assistanceKg?.toString() ?? '';
+    if (_assistanceController.text != assistanceText) {
+      _assistanceController.text = assistanceText;
+    }
+    final bodyweightText = widget.set.bodyweightKg?.toString() ?? '';
+    if (_bodyweightController.text != bodyweightText) {
+      _bodyweightController.text = bodyweightText;
+    }
+    final bodyweightFactorText = widget.set.bodyweightFactor?.toString() ?? '';
+    if (_bodyweightFactorController.text != bodyweightFactorText) {
+      _bodyweightFactorController.text = bodyweightFactorText;
     }
     final durationText = widget.set.durationSeconds?.toString() ?? '';
     if (_durationController.text != durationText) {
@@ -226,7 +251,10 @@ class _SetRowState extends State<_SetRow> {
   @override
   void dispose() {
     _repsController.dispose();
-    _weightController.dispose();
+    _externalLoadController.dispose();
+    _assistanceController.dispose();
+    _bodyweightController.dispose();
+    _bodyweightFactorController.dispose();
     _durationController.dispose();
     _restController.dispose();
     super.dispose();
@@ -243,7 +271,18 @@ class _SetRowState extends State<_SetRow> {
             Row(
               children: [
                 Text('S${widget.index + 1}', style: Theme.of(context).textTheme.labelLarge),
-                const SizedBox(width: 12),
+                const Spacer(),
+                IconButton(
+                  onPressed: widget.onDelete,
+                  icon: const Icon(Icons.delete_outline),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
                 _numberField(
                   controller: _repsController,
                   label: 'Reps',
@@ -252,16 +291,37 @@ class _SetRowState extends State<_SetRow> {
                     widget.set.copyWith(reps: int.tryParse(value)),
                   ),
                 ),
-                const SizedBox(width: 8),
                 _numberField(
-                  controller: _weightController,
-                  label: 'Peso',
+                  controller: _externalLoadController,
+                  label: 'Carga ext.',
                   suffix: 'kg',
                   onChanged: (value) => widget.onChanged(
-                    widget.set.copyWith(weight: double.tryParse(value)),
+                    widget.set.copyWith(externalLoadKg: double.tryParse(value)),
                   ),
                 ),
-                const SizedBox(width: 8),
+                _numberField(
+                  controller: _assistanceController,
+                  label: 'Asist.',
+                  suffix: 'kg',
+                  onChanged: (value) => widget.onChanged(
+                    widget.set.copyWith(assistanceKg: double.tryParse(value)),
+                  ),
+                ),
+                _numberField(
+                  controller: _bodyweightController,
+                  label: 'Peso corporal',
+                  suffix: 'kg',
+                  onChanged: (value) => widget.onChanged(
+                    widget.set.copyWith(bodyweightKg: double.tryParse(value)),
+                  ),
+                ),
+                _numberField(
+                  controller: _bodyweightFactorController,
+                  label: 'Factor BW',
+                  onChanged: (value) => widget.onChanged(
+                    widget.set.copyWith(bodyweightFactor: double.tryParse(value)),
+                  ),
+                ),
                 _numberField(
                   controller: _durationController,
                   label: 'Tiempo',
@@ -270,11 +330,14 @@ class _SetRowState extends State<_SetRow> {
                     widget.set.copyWith(durationSeconds: int.tryParse(value)),
                   ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
+                _numberField(
+                  controller: _restController,
+                  label: 'Desc',
+                  suffix: 's',
+                  onChanged: (value) => widget.onChanged(
+                    widget.set.copyWith(restSeconds: int.tryParse(value)),
+                  ),
+                ),
                 DropdownButton<int>(
                   value: widget.set.rir ?? 0,
                   onChanged: (value) => widget.onChanged(widget.set.copyWith(rir: value)),
@@ -285,20 +348,6 @@ class _SetRowState extends State<_SetRow> {
                       child: Text('RIR $index'),
                     ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                _numberField(
-                  controller: _restController,
-                  label: 'Desc',
-                  suffix: 's',
-                  onChanged: (value) => widget.onChanged(
-                    widget.set.copyWith(restSeconds: int.tryParse(value)),
-                  ),
-                ),
-                const Spacer(),
-                IconButton(
-                  onPressed: widget.onDelete,
-                  icon: const Icon(Icons.delete_outline),
                 ),
               ],
             ),

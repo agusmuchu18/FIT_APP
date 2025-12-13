@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import '../data/exercise_definition.dart';
+
 enum WorkoutType {
   strength,
   cardio,
@@ -12,32 +14,65 @@ class SetEntry {
   SetEntry({
     required this.id,
     this.reps,
-    this.weight,
     this.durationSeconds,
+    this.externalLoadKg,
+    this.assistanceKg,
+    this.bodyweightKg,
+    this.bodyweightFactor,
     this.rir,
     this.restSeconds,
   });
 
   final String id;
+
+  // Performance
   final int? reps;
-  final double? weight;
   final int? durationSeconds;
   final int? rir;
   final int? restSeconds;
 
+  // Load components
+  final double? externalLoadKg; // barra, mancuernas, lastre
+  final double? assistanceKg; // polea, banda, máquina asistida
+  final double? bodyweightKg; // snapshot del peso del usuario
+  final double? bodyweightFactor; // para lagartijas
+
+  /// Carga efectiva TOTAL usada en la serie
+  double? effectiveLoadKg(LoadType loadType) {
+    if (bodyweightKg == null) return externalLoadKg;
+
+    switch (loadType) {
+      case LoadType.external:
+        return externalLoadKg;
+      case LoadType.bodyweight_effective:
+        if (bodyweightFactor == null) return bodyweightKg;
+        return bodyweightKg! * bodyweightFactor!;
+      case LoadType.bodyweight_plus_external:
+        return bodyweightKg! + (externalLoadKg ?? 0);
+      case LoadType.assisted_bodyweight:
+        return bodyweightKg! - (assistanceKg ?? 0);
+    }
+  }
+
   SetEntry copyWith({
     String? id,
     int? reps,
-    double? weight,
     int? durationSeconds,
+    double? externalLoadKg,
+    double? assistanceKg,
+    double? bodyweightKg,
+    double? bodyweightFactor,
     int? rir,
     int? restSeconds,
   }) {
     return SetEntry(
       id: id ?? this.id,
       reps: reps ?? this.reps,
-      weight: weight ?? this.weight,
       durationSeconds: durationSeconds ?? this.durationSeconds,
+      externalLoadKg: externalLoadKg ?? this.externalLoadKg,
+      assistanceKg: assistanceKg ?? this.assistanceKg,
+      bodyweightKg: bodyweightKg ?? this.bodyweightKg,
+      bodyweightFactor: bodyweightFactor ?? this.bodyweightFactor,
       rir: rir ?? this.rir,
       restSeconds: restSeconds ?? this.restSeconds,
     );
@@ -46,8 +81,11 @@ class SetEntry {
   Map<String, dynamic> toJson() => {
         'id': id,
         'reps': reps,
-        'weight': weight,
         'durationSeconds': durationSeconds,
+        'externalLoadKg': externalLoadKg,
+        'assistanceKg': assistanceKg,
+        'bodyweightKg': bodyweightKg,
+        'bodyweightFactor': bodyweightFactor,
         'rir': rir,
         'restSeconds': restSeconds,
       };
@@ -55,8 +93,11 @@ class SetEntry {
   factory SetEntry.fromJson(Map<String, dynamic> json) => SetEntry(
         id: json['id'] as String,
         reps: json['reps'] as int?,
-        weight: (json['weight'] as num?)?.toDouble(),
         durationSeconds: json['durationSeconds'] as int?,
+        externalLoadKg: (json['externalLoadKg'] as num?)?.toDouble(),
+        assistanceKg: (json['assistanceKg'] as num?)?.toDouble(),
+        bodyweightKg: (json['bodyweightKg'] as num?)?.toDouble(),
+        bodyweightFactor: (json['bodyweightFactor'] as num?)?.toDouble(),
         rir: json['rir'] as int?,
         restSeconds: json['restSeconds'] as int?,
       );
