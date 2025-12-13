@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -12,9 +13,12 @@ class WorkoutProProvider extends ChangeNotifier {
   static const _sessionsKey = 'pro_workout_sessions';
   static const _templatesKey = 'pro_workout_templates';
   static const _recentExercisesKey = 'pro_recent_exercises';
+  static const _draftKey = 'pro_workout_draft';
 
   final Uuid _uuid = const Uuid();
   SharedPreferences? _prefs;
+  Timer? _ticker;
+  DateTime _sessionStart = DateTime.now();
 
   WorkoutType _selectedType = WorkoutType.strength;
   String? _customTypeName;
@@ -43,8 +47,11 @@ class WorkoutProProvider extends ChangeNotifier {
   List<String> _recentExercises = [];
   List<WorkoutSession> _storedSessions = [];
 
+  String? _draftRaw;
+
   bool _initialized = false;
   bool get initialized => _initialized;
+  bool get hasDraft => _draftRaw != null;
 
   WorkoutType get selectedType => _selectedType;
   String? get customTypeName => _customTypeName;
@@ -65,14 +72,23 @@ class WorkoutProProvider extends ChangeNotifier {
   String? get finalNotes => _finalNotes;
   List<String> get recentExercises => _recentExercises;
   List<WorkoutSession> get storedSessions => _storedSessions;
+  DateTime get sessionStart => _sessionStart;
 
   Future<void> initialize() async {
     _prefs ??= await SharedPreferences.getInstance();
     await _loadTemplates();
     await _loadRecentExercises();
     await _loadSessions();
+    await _loadDraft();
+    _ticker ??= Timer.periodic(const Duration(seconds: 1), (_) => notifyListeners());
     _initialized = true;
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _ticker?.cancel();
+    super.dispose();
   }
 
   void setType(WorkoutType type, {bool force = false}) {
@@ -87,46 +103,55 @@ class WorkoutProProvider extends ChangeNotifier {
       _exercises = [];
     }
     _selectedTemplate = null;
+    _persistDraft();
     notifyListeners();
   }
 
   void setCustomTypeName(String value) {
     _customTypeName = value;
+    _persistDraft();
     notifyListeners();
   }
 
   void setActivityName(String? value) {
     _activityName = value;
+    _persistDraft();
     notifyListeners();
   }
 
   void setDuration(int? value) {
     _durationMinutes = value;
+    _persistDraft();
     notifyListeners();
   }
 
   void setDistance(double? value) {
     _distanceKm = value;
+    _persistDraft();
     notifyListeners();
   }
 
   void setPace(String? value) {
     _pace = value;
+    _persistDraft();
     notifyListeners();
   }
 
   void setRpe(int value) {
     _rpe = value;
+    _persistDraft();
     notifyListeners();
   }
 
   void setFatigue(int value) {
     _fatigue = value;
+    _persistDraft();
     notifyListeners();
   }
 
   void setNotes(String? value) {
     _notes = value;
+    _persistDraft();
     notifyListeners();
   }
 
@@ -137,22 +162,26 @@ class WorkoutProProvider extends ChangeNotifier {
 
   void setClosingFatigue(int value) {
     _closingFatigue = value;
+    _persistDraft();
     notifyListeners();
   }
 
   void setClosingPerformance(int value) {
     _closingPerformance = value;
+    _persistDraft();
     notifyListeners();
   }
 
   void setFinalNotes(String? value) {
     _finalNotes = value;
+    _persistDraft();
     notifyListeners();
   }
 
   void addExercise(WorkoutExercise exercise) {
     _exercises = [..._exercises, exercise];
     _rememberExercise(exercise.name);
+    _persistDraft();
     notifyListeners();
   }
 
@@ -168,11 +197,13 @@ class WorkoutProProvider extends ChangeNotifier {
           .toList(),
     );
     _exercises = [..._exercises]..insert(index + 1, duplicated);
+    _persistDraft();
     notifyListeners();
   }
 
   void removeExercise(String exerciseId) {
     _exercises = _exercises.where((e) => e.id != exerciseId).toList();
+    _persistDraft();
     notifyListeners();
   }
 
@@ -180,6 +211,7 @@ class WorkoutProProvider extends ChangeNotifier {
     _exercises = _exercises
         .map((e) => e.id == exerciseId ? e.copyWith(notes: notes) : e)
         .toList();
+    _persistDraft();
     notifyListeners();
   }
 
@@ -191,6 +223,7 @@ class WorkoutProProvider extends ChangeNotifier {
       }
       return e;
     }).toList();
+    _persistDraft();
     notifyListeners();
   }
 
@@ -203,6 +236,7 @@ class WorkoutProProvider extends ChangeNotifier {
       }
       return e;
     }).toList();
+    _persistDraft();
     notifyListeners();
   }
 
@@ -216,6 +250,39 @@ class WorkoutProProvider extends ChangeNotifier {
       }
       return e;
     }).toList();
+    _persistDraft();
+    notifyListeners();
+  }
+
+  void bumpReps(String exerciseId, int delta) {
+    _exercises = _exercises.map((e) {
+      if (e.id != exerciseId) return e;
+      final updated = e.sets
+          .map(
+            (s) => s.copyWith(reps: (s.reps ?? 0) + delta),
+          )
+          .toList();
+      return e.copyWith(sets: updated);
+    }).toList();
+    _persistDraft();
+    notifyListeners();
+  }
+
+  void bumpWeight(String exerciseId, double delta) {
+    final target = _exercises.firstWhere((e) => e.id == exerciseId, orElse: () => WorkoutExercise(id: '', name: ''));
+    if (target.id.isEmpty || target.sets.every((s) => s.weight == null)) {
+      return;
+    }
+    _exercises = _exercises.map((e) {
+      if (e.id != exerciseId) return e;
+      final updated = e.sets
+          .map(
+            (s) => s.weight == null ? s : s.copyWith(weight: (s.weight ?? 0) + delta),
+          )
+          .toList();
+      return e.copyWith(sets: updated);
+    }).toList();
+    _persistDraft();
     notifyListeners();
   }
 
@@ -228,17 +295,20 @@ class WorkoutProProvider extends ChangeNotifier {
       }
       return e;
     }).toList();
+    _persistDraft();
     notifyListeners();
   }
 
   void selectTemplate(WorkoutTemplate template) {
     _selectedTemplate = template;
     _applyTemplate(template);
+    _persistDraft();
     notifyListeners();
   }
 
   void clearTemplate() {
     _selectedTemplate = null;
+    _persistDraft();
     notifyListeners();
   }
 
@@ -263,6 +333,7 @@ class WorkoutProProvider extends ChangeNotifier {
     );
     _userTemplates = [..._userTemplates, template];
     await _persistTemplates();
+    _persistDraft();
     notifyListeners();
   }
 
@@ -282,6 +353,8 @@ class WorkoutProProvider extends ChangeNotifier {
     _closingFatigue = 3;
     _closingPerformance = 3;
     _finalNotes = null;
+    await _clearDraft();
+    _sessionStart = DateTime.now();
     notifyListeners();
   }
 
@@ -323,6 +396,7 @@ class WorkoutProProvider extends ChangeNotifier {
 
     _storedSessions = [..._storedSessions, session];
     await _persistSessions();
+    await _clearDraft();
     return true;
   }
 
@@ -355,13 +429,61 @@ class WorkoutProProvider extends ChangeNotifier {
     return total / all.length;
   }
 
+  String? get topSetLabel {
+    final sets = _exercises.expand((e) => e.sets).where((s) => s.weight != null && s.reps != null);
+    if (sets.isEmpty) return null;
+    final top = sets.reduce((a, b) => (a.weight ?? 0) >= (b.weight ?? 0) ? a : b);
+    return '${top.weight?.toStringAsFixed(1)}kg x ${top.reps ?? 0}';
+  }
+
+  WorkoutSession? get lastSession => _storedSessions.isEmpty ? null : _storedSessions.last;
+
+  List<WorkoutTemplate> suggestedTemplates() {
+    final List<WorkoutTemplate> options = [];
+    WorkoutSession? last;
+    try {
+      last = _storedSessions.reversed
+          .firstWhere((s) => s.type == _selectedType && s.templateId != null);
+    } catch (_) {
+      last = _storedSessions.isNotEmpty ? _storedSessions.last : null;
+    }
+    if (last != null && last.templateId != null) {
+      final template = [
+        ..._standardTemplates,
+        ..._userTemplates,
+      ].firstWhere(
+        (t) => t.id == last.templateId,
+        orElse: () => _standardTemplates.firstWhere((t) => t.type == _selectedType, orElse: () => _standardTemplates.first),
+      );
+      options.add(template);
+    }
+
+    options.addAll(
+      _standardTemplates.where((t) => t.type == _selectedType).take(3),
+    );
+
+    final unique = <String>{};
+    return options.where((t) => unique.add(t.id)).toList();
+  }
+
   String getDurationLabel() {
     final minutes = _closingDuration ?? _durationMinutes;
-    if (minutes == null || minutes == 0) return '0m';
+    if (minutes == null || minutes == 0) return liveDurationLabel;
     if (minutes < 60) return '${minutes}m';
     final hours = minutes ~/ 60;
     final remainder = minutes % 60;
     return remainder == 0 ? '${hours}h' : '${hours}h ${remainder}m';
+  }
+
+  String get liveDurationLabel {
+    final diff = DateTime.now().difference(_sessionStart);
+    final minutes = diff.inMinutes;
+    final hours = diff.inHours;
+    if (hours > 0) {
+      final remainder = minutes - hours * 60;
+      return remainder == 0 ? '${hours}h' : '${hours}h ${remainder}m';
+    }
+    return '${minutes}m';
   }
 
   Future<void> _loadTemplates() async {
@@ -405,6 +527,83 @@ class WorkoutProProvider extends ChangeNotifier {
   Future<void> _persistSessions() async {
     final payload = jsonEncode(_storedSessions.map((e) => e.toJson()).toList());
     await _prefs?.setString(_sessionsKey, payload);
+  }
+
+  Future<void> _persistDraft() async {
+    final map = {
+      'type': _selectedType.name,
+      'customTypeName': _customTypeName,
+      'templateId': _selectedTemplate?.id,
+      'activityName': _activityName,
+      'durationMinutes': _durationMinutes,
+      'distanceKm': _distanceKm,
+      'pace': _pace,
+      'rpe': _rpe,
+      'fatigue': _fatigue,
+      'notes': _notes,
+      'closingDuration': _closingDuration,
+      'closingFatigue': _closingFatigue,
+      'closingPerformance': _closingPerformance,
+      'finalNotes': _finalNotes,
+      'sessionStart': _sessionStart.toIso8601String(),
+      'exercises': _exercises.map((e) => e.toJson()).toList(),
+    };
+    _draftRaw = jsonEncode(map);
+    await _prefs?.setString(_draftKey, _draftRaw!);
+  }
+
+  Future<void> _loadDraft() async {
+    _draftRaw = _prefs?.getString(_draftKey);
+    if (_draftRaw == null) return;
+    try {
+      final json = jsonDecode(_draftRaw!) as Map<String, dynamic>;
+      final typeName = json['type'] as String?;
+      if (typeName != null) {
+        _selectedType = WorkoutType.values.firstWhere(
+          (e) => e.name == typeName,
+          orElse: () => WorkoutType.strength,
+        );
+      }
+      _customTypeName = json['customTypeName'] as String?;
+      final templateId = json['templateId'] as String?;
+      if (templateId != null) {
+        _selectedTemplate = [
+          ..._standardTemplates,
+          ..._userTemplates,
+        ].firstWhere(
+          (element) => element.id == templateId,
+          orElse: () => _selectedTemplate ?? _standardTemplates.first,
+        );
+      }
+      _activityName = json['activityName'] as String?;
+      _durationMinutes = json['durationMinutes'] as int?;
+      _distanceKm = (json['distanceKm'] as num?)?.toDouble();
+      _pace = json['pace'] as String?;
+      _rpe = json['rpe'] as int? ?? 6;
+      _fatigue = json['fatigue'] as int? ?? 3;
+      _notes = json['notes'] as String?;
+      _closingDuration = json['closingDuration'] as int?;
+      _closingFatigue = json['closingFatigue'] as int? ?? 3;
+      _closingPerformance = json['closingPerformance'] as int? ?? 3;
+      _finalNotes = json['finalNotes'] as String?;
+      final startRaw = json['sessionStart'] as String?;
+      if (startRaw != null) {
+        _sessionStart = DateTime.tryParse(startRaw) ?? DateTime.now();
+      }
+      final exercisesJson = json['exercises'] as List<dynamic>?;
+      if (exercisesJson != null) {
+        _exercises = exercisesJson
+            .map((e) => WorkoutExercise.fromJson(e as Map<String, dynamic>))
+            .toList();
+      }
+    } catch (_) {
+      _draftRaw = null;
+    }
+  }
+
+  Future<void> _clearDraft() async {
+    _draftRaw = null;
+    await _prefs?.remove(_draftKey);
   }
 
   void _applyTemplate(WorkoutTemplate template) {

@@ -19,6 +19,19 @@ class WorkoutProScreen extends StatelessWidget {
       create: (_) => WorkoutProProvider()..initialize(),
       child: const _WorkoutProContent(),
     );
+}
+
+  Widget _metric(BuildContext context, String label, String value) {
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(value, style: const TextStyle(fontWeight: FontWeight.w700)),
+          const SizedBox(height: 4),
+          Text(label, style: Theme.of(context).textTheme.bodySmall),
+        ],
+      ),
+    );
   }
 }
 
@@ -57,6 +70,8 @@ class _WorkoutProContentState extends State<_WorkoutProContent> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    _SessionSummary(provider: provider),
+                    const SizedBox(height: 12),
                     Card(
                       child: Padding(
                         padding: const EdgeInsets.all(16),
@@ -93,6 +108,7 @@ class _WorkoutProContentState extends State<_WorkoutProContent> {
                       standardTemplates: provider.standardTemplates,
                       userTemplates: provider.userTemplates,
                       selected: provider.selectedTemplate,
+                      suggestions: provider.suggestedTemplates(),
                       onSelect: provider.selectTemplate,
                       onClear: provider.clearTemplate,
                     ),
@@ -109,8 +125,8 @@ class _WorkoutProContentState extends State<_WorkoutProContent> {
         exerciseCount: provider.selectedType == WorkoutType.strength ? provider.totalExercises : 0,
         setCount: provider.selectedType == WorkoutType.strength ? provider.totalSets : 0,
         durationLabel: provider.getDurationLabel(),
-        onSave: () => _saveSession(context, provider),
-        onFinish: () => _saveSession(context, provider),
+        onSave: () => _saveSession(context, provider, finalize: false),
+        onFinish: () => _saveSession(context, provider, finalize: true),
       ),
     );
   }
@@ -142,7 +158,11 @@ class _WorkoutProContentState extends State<_WorkoutProContent> {
     }
   }
 
-  Future<void> _saveSession(BuildContext context, WorkoutProProvider provider) async {
+  Future<void> _saveSession(
+    BuildContext context,
+    WorkoutProProvider provider, {
+    required bool finalize,
+  }) async {
     final ok = await provider.saveSession();
     if (!mounted) return;
     if (!ok) {
@@ -152,9 +172,11 @@ class _WorkoutProContentState extends State<_WorkoutProContent> {
       return;
     }
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Entrenamiento guardado')),
+      SnackBar(content: Text(finalize ? 'Entrenamiento finalizado' : 'Entrenamiento guardado')),
     );
-    await provider.reset();
+    if (finalize) {
+      await provider.reset();
+    }
   }
 
   Future<void> _handleMenuAction(
@@ -282,6 +304,62 @@ class _AppBarTitle extends StatelessWidget {
   }
 }
 
+class _SessionSummary extends StatelessWidget {
+  const _SessionSummary({required this.provider});
+
+  final WorkoutProProvider provider;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            Chip(
+              label: Text(_typeLabel()),
+              avatar: const Icon(Icons.fitness_center, size: 18),
+            ),
+            Chip(
+              label: Text(provider.selectedTemplate?.name ?? 'Sin plantilla'),
+              avatar: const Icon(Icons.view_module_outlined, size: 18),
+            ),
+            Text('Duración: ${provider.liveDurationLabel}', style: Theme.of(context).textTheme.bodyMedium),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surfaceVariant,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Text('Estado: Borrador'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _typeLabel() {
+    switch (provider.selectedType) {
+      case WorkoutType.strength:
+        return 'Fuerza';
+      case WorkoutType.cardio:
+        return 'Cardio';
+      case WorkoutType.functional:
+        return 'Funcional';
+      case WorkoutType.sport:
+        return 'Deporte';
+      case WorkoutType.custom:
+        return provider.customTypeName?.isNotEmpty == true
+            ? provider.customTypeName!
+            : 'Personalizado';
+    }
+  }
+}
+
 class StrengthSection extends StatelessWidget {
   const StrengthSection({required this.provider});
 
@@ -326,13 +404,39 @@ class StrengthSection extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Aún no agregaste ejercicios',
+                      'Agregá ejercicios para registrar series, reps y peso',
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
-                    const SizedBox(height: 6),
-                    FilledButton.tonal(
+                    const SizedBox(height: 10),
+                    FilledButton(
                       onPressed: () => _openAddExercise(context, standardExercises),
-                      child: const Text('Agregar primer ejercicio'),
+                      child: const Text('Agregar ejercicio'),
+                    ),
+                    const SizedBox(height: 12),
+                    const Text('Sugeridos'),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
+                      children: [
+                        'Press banca',
+                        'Dominadas',
+                        'Sentadilla',
+                        'Peso muerto',
+                      ]
+                          .map(
+                            (name) => ActionChip(
+                              label: Text(name),
+                              onPressed: () {
+                                final exercise = WorkoutExercise(
+                                  id: const Uuid().v4(),
+                                  name: name,
+                                );
+                                provider.addExercise(exercise);
+                              },
+                            ),
+                          )
+                          .toList(),
                     ),
                   ],
                 ),
@@ -348,6 +452,8 @@ class StrengthSection extends StatelessWidget {
                 },
                 onAddSet: () => provider.addSet(exercise.id),
                 onCopySet: () => provider.copyPreviousSet(exercise.id),
+                onBumpReps: () => provider.bumpReps(exercise.id, 1),
+                onBumpWeight: () => provider.bumpWeight(exercise.id, 2.5),
                 onUpdateSet: (set) => provider.updateSet(exercise.id, set.id, set),
                 onDeleteSet: (setId) => provider.removeSet(exercise.id, setId),
                 onUpdateNotes: (notes) => provider.updateExerciseNotes(exercise.id, notes),
@@ -459,7 +565,8 @@ class _MetricsRow extends StatelessWidget {
           children: [
             _metric(context, 'Series', provider.totalSets.toString()),
             _metric(context, 'Reps', provider.totalReps.toString()),
-            _metric(context, 'Volumen', provider.totalVolume.toStringAsFixed(1)),
+            _metric(context, 'Volumen (kg)', provider.totalVolume.toStringAsFixed(1)),
+            _metric(context, 'Top set', provider.topSetLabel ?? '--'),
             _metric(
               context,
               'RIR prom',
@@ -623,6 +730,21 @@ class _SimpleWorkoutSectionState extends State<SimpleWorkoutSection> {
               maxLines: 3,
               onChanged: widget.provider.setNotes,
             ),
+            const SizedBox(height: 12),
+            Card(
+              margin: EdgeInsets.zero,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  children: [
+                    _metric(context, 'Duración', '${widget.provider.durationMinutes ?? 0}m'),
+                    _metric(context, 'Distancia', widget.provider.distanceKm != null ? '${widget.provider.distanceKm} km' : '--'),
+                    _metric(context, 'Ritmo', widget.provider.pace ?? '--'),
+                    _metric(context, 'RPE', widget.provider.rpe.toString()),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -717,17 +839,22 @@ class _ClosingSectionState extends State<ClosingSection> {
   @override
   Widget build(BuildContext context) {
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Cierre de entrenamiento', style: TextStyle(fontWeight: FontWeight.w700)),
-            const SizedBox(height: 12),
-            Row(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: TextField(
+                const Text('Cierre de entrenamiento', style: TextStyle(fontWeight: FontWeight.w700)),
+                const SizedBox(height: 4),
+                Text(
+                  'Estos datos ayudan a interpretar tu carga y progreso.',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
                     controller: _durationController,
                     decoration: const InputDecoration(
                       labelText: 'Duración total (min)',
@@ -772,14 +899,23 @@ class _ClosingSectionState extends State<ClosingSection> {
               },
             ),
             const SizedBox(height: 12),
-            TextField(
-              controller: _notesController,
-              decoration: const InputDecoration(
-                labelText: 'Notas finales',
-                prefixIcon: Icon(Icons.note_alt_outlined),
+            Card(
+              margin: EdgeInsets.zero,
+              child: ExpansionTile(
+                title: const Text('Notas finales'),
+                childrenPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                children: [
+                  TextField(
+                    controller: _notesController,
+                    decoration: const InputDecoration(
+                      labelText: 'Notas finales',
+                      prefixIcon: Icon(Icons.note_alt_outlined),
+                    ),
+                    maxLines: 3,
+                    onChanged: widget.provider.setFinalNotes,
+                  ),
+                ],
               ),
-              maxLines: 3,
-              onChanged: widget.provider.setFinalNotes,
             ),
           ],
         ),

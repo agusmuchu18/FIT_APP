@@ -8,6 +8,7 @@ class TemplateSection extends StatelessWidget {
     required this.standardTemplates,
     required this.userTemplates,
     required this.selected,
+    required this.suggestions,
     required this.onSelect,
     required this.onClear,
   });
@@ -15,6 +16,7 @@ class TemplateSection extends StatelessWidget {
   final List<WorkoutTemplate> standardTemplates;
   final List<WorkoutTemplate> userTemplates;
   final WorkoutTemplate? selected;
+  final List<WorkoutTemplate> suggestions;
   final ValueChanged<WorkoutTemplate> onSelect;
   final VoidCallback onClear;
 
@@ -53,6 +55,25 @@ class TemplateSection extends StatelessWidget {
               )
             else
               _TemplateChip(template: selected!),
+            if (selected == null && suggestions.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              const Text('Sugeridas'),
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 8,
+                runSpacing: 6,
+                children: suggestions
+                    .take(3)
+                    .map(
+                      (t) => ActionChip(
+                        label: Text(t.name),
+                        avatar: const Icon(Icons.flash_on, size: 16),
+                        onPressed: () => onSelect(t),
+                      ),
+                    )
+                    .toList(),
+              ),
+            ],
           ],
         ),
       ),
