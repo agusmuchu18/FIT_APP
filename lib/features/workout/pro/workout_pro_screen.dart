@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../core/data/statistics_service.dart';
+import 'data/exercise_definition.dart';
+import 'data/exercise_library.dart';
 import 'models/workout_models.dart';
 import 'providers/workout_pro_provider.dart';
 import 'widgets/exercise_card.dart';
@@ -368,18 +370,6 @@ class StrengthSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final standardExercises = [
-      'Press banca',
-      'Sentadilla',
-      'Peso muerto',
-      'Remo con barra',
-      'Dominadas',
-      'Press militar',
-      'Hip thrust',
-      'Curl bíceps',
-      'Extensión tríceps',
-    ];
-
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -391,7 +381,7 @@ class StrengthSection extends StatelessWidget {
                 const Text('Ejercicios', style: TextStyle(fontWeight: FontWeight.w700)),
                 const Spacer(),
                 TextButton.icon(
-                  onPressed: () => _openAddExercise(context, standardExercises),
+                  onPressed: () => _openAddExercise(context, provider),
                   icon: const Icon(Icons.add),
                   label: const Text('Agregar ejercicio'),
                 ),
@@ -410,7 +400,7 @@ class StrengthSection extends StatelessWidget {
                     ),
                     const SizedBox(height: 10),
                     FilledButton(
-                      onPressed: () => _openAddExercise(context, standardExercises),
+                      onPressed: () => _openAddExercise(context, provider),
                       child: const Text('Agregar ejercicio'),
                     ),
                     const SizedBox(height: 12),
@@ -429,11 +419,15 @@ class StrengthSection extends StatelessWidget {
                             (name) => ActionChip(
                               label: Text(name),
                               onPressed: () {
-                                final exercise = WorkoutExercise(
-                                  id: const Uuid().v4(),
-                                  name: name,
-                                );
-                                provider.addExercise(exercise);
+                                final match = ExerciseLibraryIndex(exerciseLibrary)
+                                    .findByQuery(name);
+                                final exercise = match != null
+                                    ? provider.fromDefinition(match)
+                                    : WorkoutExercise(
+                                        id: const Uuid().v4(),
+                                        name: name,
+                                      );
+                                provider.addExerciseWithDefaults(exercise);
                               },
                             ),
                           )
@@ -468,275 +462,232 @@ class StrengthSection extends StatelessWidget {
     );
   }
 
+
   Future<void> _openAddExercise(
     BuildContext context,
-    List<String> standardExercises,
+    WorkoutProProvider provider,
   ) async {
-    final controller = TextEditingController();
-    final chosen = await showModalBottomSheet<String>(
+    final chosen = await showModalBottomSheet<WorkoutExercise>(
       context: context,
       showDragHandle: true,
-      builder: (context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Agregar ejercicio', style: TextStyle(fontWeight: FontWeight.w700)),
-              const SizedBox(height: 8),
-              TextField(
-                controller: controller,
-                decoration: const InputDecoration(
-                  labelText: 'Buscar o crear',
-                  prefixIcon: Icon(Icons.search),
-                ),
-              ),
-              const SizedBox(height: 12),
-              const Text('Estándar'),
-              ...standardExercises.map(
-                (name) => ListTile(
-                  title: Text(name),
-                  onTap: () => Navigator.of(context).pop(name),
-                ),
-              ),
-              if (provider.recentExercises.isNotEmpty) ...[
-                const Divider(),
-                const Text('Usados recientemente'),
-                ...provider.recentExercises.map(
-                  (name) => ListTile(
-                    title: Text(name),
-                    onTap: () => Navigator.of(context).pop(name),
-                  ),
-                ),
-              ],
-              const SizedBox(height: 12),
-              FilledButton(
-                onPressed: () => Navigator.of(context).pop(controller.text),
-                child: const Text('Crear ejercicio nuevo'),
-              ),
-            ],
-          ),
-        ),
-      ),
+      isScrollControlled: true,
+      builder: (context) => _ExerciseSelector(provider: provider),
     );
 
-    if (chosen != null && chosen.isNotEmpty) {
-      final newExercise = WorkoutExercise(
-        id: const Uuid().v4(),
-        name: chosen,
-      );
-      provider.addExercise(newExercise);
-    }
-  }
+    if (chosen == null) return;
 
-  Future<bool> _confirmDelete(BuildContext context) async {
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Eliminar ejercicio'),
-        content: const Text('¿Seguro que deseas eliminar este ejercicio?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Eliminar'),
-          ),
-        ],
-      ),
-    );
-    return result ?? false;
+    provider.addExerciseWithDefaults(chosen);
   }
 }
 
-class _MetricsRow extends StatelessWidget {
-  const _MetricsRow({required this.provider});
+class _ExerciseSelector extends StatefulWidget {
+  const _ExerciseSelector({required this.provider});
 
   final WorkoutProProvider provider;
 
   @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          children: [
-            _metric(context, 'Series', provider.totalSets.toString()),
-            _metric(context, 'Reps', provider.totalReps.toString()),
-            _metric(context, 'Volumen (kg)', provider.totalVolume.toStringAsFixed(1)),
-            _metric(context, 'Top set', provider.topSetLabel ?? '--'),
-            _metric(
-              context,
-              'RIR prom',
-              provider.averageRir != null ? provider.averageRir!.toStringAsFixed(1) : '--',
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  State<_ExerciseSelector> createState() => _ExerciseSelectorState();
 }
 
-class SimpleWorkoutSection extends StatefulWidget {
-  const SimpleWorkoutSection({required this.provider, required this.title});
-
-  final WorkoutProProvider provider;
-  final String title;
-
-  @override
-  State<SimpleWorkoutSection> createState() => _SimpleWorkoutSectionState();
-}
-
-class _SimpleWorkoutSectionState extends State<SimpleWorkoutSection> {
-  late final TextEditingController _activityController;
-  late final TextEditingController _durationController;
-  late final TextEditingController _distanceController;
-  late final TextEditingController _paceController;
-  late final TextEditingController _notesController;
-
-  @override
-  void initState() {
-    super.initState();
-    _activityController = TextEditingController(text: widget.provider.activityName ?? '');
-    _durationController = TextEditingController(
-      text: widget.provider.durationMinutes?.toString() ?? '',
-    );
-    _distanceController = TextEditingController(
-      text: widget.provider.distanceKm?.toString() ?? '',
-    );
-    _paceController = TextEditingController(text: widget.provider.pace ?? '');
-    _notesController = TextEditingController(text: widget.provider.notes ?? '');
-  }
-
-  @override
-  void didUpdateWidget(covariant SimpleWorkoutSection oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.provider.activityName != _activityController.text) {
-      _activityController.text = widget.provider.activityName ?? '';
-    }
-    final durationText = widget.provider.durationMinutes?.toString() ?? '';
-    if (_durationController.text != durationText) {
-      _durationController.text = durationText;
-    }
-    final distanceText = widget.provider.distanceKm?.toString() ?? '';
-    if (_distanceController.text != distanceText) {
-      _distanceController.text = distanceText;
-    }
-    if (widget.provider.pace != _paceController.text) {
-      _paceController.text = widget.provider.pace ?? '';
-    }
-    if (widget.provider.notes != _notesController.text) {
-      _notesController.text = widget.provider.notes ?? '';
-    }
-  }
+class _ExerciseSelectorState extends State<_ExerciseSelector> {
+  final TextEditingController _queryController = TextEditingController();
+  String? muscleFilter;
+  String? equipmentFilter;
+  String? patternFilter;
 
   @override
   void dispose() {
-    _activityController.dispose();
-    _durationController.dispose();
-    _distanceController.dispose();
-    _paceController.dispose();
-    _notesController.dispose();
+    _queryController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Card(
+    final index = ExerciseLibraryIndex(exerciseLibrary);
+    final topSuggestions = exerciseLibrary.take(8).toList();
+    final recent = widget.provider.recentExercises
+        .map(index.findByQuery)
+        .whereType<ExerciseDefinition>()
+        .toList();
+    final mostUsed = widget.provider.mostUsedExercises
+        .map(index.findByQuery)
+        .whereType<ExerciseDefinition>()
+        .toList();
+
+    final filtered = _filtered(index);
+
+    return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.only(
+          left: 16,
+          right: 16,
+          top: 16,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 12,
+        ),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(widget.title, style: const TextStyle(fontWeight: FontWeight.w700)),
+            const Text('Agregar ejercicio', style: TextStyle(fontWeight: FontWeight.w700)),
             const SizedBox(height: 12),
             TextField(
-              controller: _activityController,
+              controller: _queryController,
               decoration: const InputDecoration(
-                labelText: 'Nombre de la actividad',
-                prefixIcon: Icon(Icons.directions_run),
+                labelText: 'Buscar o crear',
+                prefixIcon: Icon(Icons.search),
               ),
-              onChanged: widget.provider.setActivityName,
+              onChanged: (_) => setState(() {}),
             ),
             const SizedBox(height: 12),
-            Row(
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
               children: [
-                Expanded(
-                  child: TextField(
-                    controller: _durationController,
-                    decoration: const InputDecoration(
-                      labelText: 'Duración (min)',
-                      prefixIcon: Icon(Icons.timer),
-                    ),
-                    keyboardType: TextInputType.number,
-                    onChanged: (v) => widget.provider.setDuration(int.tryParse(v)),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: TextField(
-                    controller: _distanceController,
-                    decoration: const InputDecoration(
-                      labelText: 'Distancia (km)',
-                      prefixIcon: Icon(Icons.straighten),
-                    ),
-                    keyboardType: TextInputType.number,
-                    onChanged: (v) => widget.provider.setDistance(double.tryParse(v)),
-                  ),
-                ),
+                _chip('Pecho', muscleFilter == 'pecho', () => _toggleMuscle('pecho')),
+                _chip('Espalda', muscleFilter == 'espalda', () => _toggleMuscle('espalda')),
+                _chip('Piernas', muscleFilter == 'piernas', () => _toggleMuscle('piernas')),
+                _chip('Hombro', muscleFilter == 'hombros', () => _toggleMuscle('hombros')),
+                _chip('Bíceps', muscleFilter == 'bíceps', () => _toggleMuscle('bíceps')),
+                _chip('Tríceps', muscleFilter == 'tríceps', () => _toggleMuscle('tríceps')),
+                _chip('Core', muscleFilter == 'core', () => _toggleMuscle('core')),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              children: [
+                _chip('Bodyweight', equipmentFilter == 'bodyweight', () => _toggleEquipment('bodyweight')),
+                _chip('Barbell', equipmentFilter == 'barbell', () => _toggleEquipment('barbell')),
+                _chip('Dumbbell', equipmentFilter == 'dumbbell', () => _toggleEquipment('dumbbell')),
+                _chip('Machine', equipmentFilter == 'machine', () => _toggleEquipment('machine')),
+                _chip('Cable', equipmentFilter == 'cable', () => _toggleEquipment('cable')),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              children: [
+                _chip('Push', patternFilter == 'push', () => _togglePattern('push')),
+                _chip('Pull', patternFilter == 'pull', () => _togglePattern('pull')),
+                _chip('Squat', patternFilter == 'squat', () => _togglePattern('squat')),
+                _chip('Hinge', patternFilter == 'hinge', () => _togglePattern('hinge')),
+                _chip('Core', patternFilter == 'core', () => _togglePattern('core')),
               ],
             ),
             const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _paceController,
-                    decoration: const InputDecoration(
-                      labelText: 'Ritmo / velocidad',
-                      prefixIcon: Icon(Icons.speed),
-                    ),
-                    onChanged: widget.provider.setPace,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _IntensityRow(provider: widget.provider),
-                ),
-              ],
+            if (recent.isNotEmpty) ...[
+              const Text('Recientes'),
+              _horizontalList(recent),
+              const SizedBox(height: 12),
+            ],
+            if (mostUsed.isNotEmpty) ...[
+              const Text('Más usados'),
+              _horizontalList(mostUsed),
+              const SizedBox(height: 12),
+            ],
+            const Text('Sugeridos'),
+            _horizontalList(topSuggestions),
+            const SizedBox(height: 12),
+            Text('Resultados (${filtered.length})', style: Theme.of(context).textTheme.titleSmall),
+            const SizedBox(height: 6),
+            SizedBox(
+              height: 260,
+              child: ListView.builder(
+                itemCount: filtered.length,
+                itemBuilder: (context, index) {
+                  final exercise = filtered[index];
+                  return ListTile(
+                    title: Text(exercise.name),
+                    subtitle: Text(exercise.primaryMuscles.join(', ')),
+                    onTap: () => _selectDefinition(exercise),
+                  );
+                },
+              ),
             ),
             const SizedBox(height: 12),
-            TextField(
-              controller: _notesController,
-              decoration: const InputDecoration(
-                labelText: 'Notas',
-                prefixIcon: Icon(Icons.notes_outlined),
-              ),
-              maxLines: 3,
-              onChanged: widget.provider.setNotes,
-            ),
-            const SizedBox(height: 12),
-            Card(
-              margin: EdgeInsets.zero,
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Row(
-                  children: [
-                    _metric(context, 'Duración', '${widget.provider.durationMinutes ?? 0}m'),
-                    _metric(context, 'Distancia', widget.provider.distanceKm != null ? '${widget.provider.distanceKm} km' : '--'),
-                    _metric(context, 'Ritmo', widget.provider.pace ?? '--'),
-                    _metric(context, 'RPE', widget.provider.rpe.toString()),
-                  ],
-                ),
-              ),
+            FilledButton(
+              onPressed: () {
+                final customName = _queryController.text.trim();
+                if (customName.isEmpty) return;
+                final exercise = WorkoutExercise(
+                  id: const Uuid().v4(),
+                  name: customName,
+                  sets: [],
+                );
+                Navigator.of(context).pop(exercise);
+              },
+              child: const Text('Crear ejercicio nuevo'),
             ),
           ],
         ),
       ),
     );
+  }
+
+  void _toggleMuscle(String value) {
+    setState(() {
+      muscleFilter = muscleFilter == value ? null : value;
+    });
+  }
+
+  void _toggleEquipment(String value) {
+    setState(() {
+      equipmentFilter = equipmentFilter == value ? null : value;
+    });
+  }
+
+  void _togglePattern(String value) {
+    setState(() {
+      patternFilter = patternFilter == value ? null : value;
+    });
+  }
+
+  List<ExerciseDefinition> _filtered(ExerciseLibraryIndex index) {
+    var results = index.search(_queryController.text);
+    if (muscleFilter != null) {
+      results = results
+          .where((e) => e.primaryMuscles
+              .map((m) => m.toLowerCase())
+              .contains(muscleFilter))
+          .toList();
+    }
+    if (equipmentFilter != null) {
+      results = results.where((e) => e.equipment == equipmentFilter).toList();
+    }
+    if (patternFilter != null) {
+      results = results.where((e) => e.movementPattern == patternFilter).toList();
+    }
+    return results;
+  }
+
+  Widget _chip(String label, bool selected, VoidCallback onSelected) {
+    return FilterChip(label: Text(label), selected: selected, onSelected: (_) => onSelected());
+  }
+
+  Widget _horizontalList(List<ExerciseDefinition> exercises) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: exercises
+            .map(
+              (e) => Padding(
+                padding: const EdgeInsets.only(right: 8, top: 6),
+                child: ActionChip(
+                  label: Text(e.name),
+                  onPressed: () => _selectDefinition(e),
+                ),
+              ),
+            )
+            .toList(),
+      ),
+    );
+  }
+
+  void _selectDefinition(ExerciseDefinition exercise) {
+    final prepared = widget.provider.fromDefinition(exercise);
+    Navigator.of(context).pop(prepared);
   }
 }
 

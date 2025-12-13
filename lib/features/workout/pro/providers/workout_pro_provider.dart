@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
+import '../data/exercise_definition.dart';
 import '../models/workout_models.dart';
 
 class WorkoutProProvider extends ChangeNotifier {
@@ -71,6 +72,17 @@ class WorkoutProProvider extends ChangeNotifier {
   int get closingPerformance => _closingPerformance;
   String? get finalNotes => _finalNotes;
   List<String> get recentExercises => _recentExercises;
+  List<String> get mostUsedExercises {
+    final counter = <String, int>{};
+    for (final session in _storedSessions) {
+      for (final exercise in session.exercises) {
+        counter.update(exercise.name, (value) => value + 1, ifAbsent: () => 1);
+      }
+    }
+    final sorted = counter.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    return sorted.take(10).map((e) => e.key).toList();
+  }
   List<WorkoutSession> get storedSessions => _storedSessions;
   DateTime get sessionStart => _sessionStart;
 
@@ -183,6 +195,26 @@ class WorkoutProProvider extends ChangeNotifier {
     _rememberExercise(exercise.name);
     _persistDraft();
     notifyListeners();
+  }
+
+  void addExerciseWithDefaults(WorkoutExercise exercise) {
+    final prepared = exercise.sets.isEmpty
+        ? exercise.copyWith(
+            sets: [SetEntry(id: _uuid.v4())],
+          )
+        : exercise;
+    addExercise(prepared);
+  }
+
+  WorkoutExercise fromDefinition(ExerciseDefinition definition) {
+    return WorkoutExercise(
+      id: _uuid.v4(),
+      name: definition.name,
+      muscleGroup:
+          definition.primaryMuscles.isNotEmpty ? definition.primaryMuscles.first : null,
+      measurement: definition.defaultMeasurement,
+      sets: [],
+    );
   }
 
   void duplicateExercise(String exerciseId) {
