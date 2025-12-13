@@ -37,6 +37,8 @@ class ExerciseDefinition {
   final bool isUnilateral;
   final bool isTimed;
 
+  bool get isBodyweightEffective => loadType == LoadType.bodyweight_effective;
+
   bool get needsUserWeight =>
       loadType == LoadType.bodyweight_effective ||
       loadType == LoadType.bodyweight_plus_external ||
@@ -111,9 +113,19 @@ class ExerciseLibraryIndex {
         .toList();
   }
 
-  List<ExerciseDefinition> filterByEquipment(String equipment) =>
-      exercises.where((e) => e.equipment == equipment).toList();
+  List<ExerciseDefinition> filterByEquipment(String equipment) {
+    final normalizedEquipment = _normalize(equipment);
 
-  List<ExerciseDefinition> filterByPattern(String pattern) =>
-      exercises.where((e) => e.movementPattern == pattern).toList();
+    return exercises
+        .where((e) => _normalize(e.equipment) == normalizedEquipment)
+        .toList();
+  }
+
+  List<ExerciseDefinition> filterByPattern(String pattern) {
+    final normalizedPattern = _normalize(pattern);
+
+    return exercises
+        .where((e) => _normalize(e.movementPattern) == normalizedPattern)
+        .toList();
+  }
 }
