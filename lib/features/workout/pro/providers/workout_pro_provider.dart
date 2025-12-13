@@ -448,11 +448,12 @@ class WorkoutProProvider extends ChangeNotifier {
       last = _storedSessions.isNotEmpty ? _storedSessions.last : null;
     }
     if (last != null && last.templateId != null) {
+      final lastTemplateId = last.templateId!;
       final template = [
         ..._standardTemplates,
         ..._userTemplates,
       ].firstWhere(
-        (t) => t.id == last.templateId,
+        (t) => t.id == lastTemplateId,
         orElse: () => _standardTemplates.firstWhere((t) => t.type == _selectedType, orElse: () => _standardTemplates.first),
       );
       options.add(template);

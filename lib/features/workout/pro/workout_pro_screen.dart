@@ -10,6 +10,19 @@ import 'widgets/template_section.dart';
 import 'widgets/workout_bottom_bar.dart';
 import 'widgets/workout_type_selector.dart';
 
+Widget _metric(BuildContext context, String label, String value) {
+  return Expanded(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(value, style: const TextStyle(fontWeight: FontWeight.w700)),
+        const SizedBox(height: 4),
+        Text(label, style: Theme.of(context).textTheme.bodySmall),
+      ],
+    ),
+  );
+}
+
 class WorkoutProScreen extends StatelessWidget {
   const WorkoutProScreen({super.key});
 
@@ -18,19 +31,6 @@ class WorkoutProScreen extends StatelessWidget {
     return ChangeNotifierProvider(
       create: (_) => WorkoutProProvider()..initialize(),
       child: const _WorkoutProContent(),
-    );
-}
-
-  Widget _metric(BuildContext context, String label, String value) {
-    return Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w700)),
-          const SizedBox(height: 4),
-          Text(label, style: Theme.of(context).textTheme.bodySmall),
-        ],
-      ),
     );
   }
 }
@@ -203,6 +203,7 @@ class _WorkoutProContentState extends State<_WorkoutProContent> {
             standardTemplates: provider.standardTemplates,
             userTemplates: provider.userTemplates,
             selected: provider.selectedTemplate,
+            suggestions: provider.suggestedTemplates(),
             onSelect: (template) {
               provider.selectTemplate(template);
               Navigator.of(context).pop();
@@ -574,19 +575,6 @@ class _MetricsRow extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _metric(BuildContext context, String label, String value) {
-    return Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w700)),
-          const SizedBox(height: 4),
-          Text(label, style: Theme.of(context).textTheme.bodySmall),
-        ],
       ),
     );
   }
