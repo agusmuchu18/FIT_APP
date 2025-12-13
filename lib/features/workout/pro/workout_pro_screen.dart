@@ -45,6 +45,14 @@ class _WorkoutProContent extends StatefulWidget {
 }
 
 class _WorkoutProContentState extends State<_WorkoutProContent> {
+  late final ExerciseLibraryIndex _exerciseIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _exerciseIndex = ExerciseLibraryIndex(exerciseLibrary);
+  }
+
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<WorkoutProProvider>();
@@ -553,16 +561,15 @@ class StrengthSection extends StatelessWidget {
                         'Peso muerto',
                       ]
                           .map(
-                            (name) => ActionChip(
-                              label: Text(name),
-                              onPressed: () {
-                                final match = ExerciseLibraryIndex(exerciseLibrary)
-                                    .findByQuery(name);
-                                final exercise = match != null
-                                    ? provider.fromDefinition(match)
-                                    : WorkoutExercise(
-                                        id: const Uuid().v4(),
-                                        name: name,
+                          (name) => ActionChip(
+                            label: Text(name),
+                            onPressed: () {
+                              final match = _exerciseIndex.findByQuery(name);
+                              final exercise = match != null
+                                  ? provider.fromDefinition(match)
+                                  : WorkoutExercise(
+                                      id: const Uuid().v4(),
+                                      name: name,
                                       );
                                 provider.addExerciseWithDefaults(exercise);
                               },
@@ -574,22 +581,26 @@ class StrengthSection extends StatelessWidget {
                 ),
               ),
             ...provider.exercises.map(
-              (exercise) => ExerciseCard(
-                key: ValueKey(exercise.id),
-                exercise: exercise,
-                onDuplicate: () => provider.duplicateExercise(exercise.id),
-                onDelete: () async {
-                  final confirm = await _confirmDelete(context);
-                  if (confirm) provider.removeExercise(exercise.id);
-                },
-                onAddSet: () => provider.addSet(exercise.id),
-                onCopySet: () => provider.copyPreviousSet(exercise.id),
-                onBumpReps: () => provider.bumpReps(exercise.id, 1),
-                onBumpWeight: () => provider.bumpWeight(exercise.id, 2.5),
-                onUpdateSet: (set) => provider.updateSet(exercise.id, set.id, set),
-                onDeleteSet: (setId) => provider.removeSet(exercise.id, setId),
-                onUpdateNotes: (notes) => provider.updateExerciseNotes(exercise.id, notes),
-              ),
+              (exercise) {
+                final definition = _exerciseIndex.findByQuery(exercise.name);
+                return ExerciseCard(
+                  key: ValueKey(exercise.id),
+                  exercise: exercise,
+                  definition: definition,
+                  onDuplicate: () => provider.duplicateExercise(exercise.id),
+                  onDelete: () async {
+                    final confirm = await _confirmDelete(context);
+                    if (confirm) provider.removeExercise(exercise.id);
+                  },
+                  onAddSet: () => provider.addSet(exercise.id),
+                  onCopySet: () => provider.copyPreviousSet(exercise.id),
+                  onBumpReps: () => provider.bumpReps(exercise.id, 1),
+                  onBumpWeight: () => provider.bumpWeight(exercise.id, 2.5),
+                  onUpdateSet: (set) => provider.updateSet(exercise.id, set.id, set),
+                  onDeleteSet: (setId) => provider.removeSet(exercise.id, setId),
+                  onUpdateNotes: (notes) => provider.updateExerciseNotes(exercise.id, notes),
+                );
+              },
             ),
             const SizedBox(height: 12),
             _MetricsRow(provider: provider),

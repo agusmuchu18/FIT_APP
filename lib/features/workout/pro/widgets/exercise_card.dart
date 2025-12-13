@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
+import '../data/exercise_definition.dart';
 import '../models/workout_models.dart';
 
 class ExerciseCard extends StatefulWidget {
   const ExerciseCard({
     super.key,
     required this.exercise,
+    this.definition,
     required this.onDuplicate,
     required this.onDelete,
     required this.onAddSet,
@@ -18,6 +20,7 @@ class ExerciseCard extends StatefulWidget {
   });
 
   final WorkoutExercise exercise;
+  final ExerciseDefinition? definition;
   final VoidCallback onDuplicate;
   final VoidCallback onDelete;
   final VoidCallback onAddSet;
@@ -97,11 +100,11 @@ class _ExerciseCardState extends State<ExerciseCard> {
                         label: const Text('+1 rep a todas'),
                       ),
                       if (weightAvailable)
-                      OutlinedButton.icon(
-                        onPressed: widget.onBumpWeight,
-                        icon: const Icon(Icons.scale),
-                        label: const Text('+2.5 kg a todas'),
-                      ),
+                        OutlinedButton.icon(
+                          onPressed: widget.onBumpWeight,
+                          icon: const Icon(Icons.scale),
+                          label: const Text('+2.5 kg a todas'),
+                        ),
                       PopupMenuButton<String>(
                         onSelected: (value) {
                           if (value == 'duplicate') {
@@ -144,6 +147,7 @@ class _ExerciseCardState extends State<ExerciseCard> {
                                         widget.exercise.sets[i].restSeconds) ==
                                     null &&
                                 i == widget.exercise.sets.length - 1,
+                            definition: widget.definition,
                             onChanged: (updated) => widget.onUpdateSet(updated),
                             onDelete: () => widget.onDeleteSet(widget.exercise.sets[i].id),
                           ),
@@ -176,6 +180,7 @@ class _SetRow extends StatefulWidget {
     required this.set,
     required this.index,
     required this.autofocus,
+    required this.definition,
     required this.onChanged,
     required this.onDelete,
   });
@@ -183,6 +188,7 @@ class _SetRow extends StatefulWidget {
   final SetEntry set;
   final int index;
   final bool autofocus;
+  final ExerciseDefinition? definition;
   final ValueChanged<SetEntry> onChanged;
   final VoidCallback onDelete;
 
@@ -210,7 +216,10 @@ class _SetRowState extends State<_SetRow> {
     _bodyweightController =
         TextEditingController(text: widget.set.bodyweightKg?.toString() ?? '');
     _bodyweightFactorController =
-        TextEditingController(text: widget.set.bodyweightFactor?.toString() ?? '');
+        TextEditingController(
+            text: (widget.set.bodyweightFactor ?? widget.definition?.bodyweightFactor)
+                    ?.toString() ??
+                '');
     _durationController = TextEditingController(text: widget.set.durationSeconds?.toString() ?? '');
     _restController = TextEditingController(text: widget.set.restSeconds?.toString() ?? '');
   }
@@ -234,7 +243,8 @@ class _SetRowState extends State<_SetRow> {
     if (_bodyweightController.text != bodyweightText) {
       _bodyweightController.text = bodyweightText;
     }
-    final bodyweightFactorText = widget.set.bodyweightFactor?.toString() ?? '';
+    final bodyweightFactorText =
+        (widget.set.bodyweightFactor ?? widget.definition?.bodyweightFactor)?.toString() ?? '';
     if (_bodyweightFactorController.text != bodyweightFactorText) {
       _bodyweightFactorController.text = bodyweightFactorText;
     }
@@ -262,6 +272,9 @@ class _SetRowState extends State<_SetRow> {
 
   @override
   Widget build(BuildContext context) {
+    final loadType = widget.definition?.loadType;
+    final loadFields = _buildLoadFields(loadType);
+
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 6),
       child: Padding(
@@ -291,37 +304,7 @@ class _SetRowState extends State<_SetRow> {
                     widget.set.copyWith(reps: int.tryParse(value)),
                   ),
                 ),
-                _numberField(
-                  controller: _externalLoadController,
-                  label: 'Carga ext.',
-                  suffix: 'kg',
-                  onChanged: (value) => widget.onChanged(
-                    widget.set.copyWith(externalLoadKg: double.tryParse(value)),
-                  ),
-                ),
-                _numberField(
-                  controller: _assistanceController,
-                  label: 'Asist.',
-                  suffix: 'kg',
-                  onChanged: (value) => widget.onChanged(
-                    widget.set.copyWith(assistanceKg: double.tryParse(value)),
-                  ),
-                ),
-                _numberField(
-                  controller: _bodyweightController,
-                  label: 'Peso corporal',
-                  suffix: 'kg',
-                  onChanged: (value) => widget.onChanged(
-                    widget.set.copyWith(bodyweightKg: double.tryParse(value)),
-                  ),
-                ),
-                _numberField(
-                  controller: _bodyweightFactorController,
-                  label: 'Factor BW',
-                  onChanged: (value) => widget.onChanged(
-                    widget.set.copyWith(bodyweightFactor: double.tryParse(value)),
-                  ),
-                ),
+                ...loadFields,
                 _numberField(
                   controller: _durationController,
                   label: 'Tiempo',
@@ -368,7 +351,7 @@ class _SetRowState extends State<_SetRow> {
       width: 90,
       child: TextField(
         controller: controller,
-        keyboardType: TextInputType.number,
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
         decoration: InputDecoration(
           labelText: label,
           suffixText: suffix,
@@ -377,5 +360,129 @@ class _SetRowState extends State<_SetRow> {
         onChanged: onChanged,
       ),
     );
+  }
+
+  List<Widget> _buildLoadFields(LoadType? loadType) {
+    final type = loadType ?? LoadType.external;
+    final effectiveLoad = _effectiveLoad(type);
+
+    switch (type) {
+      case LoadType.external:
+        return [
+          _numberField(
+            controller: _externalLoadController,
+            label: 'Peso',
+            suffix: 'kg',
+            onChanged: (value) => widget.onChanged(
+              widget.set.copyWith(externalLoadKg: _parseDouble(value)),
+            ),
+          ),
+        ];
+      case LoadType.bodyweight_effective:
+        return [
+          _readonlyField(
+            controller: _bodyweightController,
+            label: 'BW',
+            suffix: 'kg',
+          ),
+          _numberField(
+            controller: _bodyweightFactorController,
+            label: 'Factor BW',
+            onChanged: (value) => widget.onChanged(
+              widget.set.copyWith(bodyweightFactor: _parseDouble(value)),
+            ),
+          ),
+          _effectiveLoadField(effectiveLoad),
+        ];
+      case LoadType.bodyweight_plus_external:
+        return [
+          _readonlyField(
+            controller: _bodyweightController,
+            label: 'BW',
+            suffix: 'kg',
+          ),
+          _numberField(
+            controller: _externalLoadController,
+            label: 'Lastre',
+            suffix: 'kg',
+            onChanged: (value) => widget.onChanged(
+              widget.set.copyWith(externalLoadKg: _parseDouble(value)),
+            ),
+          ),
+          _effectiveLoadField(effectiveLoad),
+        ];
+      case LoadType.assisted_bodyweight:
+        return [
+          _readonlyField(
+            controller: _bodyweightController,
+            label: 'BW',
+            suffix: 'kg',
+          ),
+          _numberField(
+            controller: _assistanceController,
+            label: 'Asistencia',
+            suffix: 'kg',
+            onChanged: (value) => widget.onChanged(
+              widget.set.copyWith(assistanceKg: _parseDouble(value)),
+            ),
+          ),
+          _effectiveLoadField(effectiveLoad),
+        ];
+    }
+  }
+
+  Widget _readonlyField({
+    required TextEditingController controller,
+    required String label,
+    String? suffix,
+  }) {
+    return SizedBox(
+      width: 110,
+      child: TextField(
+        controller: controller,
+        enabled: false,
+        decoration: InputDecoration(
+          labelText: label,
+          suffixText: suffix,
+        ),
+      ),
+    );
+  }
+
+  Widget _effectiveLoadField(double? value) {
+    final display = value == null ? '—' : '${value.toStringAsFixed(1)} kg';
+    return SizedBox(
+      width: 120,
+      child: InputDecorator(
+        decoration: const InputDecoration(labelText: 'Carga efectiva'),
+        child: Text(display),
+      ),
+    );
+  }
+
+  double? _effectiveLoad(LoadType loadType) {
+    final bw = widget.set.bodyweightKg;
+    final ext = widget.set.externalLoadKg;
+    final assistance = widget.set.assistanceKg;
+    final factor = widget.set.bodyweightFactor ?? widget.definition?.bodyweightFactor;
+
+    switch (loadType) {
+      case LoadType.external:
+        return ext;
+      case LoadType.bodyweight_effective:
+        if (bw == null) return null;
+        return bw * (factor ?? 1);
+      case LoadType.bodyweight_plus_external:
+        if (bw == null && ext == null) return null;
+        return (bw ?? 0) + (ext ?? 0);
+      case LoadType.assisted_bodyweight:
+        if (bw == null && assistance == null) return null;
+        return (bw ?? 0) - (assistance ?? 0);
+    }
+  }
+
+  double? _parseDouble(String value) {
+    if (value.isEmpty) return null;
+    return double.tryParse(value.replaceAll(',', '.'));
   }
 }
