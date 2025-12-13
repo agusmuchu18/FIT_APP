@@ -11,4 +11,5 @@ class AppColors {
   static const Color textPrimary = Colors.white;
   static const Color textSecondary = Color(0xFFE4E8EE);
   static const Color textMuted = Color(0xFF9BA7B4);
+  static const Color border = Color(0xFF2F3B4C);
 }
