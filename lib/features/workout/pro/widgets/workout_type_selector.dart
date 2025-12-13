@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/workout_models.dart';
 
-class WorkoutTypeSelector extends StatelessWidget {
+class WorkoutTypeSelector extends StatefulWidget {
   const WorkoutTypeSelector({
     super.key,
     required this.selected,
@@ -15,6 +15,33 @@ class WorkoutTypeSelector extends StatelessWidget {
   final String? customName;
   final ValueChanged<WorkoutType> onSelected;
   final ValueChanged<String> onCustomNameChanged;
+
+  @override
+  State<WorkoutTypeSelector> createState() => _WorkoutTypeSelectorState();
+}
+
+class _WorkoutTypeSelectorState extends State<WorkoutTypeSelector> {
+  late final TextEditingController _customController;
+
+  @override
+  void initState() {
+    super.initState();
+    _customController = TextEditingController(text: widget.customName ?? '');
+  }
+
+  @override
+  void didUpdateWidget(covariant WorkoutTypeSelector oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.customName != _customController.text) {
+      _customController.text = widget.customName ?? '';
+    }
+  }
+
+  @override
+  void dispose() {
+    _customController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,19 +60,16 @@ class WorkoutTypeSelector extends StatelessWidget {
           runSpacing: 8,
           children: chips,
         ),
-        if (selected == WorkoutType.custom)
+        if (widget.selected == WorkoutType.custom)
           Padding(
             padding: const EdgeInsets.only(top: 12),
             child: TextField(
+              controller: _customController,
               decoration: const InputDecoration(
                 labelText: 'Nombre personalizado',
                 prefixIcon: Icon(Icons.edit_outlined),
               ),
-              onChanged: onCustomNameChanged,
-              controller: TextEditingController(text: customName)
-                ..selection = TextSelection.fromPosition(
-                  TextPosition(offset: customName?.length ?? 0),
-                ),
+              onChanged: widget.onCustomNameChanged,
             ),
           ),
       ],
@@ -53,11 +77,11 @@ class WorkoutTypeSelector extends StatelessWidget {
   }
 
   Widget _typeChip(BuildContext context, WorkoutType type, String label) {
-    final isSelected = selected == type;
+    final isSelected = widget.selected == type;
     return ChoiceChip(
       label: Text(label),
       selected: isSelected,
-      onSelected: (_) => onSelected(type),
+      onSelected: (_) => widget.onSelected(type),
     );
   }
 }
