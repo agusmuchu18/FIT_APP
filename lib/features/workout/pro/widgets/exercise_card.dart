@@ -16,6 +16,7 @@ class ExerciseCard extends StatefulWidget {
     required this.onBumpWeight,
     required this.onUpdateSet,
     required this.onDeleteSet,
+    required this.onRestoreSet,
     required this.onUpdateNotes,
   });
 
@@ -29,6 +30,7 @@ class ExerciseCard extends StatefulWidget {
   final VoidCallback onBumpWeight;
   final void Function(SetEntry set) onUpdateSet;
   final void Function(String setId) onDeleteSet;
+  final void Function(int index, SetEntry set) onRestoreSet;
   final void Function(String? notes) onUpdateNotes;
 
   @override
@@ -64,6 +66,7 @@ class _ExerciseCardState extends State<ExerciseCard> {
     final summary = '${widget.exercise.sets.length} series · '
         '${widget.exercise.sets.fold<int>(0, (s, e) => s + (e.reps ?? 0))} reps';
     final weightAvailable = widget.exercise.sets.any((s) => s.externalLoadKg != null);
+    final collapsedSummary = _buildCollapsedSummary();
     return AnimatedSize(
       duration: const Duration(milliseconds: 200),
       child: Card(
@@ -73,7 +76,19 @@ class _ExerciseCardState extends State<ExerciseCard> {
           initiallyExpanded: expanded,
           onExpansionChanged: (value) => setState(() => expanded = value),
           title: Text(widget.exercise.name),
-          subtitle: Text(widget.exercise.muscleGroup ?? 'Sin grupo'),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(widget.exercise.muscleGroup ?? 'Sin grupo'),
+              if (!expanded) ...[
+                const SizedBox(height: 4),
+                Text(
+                  collapsedSummary,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+            ],
+          ),
           trailing: Text(summary),
           children: [
             Padding(
@@ -133,23 +148,51 @@ class _ExerciseCardState extends State<ExerciseCard> {
                       key: ValueKey(widget.exercise.sets.length),
                       children: [
                         for (var i = 0; i < widget.exercise.sets.length; i++)
-                          _SetRow(
+                          Dismissible(
                             key: ValueKey(widget.exercise.sets[i].id),
-                            set: widget.exercise.sets[i],
-                            index: i,
-                            autofocus: (widget.exercise.sets[i].reps ??
-                                        widget.exercise.sets[i].externalLoadKg ??
-                                        widget.exercise.sets[i].assistanceKg ??
-                                        widget.exercise.sets[i].bodyweightKg ??
-                                        widget.exercise.sets[i].bodyweightFactor ??
-                                        widget.exercise.sets[i].durationSeconds ??
-                                        widget.exercise.sets[i].rir ??
-                                        widget.exercise.sets[i].restSeconds) ==
-                                    null &&
-                                i == widget.exercise.sets.length - 1,
-                            definition: widget.definition,
-                            onChanged: (updated) => widget.onUpdateSet(updated),
-                            onDelete: () => widget.onDeleteSet(widget.exercise.sets[i].id),
+                            background: Container(
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.errorContainer,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              alignment: Alignment.centerRight,
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              child: Icon(
+                                Icons.delete_outline,
+                                color: Theme.of(context).colorScheme.onErrorContainer,
+                              ),
+                            ),
+                            direction: DismissDirection.endToStart,
+                            onDismissed: (_) {
+                              final removed = widget.exercise.sets[i];
+                              widget.onDeleteSet(removed.id);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: const Text('Serie eliminada'),
+                                  action: SnackBarAction(
+                                    label: 'Deshacer',
+                                    onPressed: () => widget.onRestoreSet(i, removed),
+                                  ),
+                                ),
+                              );
+                            },
+                            child: _SetRow(
+                              set: widget.exercise.sets[i],
+                              index: i,
+                              autofocus: (widget.exercise.sets[i].reps ??
+                                          widget.exercise.sets[i].externalLoadKg ??
+                                          widget.exercise.sets[i].assistanceKg ??
+                                          widget.exercise.sets[i].bodyweightKg ??
+                                          widget.exercise.sets[i].bodyweightFactor ??
+                                          widget.exercise.sets[i].durationSeconds ??
+                                          widget.exercise.sets[i].rir ??
+                                          widget.exercise.sets[i].restSeconds) ==
+                                      null &&
+                                  i == widget.exercise.sets.length - 1,
+                              definition: widget.definition,
+                              onChanged: (updated) => widget.onUpdateSet(updated),
+                              onDelete: () => widget.onDeleteSet(widget.exercise.sets[i].id),
+                            ),
                           ),
                       ],
                     ),
@@ -171,6 +214,33 @@ class _ExerciseCardState extends State<ExerciseCard> {
         ),
       ),
     );
+  }
+}
+
+extension on ExerciseCard {
+  String _buildCollapsedSummary() {
+    final sets = exercise.sets.length;
+    final volume = exercise.sets.fold<double>(
+      0,
+      (sum, set) => sum + ((set.externalLoadKg ?? 0) * (set.reps ?? 0)),
+    );
+    final best = exercise.sets
+        .where((s) => s.externalLoadKg != null && s.reps != null)
+        .fold<SetEntry?>(
+          null,
+          (best, current) =>
+              best == null || (current.externalLoadKg ?? 0) > (best.externalLoadKg ?? 0)
+                  ? current
+                  : best,
+        );
+
+    final bestLabel = best == null
+        ? 'sin PR'
+        : '${best.externalLoadKg?.toStringAsFixed(1)}kg x ${best.reps ?? 0}';
+
+    final volumeLabel = volume == 0 ? 'volumen —' : 'volumen ${volume.toStringAsFixed(1)}kg';
+
+    return '$sets series · $volumeLabel · $bestLabel';
   }
 }
 
@@ -204,6 +274,12 @@ class _SetRowState extends State<_SetRow> {
   late final TextEditingController _bodyweightFactorController;
   late final TextEditingController _durationController;
   late final TextEditingController _restController;
+  late final FocusNode _repsFocus;
+  late final FocusNode _externalFocus;
+  late final FocusNode _assistanceFocus;
+  late final FocusNode _bodyweightFactorFocus;
+  late final FocusNode _durationFocus;
+  late final FocusNode _restFocus;
   bool _showAdvanced = false;
 
   @override
@@ -223,6 +299,12 @@ class _SetRowState extends State<_SetRow> {
                 '');
     _durationController = TextEditingController(text: widget.set.durationSeconds?.toString() ?? '');
     _restController = TextEditingController(text: widget.set.restSeconds?.toString() ?? '');
+    _repsFocus = FocusNode();
+    _externalFocus = FocusNode();
+    _assistanceFocus = FocusNode();
+    _bodyweightFactorFocus = FocusNode();
+    _durationFocus = FocusNode();
+    _restFocus = FocusNode();
     _showAdvanced =
         widget.set.restSeconds != null || widget.set.durationSeconds != null || widget.set.rir != null;
   }
@@ -273,6 +355,12 @@ class _SetRowState extends State<_SetRow> {
     _bodyweightFactorController.dispose();
     _durationController.dispose();
     _restController.dispose();
+    _repsFocus.dispose();
+    _externalFocus.dispose();
+    _assistanceFocus.dispose();
+    _bodyweightFactorFocus.dispose();
+    _durationFocus.dispose();
+    _restFocus.dispose();
     super.dispose();
   }
 
@@ -280,6 +368,7 @@ class _SetRowState extends State<_SetRow> {
   Widget build(BuildContext context) {
     final loadType = widget.definition?.loadType;
     final loadFields = _buildLoadFields(loadType);
+    final focusOrder = _focusOrder(loadType);
 
     return Column(
       children: [
@@ -313,6 +402,8 @@ class _SetRowState extends State<_SetRow> {
                           controller: _repsController,
                           label: 'Reps',
                           autofocus: widget.autofocus,
+                          focusNode: _repsFocus,
+                          nextFocus: _nextFocus(_repsFocus, focusOrder),
                           onChanged: (value) => widget.onChanged(
                             widget.set.copyWith(reps: int.tryParse(value)),
                           ),
@@ -353,6 +444,8 @@ class _SetRowState extends State<_SetRow> {
                               controller: _durationController,
                               label: 'Tiempo',
                               suffix: 's',
+                              focusNode: _durationFocus,
+                              nextFocus: _nextFocus(_durationFocus, focusOrder),
                               onChanged: (value) => widget.onChanged(
                                 widget.set.copyWith(durationSeconds: int.tryParse(value)),
                               ),
@@ -361,6 +454,8 @@ class _SetRowState extends State<_SetRow> {
                               controller: _restController,
                               label: 'Desc',
                               suffix: 's',
+                              focusNode: _restFocus,
+                              nextFocus: _nextFocus(_restFocus, focusOrder),
                               onChanged: (value) => widget.onChanged(
                                 widget.set.copyWith(restSeconds: int.tryParse(value)),
                               ),
@@ -397,13 +492,17 @@ class _SetRowState extends State<_SetRow> {
     required String label,
     String? suffix,
     bool autofocus = false,
+    FocusNode? focusNode,
+    FocusNode? nextFocus,
     required ValueChanged<String> onChanged,
   }) {
     return SizedBox(
       width: 96,
       child: TextField(
         controller: controller,
+        focusNode: focusNode,
         keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        textInputAction: nextFocus == null ? TextInputAction.done : TextInputAction.next,
         decoration: InputDecoration(
           labelText: label,
           suffixText: suffix,
@@ -411,6 +510,13 @@ class _SetRowState extends State<_SetRow> {
         ),
         autofocus: autofocus,
         onChanged: onChanged,
+        onSubmitted: (_) {
+          if (nextFocus != null) {
+            FocusScope.of(context).requestFocus(nextFocus);
+          } else {
+            FocusScope.of(context).unfocus();
+          }
+        },
       ),
     );
   }
@@ -418,6 +524,8 @@ class _SetRowState extends State<_SetRow> {
   List<Widget> _buildLoadFields(LoadType? loadType) {
     final type = loadType ?? LoadType.external;
     final effectiveLoad = _effectiveLoad(type);
+    final loadFocus = _loadFocusForType(type);
+    final focusOrder = _focusOrder(loadType);
 
     switch (type) {
       case LoadType.external:
@@ -426,6 +534,8 @@ class _SetRowState extends State<_SetRow> {
             controller: _externalLoadController,
             label: 'Peso',
             suffix: 'kg',
+            focusNode: loadFocus,
+            nextFocus: _nextFocus(loadFocus, focusOrder),
             onChanged: (value) => widget.onChanged(
               widget.set.copyWith(externalLoadKg: _parseDouble(value)),
             ),
@@ -441,6 +551,8 @@ class _SetRowState extends State<_SetRow> {
           _numberField(
             controller: _bodyweightFactorController,
             label: 'Factor BW',
+            focusNode: loadFocus,
+            nextFocus: _nextFocus(loadFocus, focusOrder),
             onChanged: (value) => widget.onChanged(
               widget.set.copyWith(bodyweightFactor: _parseDouble(value)),
             ),
@@ -458,6 +570,8 @@ class _SetRowState extends State<_SetRow> {
             controller: _externalLoadController,
             label: 'Lastre',
             suffix: 'kg',
+            focusNode: loadFocus,
+            nextFocus: _nextFocus(loadFocus, focusOrder),
             onChanged: (value) => widget.onChanged(
               widget.set.copyWith(externalLoadKg: _parseDouble(value)),
             ),
@@ -475,6 +589,8 @@ class _SetRowState extends State<_SetRow> {
             controller: _assistanceController,
             label: 'Asistencia',
             suffix: 'kg',
+            focusNode: loadFocus,
+            nextFocus: _nextFocus(loadFocus, focusOrder),
             onChanged: (value) => widget.onChanged(
               widget.set.copyWith(assistanceKg: _parseDouble(value)),
             ),
@@ -538,5 +654,34 @@ class _SetRowState extends State<_SetRow> {
   double? _parseDouble(String value) {
     if (value.isEmpty) return null;
     return double.tryParse(value.replaceAll(',', '.'));
+  }
+
+  List<FocusNode> _focusOrder(LoadType? type) {
+    final order = <FocusNode>[_repsFocus];
+    final loadFocus = _loadFocusForType(type ?? widget.definition?.loadType ?? LoadType.external);
+    if (loadFocus != null) order.add(loadFocus);
+    if (_showAdvanced) {
+      order.addAll([_durationFocus, _restFocus]);
+    }
+    return order;
+  }
+
+  FocusNode? _loadFocusForType(LoadType type) {
+    switch (type) {
+      case LoadType.external:
+      case LoadType.bodyweight_plus_external:
+        return _externalFocus;
+      case LoadType.bodyweight_effective:
+        return _bodyweightFactorFocus;
+      case LoadType.assisted_bodyweight:
+        return _assistanceFocus;
+    }
+  }
+
+  FocusNode? _nextFocus(FocusNode? current, List<FocusNode> order) {
+    if (current == null) return null;
+    final index = order.indexOf(current);
+    if (index == -1 || index + 1 >= order.length) return null;
+    return order[index + 1];
   }
 }

@@ -135,8 +135,8 @@ class _WorkoutProContentState extends State<_WorkoutProContent> {
       text: provider.closingDuration?.toString() ?? provider.durationMinutes?.toString() ?? '',
     );
     final notesController = TextEditingController(text: provider.finalNotes ?? '');
-    var fatigue = provider.closingFatigue;
-    var performance = provider.closingPerformance;
+    int? fatigue = provider.closingFatigue;
+    int? performance = provider.closingPerformance;
 
     await showModalBottomSheet(
       context: context,
@@ -166,12 +166,14 @@ class _WorkoutProContentState extends State<_WorkoutProContent> {
                       isDense: true,
                     ),
                     keyboardType: TextInputType.number,
+                    onChanged: (value) =>
+                        provider.setClosingDuration(int.tryParse(value)),
                   ),
                   const SizedBox(height: 12),
                   Row(
                     children: [
                       Expanded(
-                        child: DropdownButtonFormField<int>(
+                        child: DropdownButtonFormField<int?>(
                           value: fatigue,
                           decoration: const InputDecoration(
                             labelText: 'Fatiga general (1-5)',
@@ -183,13 +185,23 @@ class _WorkoutProContentState extends State<_WorkoutProContent> {
                               value: index + 1,
                               child: Text('${index + 1}'),
                             ),
-                          ),
-                          onChanged: (v) => setState(() => fatigue = v ?? fatigue),
+                          )
+                            ..insert(
+                              0,
+                              const DropdownMenuItem<int?>(
+                                value: null,
+                                child: Text('Sin dato'),
+                              ),
+                            ),
+                          onChanged: (v) {
+                            setState(() => fatigue = v);
+                            provider.setClosingFatigue(v);
+                          },
                         ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: DropdownButtonFormField<int>(
+                        child: DropdownButtonFormField<int?>(
                           value: performance,
                           decoration: const InputDecoration(
                             labelText: 'Performance (1-5)',
@@ -201,8 +213,18 @@ class _WorkoutProContentState extends State<_WorkoutProContent> {
                               value: index + 1,
                               child: Text('${index + 1}'),
                             ),
-                          ),
-                          onChanged: (v) => setState(() => performance = v ?? performance),
+                          )
+                            ..insert(
+                              0,
+                              const DropdownMenuItem<int?>(
+                                value: null,
+                                child: Text('Sin dato'),
+                              ),
+                            ),
+                          onChanged: (v) {
+                            setState(() => performance = v);
+                            provider.setClosingPerformance(v);
+                          },
                         ),
                       ),
                     ],
@@ -216,6 +238,9 @@ class _WorkoutProContentState extends State<_WorkoutProContent> {
                       isDense: true,
                     ),
                     maxLines: 3,
+                    onChanged: (value) => provider.setFinalNotes(
+                      value.isEmpty ? null : value,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   Row(
@@ -227,6 +252,7 @@ class _WorkoutProContentState extends State<_WorkoutProContent> {
                       const Spacer(),
                       OutlinedButton(
                         onPressed: () async {
+                          provider.clearClosing();
                           Navigator.of(sheetContext).pop();
                           await _saveSession(context, provider, finalize: true);
                         },
@@ -732,28 +758,36 @@ class StrengthSection extends StatelessWidget {
                   ],
                 ),
               ),
-            ...provider.exercises.map(
-              (exercise) {
-                final definition = exerciseIndex.findByQuery(exercise.name);
-                return ExerciseCard(
-                  key: ValueKey(exercise.id),
-                  exercise: exercise,
-                  definition: definition,
-                  onDuplicate: () => provider.duplicateExercise(exercise.id),
-                  onDelete: () async {
-                    final confirm = await _confirmDelete(context);
-                    if (confirm) provider.removeExercise(exercise.id);
-                  },
-                  onAddSet: () => provider.addSet(exercise.id),
-                  onCopySet: () => provider.copyPreviousSet(exercise.id),
-                  onBumpReps: () => provider.bumpReps(exercise.id, 1),
-                  onBumpWeight: () => provider.bumpWeight(exercise.id, 2.5),
-                  onUpdateSet: (set) => provider.updateSet(exercise.id, set.id, set),
-                  onDeleteSet: (setId) => provider.removeSet(exercise.id, setId),
-                  onUpdateNotes: (notes) => provider.updateExerciseNotes(exercise.id, notes),
-                );
-              },
-            ),
+            if (provider.exercises.isNotEmpty)
+              ReorderableListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: provider.exercises.length,
+                onReorder: provider.reorderExercise,
+                itemBuilder: (context, index) {
+                  final exercise = provider.exercises[index];
+                  final definition = exerciseIndex.findByQuery(exercise.name);
+                  return ExerciseCard(
+                    key: ValueKey(exercise.id),
+                    exercise: exercise,
+                    definition: definition,
+                    onDuplicate: () => provider.duplicateExercise(exercise.id),
+                    onDelete: () async {
+                      final confirm = await _confirmDelete(context);
+                      if (confirm) provider.removeExercise(exercise.id);
+                    },
+                    onAddSet: () => provider.addSet(exercise.id),
+                    onCopySet: () => provider.copyPreviousSet(exercise.id),
+                    onBumpReps: () => provider.bumpReps(exercise.id, 1),
+                    onBumpWeight: () => provider.bumpWeight(exercise.id, 2.5),
+                    onUpdateSet: (set) => provider.updateSet(exercise.id, set.id, set),
+                    onDeleteSet: (setId) => provider.removeSet(exercise.id, setId),
+                    onRestoreSet: (setIndex, set) =>
+                        provider.insertSet(exercise.id, setIndex, set),
+                    onUpdateNotes: (notes) => provider.updateExerciseNotes(exercise.id, notes),
+                  );
+                },
+              ),
             const SizedBox(height: 12),
             _MetricsRow(provider: provider),
           ],
