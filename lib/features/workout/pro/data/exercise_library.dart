@@ -293,11 +293,11 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     primaryMuscles: ["espalda"],
     secondaryMuscles: ["core"],
     equipment: 'cable',
-    movementPattern: 'hinge',
+    movementPattern: 'pull', // NOTE: Clasificado como movimiento de tracción/aislamiento, no bisagra.
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
     
-    allowExternalLoad: false,
+    allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
   ),
@@ -312,7 +312,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
     
-    allowExternalLoad: false,
+    allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
   ),
@@ -327,7 +327,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
     
-    allowExternalLoad: false,
+    allowExternalLoad: true,
     isUnilateral: true,
     isTimed: false,
   ),
@@ -372,7 +372,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
     
-    allowExternalLoad: false,
+    allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
   ),
@@ -507,7 +507,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
     
-    allowExternalLoad: false,
+    allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
   ),
@@ -552,7 +552,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
     
-    allowExternalLoad: false,
+    allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
   ),
@@ -567,7 +567,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
     
-    allowExternalLoad: false,
+    allowExternalLoad: true,
     isUnilateral: true,
     isTimed: false,
   ),
@@ -582,7 +582,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
     
-    allowExternalLoad: false,
+    allowExternalLoad: true,
     isUnilateral: true,
     isTimed: false,
   ),
@@ -597,7 +597,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
     
-    allowExternalLoad: false,
+    allowExternalLoad: true,
     isUnilateral: true,
     isTimed: false,
   ),
@@ -612,7 +612,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
     
-    allowExternalLoad: false,
+    allowExternalLoad: true,
     isUnilateral: true,
     isTimed: false,
   ),
@@ -627,7 +627,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
     
-    allowExternalLoad: false,
+    allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
   ),
@@ -642,7 +642,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
     
-    allowExternalLoad: false,
+    allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
   ),
@@ -657,7 +657,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
     
-    allowExternalLoad: false,
+    allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
   ),
@@ -672,7 +672,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
     
-    allowExternalLoad: false,
+    allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
   ),
@@ -687,7 +687,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
     
-    allowExternalLoad: false,
+    allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
   ),
@@ -702,7 +702,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
     
-    allowExternalLoad: false,
+    allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
   ),
@@ -717,7 +717,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
     
-    allowExternalLoad: false,
+    allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
   ),
@@ -777,7 +777,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
     
-    allowExternalLoad: false,
+    allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
   ),
@@ -792,7 +792,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
     
-    allowExternalLoad: false,
+    allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
   ),
@@ -807,7 +807,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
     
-    allowExternalLoad: false,
+    allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
   ),
@@ -837,7 +837,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
     
-    allowExternalLoad: false,
+    allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
   ),
@@ -882,7 +882,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
     
-    allowExternalLoad: false,
+    allowExternalLoad: true,
     isUnilateral: true,
     isTimed: false,
   ),
@@ -897,7 +897,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
     
-    allowExternalLoad: false,
+    allowExternalLoad: true,
     isUnilateral: true,
     isTimed: false,
   ),
@@ -912,7 +912,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
     
-    allowExternalLoad: false,
+    allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
   ),
@@ -927,7 +927,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
     
-    allowExternalLoad: false,
+    allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
   ),
@@ -942,7 +942,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
     
-    allowExternalLoad: false,
+    allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
   ),
@@ -957,7 +957,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
     
-    allowExternalLoad: false,
+    allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
   ),
@@ -1017,7 +1017,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
     
-    allowExternalLoad: false,
+    allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
   ),
@@ -1077,7 +1077,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
     
-    allowExternalLoad: false,
+    allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
   ),
@@ -1122,7 +1122,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
     
-    allowExternalLoad: false,
+    allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
   ),
@@ -1182,7 +1182,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
     
-    allowExternalLoad: false,
+    allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
   ),
@@ -1242,7 +1242,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     defaultMeasurement: 'distance',
     loadType: LoadType.external,
     
-    allowExternalLoad: false,
+    allowExternalLoad: true,
     isUnilateral: true,
     isTimed: false,
   ),
@@ -1257,7 +1257,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
     
-    allowExternalLoad: false,
+    allowExternalLoad: true,
     isUnilateral: true,
     isTimed: false,
   ),
@@ -1272,7 +1272,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
     
-    allowExternalLoad: false,
+    allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
   ),
@@ -1287,7 +1287,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     defaultMeasurement: 'distance',
     loadType: LoadType.external,
     
-    allowExternalLoad: false,
+    allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
   ),
@@ -1302,7 +1302,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     defaultMeasurement: 'distance',
     loadType: LoadType.external,
     
-    allowExternalLoad: false,
+    allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
   ),
@@ -1317,7 +1317,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
     
-    allowExternalLoad: false,
+    allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
   ),
@@ -1362,7 +1362,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     defaultMeasurement: 'time',
     loadType: LoadType.external,
     
-    allowExternalLoad: false,
+    allowExternalLoad: true,
     isUnilateral: false,
     isTimed: true,
   ),
@@ -1377,7 +1377,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     defaultMeasurement: 'time',
     loadType: LoadType.external,
     
-    allowExternalLoad: false,
+    allowExternalLoad: true,
     isUnilateral: false,
     isTimed: true,
   ),
@@ -1392,7 +1392,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     defaultMeasurement: 'time',
     loadType: LoadType.external,
     
-    allowExternalLoad: false,
+    allowExternalLoad: true,
     isUnilateral: false,
     isTimed: true,
   ),
@@ -1407,7 +1407,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
     
-    allowExternalLoad: false,
+    allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
   ),
@@ -1467,7 +1467,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
     
-    allowExternalLoad: false,
+    allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
   ),
@@ -1497,7 +1497,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     defaultMeasurement: 'distance',
     loadType: LoadType.external,
 
-    allowExternalLoad: false,
+    allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
   ),
@@ -1560,6 +1560,23 @@ final List<ExerciseDefinition> exerciseLibrary = (() {
           .map((entry) => 'id: ${entry.key}, count: ${entry.value}')
           .join('; ');
       throw AssertionError('Duplicate exercise ids detected -> $message');
+    }
+
+    return true;
+  }());
+
+  assert(() {
+    for (final exercise in allExercises) {
+      if (exercise.isTimed && exercise.defaultMeasurement != 'time') {
+        throw AssertionError(
+          'Ejercicio temporizado con defaultMeasurement no compatible: ${exercise.id}',
+        );
+      }
+      if (!exercise.isTimed && exercise.defaultMeasurement == 'time') {
+        throw AssertionError(
+          'Ejercicio con defaultMeasurement time pero isTimed=false: ${exercise.id}',
+        );
+      }
     }
 
     return true;
@@ -1971,12 +1988,12 @@ final List<ExerciseDefinition> additionalExercises = [
     movementPattern: 'hinge',
   ),
   coreTimed(id: 'hollow_rock', name: 'Hollow rock'),
-  coreTimed(
+  coreReps(
     id: 'v_up',
     name: 'V-up',
     secondaryMuscles: ['flexores de cadera'],
   ),
-  coreTimed(id: 'toe_touch_crunch', name: 'Toe touch crunch'),
+  coreReps(id: 'toe_touch_crunch', name: 'Toe touch crunch'),
   coreTimed(
     id: 'hip_dip_plank',
     name: 'Hip dip plank',
@@ -1988,12 +2005,13 @@ final List<ExerciseDefinition> additionalExercises = [
     primaryMuscles: ['glúteos'],
     secondaryMuscles: ['core', 'hombros'],
   ),
-  coreTimed(
+  simpleExercise(
     id: 'prone_snow_angel',
     name: 'Prone snow angel',
     primaryMuscles: ['espalda alta'],
     secondaryMuscles: ['hombros'],
     movementPattern: 'isolation',
+    defaultMeasurement: 'reps',
   ),
   coreTimed(
     id: 'superman_hold',
