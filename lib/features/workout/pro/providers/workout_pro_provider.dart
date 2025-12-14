@@ -41,8 +41,8 @@ class WorkoutProProvider extends ChangeNotifier {
 
   // Closing
   int? _closingDuration;
-  int _closingFatigue = 3;
-  int _closingPerformance = 3;
+  int? _closingFatigue;
+  int? _closingPerformance;
   String? _finalNotes;
 
   List<String> _recentExercises = [];
@@ -68,8 +68,8 @@ class WorkoutProProvider extends ChangeNotifier {
   int get fatigue => _fatigue;
   String? get notes => _notes;
   int? get closingDuration => _closingDuration;
-  int get closingFatigue => _closingFatigue;
-  int get closingPerformance => _closingPerformance;
+  int? get closingFatigue => _closingFatigue;
+  int? get closingPerformance => _closingPerformance;
   String? get finalNotes => _finalNotes;
   List<String> get recentExercises => _recentExercises;
   List<String> get mostUsedExercises {
@@ -169,16 +169,17 @@ class WorkoutProProvider extends ChangeNotifier {
 
   void setClosingDuration(int? value) {
     _closingDuration = value;
+    _persistDraft();
     notifyListeners();
   }
 
-  void setClosingFatigue(int value) {
+  void setClosingFatigue(int? value) {
     _closingFatigue = value;
     _persistDraft();
     notifyListeners();
   }
 
-  void setClosingPerformance(int value) {
+  void setClosingPerformance(int? value) {
     _closingPerformance = value;
     _persistDraft();
     notifyListeners();
@@ -190,9 +191,29 @@ class WorkoutProProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void clearClosing() {
+    _closingDuration = null;
+    _closingFatigue = null;
+    _closingPerformance = null;
+    _finalNotes = null;
+    _persistDraft();
+    notifyListeners();
+  }
+
   void addExercise(WorkoutExercise exercise) {
     _exercises = [..._exercises, exercise];
     _rememberExercise(exercise.name);
+    _persistDraft();
+    notifyListeners();
+  }
+
+  void reorderExercise(int oldIndex, int newIndex) {
+    if (oldIndex < 0 || oldIndex >= _exercises.length) return;
+    if (newIndex > oldIndex) newIndex -= 1;
+    final updated = [..._exercises];
+    final item = updated.removeAt(oldIndex);
+    updated.insert(newIndex.clamp(0, updated.length), item);
+    _exercises = updated;
     _persistDraft();
     notifyListeners();
   }
@@ -335,6 +356,20 @@ class WorkoutProProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void insertSet(String exerciseId, int index, SetEntry set) {
+    _exercises = _exercises.map((e) {
+      if (e.id == exerciseId) {
+        final updatedSets = [...e.sets];
+        final targetIndex = index.clamp(0, updatedSets.length);
+        updatedSets.insert(targetIndex, set);
+        return e.copyWith(sets: updatedSets);
+      }
+      return e;
+    }).toList();
+    _persistDraft();
+    notifyListeners();
+  }
+
   void selectTemplate(WorkoutTemplate template) {
     _selectedTemplate = template;
     _applyTemplate(template);
@@ -385,10 +420,7 @@ class WorkoutProProvider extends ChangeNotifier {
     _rpe = 6;
     _fatigue = 3;
     _notes = null;
-    _closingDuration = null;
-    _closingFatigue = 3;
-    _closingPerformance = 3;
-    _finalNotes = null;
+    clearClosing();
     await _clearDraft();
     _sessionStart = DateTime.now();
     notifyListeners();
@@ -621,8 +653,8 @@ class WorkoutProProvider extends ChangeNotifier {
       _fatigue = json['fatigue'] as int? ?? 3;
       _notes = json['notes'] as String?;
       _closingDuration = json['closingDuration'] as int?;
-      _closingFatigue = json['closingFatigue'] as int? ?? 3;
-      _closingPerformance = json['closingPerformance'] as int? ?? 3;
+      _closingFatigue = json['closingFatigue'] as int?;
+      _closingPerformance = json['closingPerformance'] as int?;
       _finalNotes = json['finalNotes'] as String?;
       final startRaw = json['sessionStart'] as String?;
       if (startRaw != null) {
