@@ -1,16 +1,8 @@
-import 'package:meta/meta.dart';
+import 'package:flutter/foundation.dart';
 
-/// World-class domain entities for an offline-first, multi-device, conflict-safe app.
-///
-/// Key upgrades vs “simple entities”:
-/// - Standard sync metadata on every entity (createdAt, updatedAt, deleted, revision, deviceId)
-/// - Stable JSON serialization (toJson/fromJson) for remote sync + local persistence
-/// - Immutability + copyWith everywhere
-/// - Tombstone deletes (deleted=true) to sync deletions safely
-///
-/// Notes:
-/// - I kept your existing field types to avoid breaking your UI (e.g. bedtime/wakeTime are still String?).
-/// - If you later want “perfect” typing (bedtime/wakeTime as DateTime?), we can migrate safely with adapters.
+/// ------------------------------
+/// Sync metadata (offline-first / multi-device / conflict-safe)
+/// ------------------------------
 
 @immutable
 class EntityMeta {
@@ -22,20 +14,14 @@ class EntityMeta {
     this.deviceId,
   });
 
-  /// When the entity was first created (client-side or server-side).
   final DateTime createdAt;
-
-  /// When the entity was last modified.
   final DateTime updatedAt;
-
-  /// Tombstone flag (for delete sync without losing history).
   final bool deleted;
 
-  /// Monotonic version. Increment on each mutation.
-  /// In a real backend you can replace or augment this with ETag / serverRevision.
+  /// Monotonic version for conflict resolution / audit.
   final int revision;
 
-  /// Optional device id (useful for debugging/conflict inspection).
+  /// Optional device identifier for debugging / conflict inspection.
   final String? deviceId;
 
   factory EntityMeta.now({String? deviceId}) {
@@ -65,7 +51,6 @@ class EntityMeta {
     );
   }
 
-  /// “Touch” the metadata for a local update.
   EntityMeta touched({String? deviceId}) {
     return copyWith(
       updatedAt: DateTime.now().toUtc(),
@@ -74,7 +59,6 @@ class EntityMeta {
     );
   }
 
-  /// Mark as deleted (tombstone) for sync.
   EntityMeta tombstoned({String? deviceId}) {
     return copyWith(
       updatedAt: DateTime.now().toUtc(),
@@ -93,9 +77,11 @@ class EntityMeta {
       };
 
   factory EntityMeta.fromJson(Map<String, Object?> json) {
+    final createdAt = _readDate(json['createdAt']) ?? DateTime.now().toUtc();
+    final updatedAt = _readDate(json['updatedAt']) ?? createdAt;
     return EntityMeta(
-      createdAt: _readDate(json['createdAt']) ?? DateTime.now().toUtc(),
-      updatedAt: _readDate(json['updatedAt']) ?? DateTime.now().toUtc(),
+      createdAt: createdAt,
+      updatedAt: updatedAt,
       deleted: _readBool(json['deleted']) ?? false,
       revision: _readInt(json['revision']) ?? 1,
       deviceId: json['deviceId'] as String?,
@@ -103,33 +89,46 @@ class EntityMeta {
   }
 }
 
-/// Base contract for all syncable entities.
+/// Interface de entidad sincronizable.
+/// Importante: si usás `implements`, tenés que implementar todo.
+/// Para no repetir código, usamos el mixin SyncEntityMetaMixin.
 abstract class SyncEntity {
   String get id;
   EntityMeta get meta;
 
-  /// Convenience: used by adapters.
+  DateTime get updatedAt;
+  bool get deleted;
+}
+
+/// Mixin que implementa updatedAt/deleted basado en meta.
+/// Esto evita el error que viste (porque `implements` no hereda implementaciones).
+mixin SyncEntityMetaMixin implements SyncEntity {
+  @override
   DateTime get updatedAt => meta.updatedAt;
+
+  @override
   bool get deleted => meta.deleted;
 }
 
 /// ------------------------------
-/// Workout
+/// WorkoutEntry
 /// ------------------------------
 
 @immutable
-class WorkoutEntry implements SyncEntity {
-  const WorkoutEntry({
+class WorkoutEntry with SyncEntityMetaMixin implements SyncEntity {
+  /// Constructor compatible con tu código actual:
+  /// - `meta` es opcional (si no lo pasás, se genera automáticamente).
+  WorkoutEntry({
     required this.id,
     required this.name,
     required this.durationMinutes,
     required this.intensity,
     this.notes,
     this.template,
-    required this.meta,
-  });
+    EntityMeta? meta,
+  }) : meta = meta ?? EntityMeta.now();
 
-  /// Create a brand new entity with fresh metadata.
+  /// Opcional: factory “semántica” para crear nuevo registro (idéntico al ctor).
   factory WorkoutEntry.create({
     required String id,
     required String name,
@@ -214,54 +213,23 @@ class WorkoutEntry implements SyncEntity {
       meta: EntityMeta.fromJson(_readMap(json['_meta'])),
     );
   }
-
-  @override
-  bool operator ==(Object other) {
-    return other is WorkoutEntry &&
-        other.id == id &&
-        other.name == name &&
-        other.durationMinutes == durationMinutes &&
-        other.intensity == intensity &&
-        other.notes == notes &&
-        other.template == template &&
-        other.meta.createdAt == meta.createdAt &&
-        other.meta.updatedAt == meta.updatedAt &&
-        other.meta.deleted == meta.deleted &&
-        other.meta.revision == meta.revision &&
-        other.meta.deviceId == meta.deviceId;
-  }
-
-  @override
-  int get hashCode => Object.hash(
-        id,
-        name,
-        durationMinutes,
-        intensity,
-        notes,
-        template,
-        meta.createdAt,
-        meta.updatedAt,
-        meta.deleted,
-        meta.revision,
-        meta.deviceId,
-      );
 }
 
 /// ------------------------------
-/// Meal + Macros
+/// MealEntry + Macros
 /// ------------------------------
 
 @immutable
-class MealEntry implements SyncEntity {
-  const MealEntry({
+class MealEntry with SyncEntityMetaMixin implements SyncEntity {
+  MealEntry({
     required this.id,
     required this.title,
     required this.calories,
     required this.macros,
     this.template,
     this.notes,
-    required this.meta,
-  });
+    EntityMeta? meta,
+  }) : meta = meta ?? EntityMeta.now();
 
   factory MealEntry.create({
     required String id,
@@ -347,37 +315,6 @@ class MealEntry implements SyncEntity {
       meta: EntityMeta.fromJson(_readMap(json['_meta'])),
     );
   }
-
-  @override
-  bool operator ==(Object other) {
-    return other is MealEntry &&
-        other.id == id &&
-        other.title == title &&
-        other.calories == calories &&
-        other.macros == macros &&
-        other.template == template &&
-        other.notes == notes &&
-        other.meta.createdAt == meta.createdAt &&
-        other.meta.updatedAt == meta.updatedAt &&
-        other.meta.deleted == meta.deleted &&
-        other.meta.revision == meta.revision &&
-        other.meta.deviceId == meta.deviceId;
-  }
-
-  @override
-  int get hashCode => Object.hash(
-        id,
-        title,
-        calories,
-        macros,
-        template,
-        notes,
-        meta.createdAt,
-        meta.updatedAt,
-        meta.deleted,
-        meta.revision,
-        meta.deviceId,
-      );
 }
 
 @immutable
@@ -417,23 +354,15 @@ class Macros {
       fat: _readInt(json['fat']) ?? 0,
     );
   }
-
-  @override
-  bool operator ==(Object other) {
-    return other is Macros && other.carbs == carbs && other.protein == protein && other.fat == fat;
-  }
-
-  @override
-  int get hashCode => Object.hash(carbs, protein, fat);
 }
 
 /// ------------------------------
-/// Sleep
+/// SleepEntry
 /// ------------------------------
 
 @immutable
-class SleepEntry implements SyncEntity {
-  const SleepEntry({
+class SleepEntry with SyncEntityMetaMixin implements SyncEntity {
+  SleepEntry({
     required this.id,
     required this.hours,
     required this.quality,
@@ -444,8 +373,8 @@ class SleepEntry implements SyncEntity {
     this.screenUsageBeforeSleep,
     this.stressLevel,
     this.wakeEnergy,
-    required this.meta,
-  });
+    EntityMeta? meta,
+  }) : meta = meta ?? EntityMeta.now();
 
   factory SleepEntry.create({
     required String id,
@@ -482,7 +411,7 @@ class SleepEntry implements SyncEntity {
   final String? notes;
   final String? template;
 
-  /// Keep as String? for compatibility. Recommended format: ISO 8601.
+  /// Mantengo String? para compatibilidad (ideal: ISO 8601).
   final String? bedtime;
   final String? wakeTime;
 
@@ -514,7 +443,8 @@ class SleepEntry implements SyncEntity {
       template: template ?? this.template,
       bedtime: bedtime ?? this.bedtime,
       wakeTime: wakeTime ?? this.wakeTime,
-      screenUsageBeforeSleep: screenUsageBeforeSleep ?? this.screenUsageBeforeSleep,
+      screenUsageBeforeSleep:
+          screenUsageBeforeSleep ?? this.screenUsageBeforeSleep,
       stressLevel: stressLevel ?? this.stressLevel,
       wakeEnergy: wakeEnergy ?? this.wakeEnergy,
       meta: meta ?? this.meta.touched(deviceId: deviceIdForTouch),
@@ -566,54 +496,15 @@ class SleepEntry implements SyncEntity {
       meta: EntityMeta.fromJson(_readMap(json['_meta'])),
     );
   }
-
-  @override
-  bool operator ==(Object other) {
-    return other is SleepEntry &&
-        other.id == id &&
-        other.hours == hours &&
-        other.quality == quality &&
-        other.notes == notes &&
-        other.template == template &&
-        other.bedtime == bedtime &&
-        other.wakeTime == wakeTime &&
-        other.screenUsageBeforeSleep == screenUsageBeforeSleep &&
-        other.stressLevel == stressLevel &&
-        other.wakeEnergy == wakeEnergy &&
-        other.meta.createdAt == meta.createdAt &&
-        other.meta.updatedAt == meta.updatedAt &&
-        other.meta.deleted == meta.deleted &&
-        other.meta.revision == meta.revision &&
-        other.meta.deviceId == meta.deviceId;
-  }
-
-  @override
-  int get hashCode => Object.hash(
-        id,
-        hours,
-        quality,
-        notes,
-        template,
-        bedtime,
-        wakeTime,
-        screenUsageBeforeSleep,
-        stressLevel,
-        wakeEnergy,
-        meta.createdAt,
-        meta.updatedAt,
-        meta.deleted,
-        meta.revision,
-        meta.deviceId,
-      );
 }
 
 /// ------------------------------
-/// User Preferences
+/// UserPreferences
 /// ------------------------------
 
 @immutable
-class UserPreferences implements SyncEntity {
-  const UserPreferences({
+class UserPreferences with SyncEntityMetaMixin implements SyncEntity {
+  UserPreferences({
     required this.id,
     required this.primaryGoal,
     required this.experienceLevel,
@@ -622,8 +513,8 @@ class UserPreferences implements SyncEntity {
     this.dailyStepGoal,
     this.targetCalories,
     this.preferredSleep,
-    required this.meta,
-  });
+    EntityMeta? meta,
+  }) : meta = meta ?? EntityMeta.now();
 
   factory UserPreferences.create({
     required String id,
@@ -677,7 +568,8 @@ class UserPreferences implements SyncEntity {
       id: id,
       primaryGoal: primaryGoal ?? this.primaryGoal,
       experienceLevel: experienceLevel ?? this.experienceLevel,
-      targetSessionsPerWeek: targetSessionsPerWeek ?? this.targetSessionsPerWeek,
+      targetSessionsPerWeek:
+          targetSessionsPerWeek ?? this.targetSessionsPerWeek,
       modePreference: modePreference ?? this.modePreference,
       dailyStepGoal: dailyStepGoal ?? this.dailyStepGoal,
       targetCalories: targetCalories ?? this.targetCalories,
@@ -725,41 +617,6 @@ class UserPreferences implements SyncEntity {
       meta: EntityMeta.fromJson(_readMap(json['_meta'])),
     );
   }
-
-  @override
-  bool operator ==(Object other) {
-    return other is UserPreferences &&
-        other.id == id &&
-        other.primaryGoal == primaryGoal &&
-        other.experienceLevel == experienceLevel &&
-        other.targetSessionsPerWeek == targetSessionsPerWeek &&
-        other.modePreference == modePreference &&
-        other.dailyStepGoal == dailyStepGoal &&
-        other.targetCalories == targetCalories &&
-        other.preferredSleep == preferredSleep &&
-        other.meta.createdAt == meta.createdAt &&
-        other.meta.updatedAt == meta.updatedAt &&
-        other.meta.deleted == meta.deleted &&
-        other.meta.revision == meta.revision &&
-        other.meta.deviceId == meta.deviceId;
-  }
-
-  @override
-  int get hashCode => Object.hash(
-        id,
-        primaryGoal,
-        experienceLevel,
-        targetSessionsPerWeek,
-        modePreference,
-        dailyStepGoal,
-        targetCalories,
-        preferredSleep,
-        meta.createdAt,
-        meta.updatedAt,
-        meta.deleted,
-        meta.revision,
-        meta.deviceId,
-      );
 }
 
 /// ------------------------------
@@ -790,12 +647,12 @@ double? _readDouble(Object? v) {
 
 bool? _readBool(Object? v) {
   if (v is bool) return v;
+  if (v is num) return v != 0;
   if (v is String) {
     final s = v.toLowerCase().trim();
     if (s == 'true' || s == '1' || s == 'yes') return true;
     if (s == 'false' || s == '0' || s == 'no') return false;
   }
-  if (v is num) return v != 0;
   return null;
 }
 
