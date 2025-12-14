@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 
+import 'package:hive_flutter/hive_flutter.dart';
+
 import 'app/theme/app_theme.dart';
 import 'core/data/local_storage_service.dart';
 import 'core/data/remote_sync_service.dart';
 import 'core/data/repositories.dart';
 import 'core/data/statistics_service.dart';
 import 'core/domain/entities.dart';
+import 'core/data/hive_sync_queue_store.dart';
 import 'features/analytics/analytics_overview_screen.dart';
 import 'features/auth/presentation/login_screen.dart';
 import 'features/auth/presentation/signup_screen.dart';
@@ -19,12 +22,14 @@ import 'features/streak/presentation/streak_screen.dart';
 import 'features/workout/pro/workout_pro_screen.dart';
 import 'features/workout/workout_screens.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Hive.initFlutter();
 
   // --- Services (local + remote sync) ---
   final local = LocalStorageService();
   final statistics = StatisticsService();
+  final syncQueue = await HiveSyncQueueStore.create();
 
   // DEV bootstrap: compila sin backend real.
   // En producción: reemplazar transport/network/session/queue por implementaciones reales.
@@ -32,7 +37,7 @@ void main() {
     transport: NoopRemoteSyncTransport(),
     session: const StaticSyncSession(userId: 'local-dev'),
     network: const AlwaysOnlineNetworkStatus(),
-    queue: MemorySyncQueueStore(),
+    queue: syncQueue,
     policy: const SyncPolicy(),
 
     workoutAdapter: SyncAdapter<WorkoutEntry>(
