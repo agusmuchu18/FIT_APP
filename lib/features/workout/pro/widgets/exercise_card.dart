@@ -204,6 +204,7 @@ class _SetRowState extends State<_SetRow> {
   late final TextEditingController _bodyweightFactorController;
   late final TextEditingController _durationController;
   late final TextEditingController _restController;
+  bool _showAdvanced = false;
 
   @override
   void initState() {
@@ -222,6 +223,8 @@ class _SetRowState extends State<_SetRow> {
                 '');
     _durationController = TextEditingController(text: widget.set.durationSeconds?.toString() ?? '');
     _restController = TextEditingController(text: widget.set.restSeconds?.toString() ?? '');
+    _showAdvanced =
+        widget.set.restSeconds != null || widget.set.durationSeconds != null || widget.set.rir != null;
   }
 
   @override
@@ -256,6 +259,9 @@ class _SetRowState extends State<_SetRow> {
     if (_restController.text != restText) {
       _restController.text = restText;
     }
+    if (widget.set.restSeconds != null || widget.set.durationSeconds != null || widget.set.rir != null) {
+      _showAdvanced = true;
+    }
   }
 
   @override
@@ -275,68 +281,114 @@ class _SetRowState extends State<_SetRow> {
     final loadType = widget.definition?.loadType;
     final loadFields = _buildLoadFields(loadType);
 
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 6),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                Text('S${widget.index + 1}', style: Theme.of(context).textTheme.labelLarge),
-                const Spacer(),
-                IconButton(
-                  onPressed: widget.onDelete,
-                  icon: const Icon(Icons.delete_outline),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _numberField(
-                  controller: _repsController,
-                  label: 'Reps',
-                  autofocus: widget.autofocus,
-                  onChanged: (value) => widget.onChanged(
-                    widget.set.copyWith(reps: int.tryParse(value)),
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.35),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: Text('S${widget.index + 1}', style: Theme.of(context).textTheme.labelLarge),
                   ),
-                ),
-                ...loadFields,
-                _numberField(
-                  controller: _durationController,
-                  label: 'Tiempo',
-                  suffix: 's',
-                  onChanged: (value) => widget.onChanged(
-                    widget.set.copyWith(durationSeconds: int.tryParse(value)),
+                  Container(
+                    width: 1,
+                    height: 48,
+                    margin: const EdgeInsets.symmetric(horizontal: 10),
+                    color: Theme.of(context).colorScheme.outlineVariant.withOpacity(0.4),
                   ),
-                ),
-                _numberField(
-                  controller: _restController,
-                  label: 'Desc',
-                  suffix: 's',
-                  onChanged: (value) => widget.onChanged(
-                    widget.set.copyWith(restSeconds: int.tryParse(value)),
-                  ),
-                ),
-                DropdownButton<int>(
-                  value: widget.set.rir ?? 0,
-                  onChanged: (value) => widget.onChanged(widget.set.copyWith(rir: value)),
-                  items: List.generate(
-                    6,
-                    (index) => DropdownMenuItem(
-                      value: index,
-                      child: Text('RIR $index'),
+                  Expanded(
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        _numberField(
+                          controller: _repsController,
+                          label: 'Reps',
+                          autofocus: widget.autofocus,
+                          onChanged: (value) => widget.onChanged(
+                            widget.set.copyWith(reps: int.tryParse(value)),
+                          ),
+                        ),
+                        ...loadFields,
+                      ],
                     ),
                   ),
+                  IconButton(
+                    onPressed: widget.onDelete,
+                    icon: const Icon(Icons.delete_outline),
+                  ),
+                ],
+              ),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  style: TextButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                  ),
+                  onPressed: () => setState(() => _showAdvanced = !_showAdvanced),
+                  icon: Icon(_showAdvanced ? Icons.expand_less : Icons.more_horiz),
+                  label: Text(_showAdvanced ? 'Ocultar' : 'Más'),
                 ),
-              ],
-            ),
-          ],
+              ),
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 200),
+                child: !_showAdvanced
+                    ? const SizedBox.shrink()
+                    : Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            _numberField(
+                              controller: _durationController,
+                              label: 'Tiempo',
+                              suffix: 's',
+                              onChanged: (value) => widget.onChanged(
+                                widget.set.copyWith(durationSeconds: int.tryParse(value)),
+                              ),
+                            ),
+                            _numberField(
+                              controller: _restController,
+                              label: 'Desc',
+                              suffix: 's',
+                              onChanged: (value) => widget.onChanged(
+                                widget.set.copyWith(restSeconds: int.tryParse(value)),
+                              ),
+                            ),
+                            SizedBox(
+                              width: 120,
+                              child: DropdownButtonFormField<int>(
+                                decoration: const InputDecoration(labelText: 'RIR', isDense: true),
+                                value: widget.set.rir ?? 0,
+                                items: List.generate(
+                                  6,
+                                  (index) => DropdownMenuItem(
+                                    value: index,
+                                    child: Text('RIR $index'),
+                                  ),
+                                ),
+                                onChanged: (value) => widget.onChanged(widget.set.copyWith(rir: value)),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+              ),
+            ],
+          ),
         ),
-      ),
+        const SizedBox(height: 8),
+      ],
     );
   }
 
@@ -348,13 +400,14 @@ class _SetRowState extends State<_SetRow> {
     required ValueChanged<String> onChanged,
   }) {
     return SizedBox(
-      width: 90,
+      width: 96,
       child: TextField(
         controller: controller,
         keyboardType: const TextInputType.numberWithOptions(decimal: true),
         decoration: InputDecoration(
           labelText: label,
           suffixText: suffix,
+          isDense: true,
         ),
         autofocus: autofocus,
         onChanged: onChanged,
@@ -437,13 +490,14 @@ class _SetRowState extends State<_SetRow> {
     String? suffix,
   }) {
     return SizedBox(
-      width: 110,
+      width: 106,
       child: TextField(
         controller: controller,
         enabled: false,
         decoration: InputDecoration(
           labelText: label,
           suffixText: suffix,
+          isDense: true,
         ),
       ),
     );
@@ -454,7 +508,7 @@ class _SetRowState extends State<_SetRow> {
     return SizedBox(
       width: 120,
       child: InputDecorator(
-        decoration: const InputDecoration(labelText: 'Carga efectiva'),
+        decoration: const InputDecoration(labelText: 'Carga efectiva', isDense: true),
         child: Text(display),
       ),
     );

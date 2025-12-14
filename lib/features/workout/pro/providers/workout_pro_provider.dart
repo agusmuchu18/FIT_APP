@@ -250,7 +250,9 @@ class WorkoutProProvider extends ChangeNotifier {
   void addSet(String exerciseId) {
     _exercises = _exercises.map((e) {
       if (e.id == exerciseId) {
-        final newSet = SetEntry(id: _uuid.v4());
+        final newSet = e.sets.isEmpty
+            ? SetEntry(id: _uuid.v4())
+            : e.sets.last.copyWith(id: _uuid.v4());
         return e.copyWith(sets: [...e.sets, newSet]);
       }
       return e;

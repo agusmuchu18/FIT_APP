@@ -82,50 +82,9 @@ class _WorkoutProContentState extends State<_WorkoutProContent> {
                   children: [
                     _SessionSummary(provider: provider),
                     const SizedBox(height: 12),
-                    Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text('Tipo de entrenamiento', style: TextStyle(fontWeight: FontWeight.w700)),
-                            const SizedBox(height: 12),
-                            WorkoutTypeSelector(
-                              selected: provider.selectedType,
-                              customName: provider.customTypeName,
-                              onCustomNameChanged: provider.setCustomTypeName,
-                              onSelected: (type) async {
-                                if (provider.selectedType == WorkoutType.strength &&
-                                    type != WorkoutType.strength &&
-                                    provider.exercises.isNotEmpty) {
-                                  final confirmed = await _confirmDialog(
-                                    context,
-                                    'Cambiar tipo borrará ejercicios. ¿Continuar?',
-                                  );
-                                  if (!confirmed) return;
-                                  provider.setType(type, force: true);
-                                } else {
-                                  provider.setType(type);
-                                }
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    TemplateSection(
-                      standardTemplates: provider.standardTemplates,
-                      userTemplates: provider.userTemplates,
-                      selected: provider.selectedTemplate,
-                      suggestions: provider.suggestedTemplates(),
-                      onSelect: provider.selectTemplate,
-                      onClear: provider.clearTemplate,
-                    ),
+                    _ConfigurationCard(provider: provider, onConfirmTypeChange: _confirmDialog),
                     const SizedBox(height: 12),
                     _buildDynamicSection(provider),
-                    const SizedBox(height: 12),
-                    ClosingSection(provider: provider),
                   ],
                 ),
               ),
@@ -136,7 +95,7 @@ class _WorkoutProContentState extends State<_WorkoutProContent> {
         setCount: provider.selectedType == WorkoutType.strength ? provider.totalSets : 0,
         durationLabel: provider.getDurationLabel(),
         onSave: () => _saveSession(context, provider, finalize: false),
-        onFinish: () => _saveSession(context, provider, finalize: true),
+        onFinish: () => _showFinishSheet(context, provider),
       ),
     );
   }
@@ -169,6 +128,134 @@ class _WorkoutProContentState extends State<_WorkoutProContent> {
           title: 'Otro',
         );
     }
+  }
+
+  Future<void> _showFinishSheet(BuildContext context, WorkoutProProvider provider) async {
+    final durationController = TextEditingController(
+      text: provider.closingDuration?.toString() ?? provider.durationMinutes?.toString() ?? '',
+    );
+    final notesController = TextEditingController(text: provider.finalNotes ?? '');
+    var fatigue = provider.closingFatigue;
+    var performance = provider.closingPerformance;
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (sheetContext) {
+        return Padding(
+          padding: EdgeInsets.only(
+            left: 16,
+            right: 16,
+            top: 8,
+            bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 16,
+          ),
+          child: StatefulBuilder(
+            builder: (context, setState) {
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Registrar cierre', style: Theme.of(context).textTheme.titleMedium),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: durationController,
+                    decoration: const InputDecoration(
+                      labelText: 'Duración total (min)',
+                      prefixIcon: Icon(Icons.timer_outlined),
+                      isDense: true,
+                    ),
+                    keyboardType: TextInputType.number,
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: DropdownButtonFormField<int>(
+                          value: fatigue,
+                          decoration: const InputDecoration(
+                            labelText: 'Fatiga general (1-5)',
+                            isDense: true,
+                          ),
+                          items: List.generate(
+                            5,
+                            (index) => DropdownMenuItem(
+                              value: index + 1,
+                              child: Text('${index + 1}'),
+                            ),
+                          ),
+                          onChanged: (v) => setState(() => fatigue = v ?? fatigue),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: DropdownButtonFormField<int>(
+                          value: performance,
+                          decoration: const InputDecoration(
+                            labelText: 'Performance (1-5)',
+                            isDense: true,
+                          ),
+                          items: List.generate(
+                            5,
+                            (index) => DropdownMenuItem(
+                              value: index + 1,
+                              child: Text('${index + 1}'),
+                            ),
+                          ),
+                          onChanged: (v) => setState(() => performance = v ?? performance),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: notesController,
+                    decoration: const InputDecoration(
+                      labelText: 'Notas finales',
+                      prefixIcon: Icon(Icons.note_alt_outlined),
+                      isDense: true,
+                    ),
+                    maxLines: 3,
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.of(sheetContext).pop(),
+                        child: const Text('Cancelar'),
+                      ),
+                      const Spacer(),
+                      OutlinedButton(
+                        onPressed: () async {
+                          Navigator.of(sheetContext).pop();
+                          await _saveSession(context, provider, finalize: true);
+                        },
+                        child: const Text('Saltar'),
+                      ),
+                      const SizedBox(width: 8),
+                      FilledButton(
+                        onPressed: () async {
+                          provider.setClosingDuration(int.tryParse(durationController.text));
+                          provider.setClosingFatigue(fatigue);
+                          provider.setClosingPerformance(performance);
+                          provider.setFinalNotes(notesController.text.isEmpty ? null : notesController.text);
+                          Navigator.of(sheetContext).pop();
+                          await _saveSession(context, provider, finalize: true);
+                        },
+                        child: const Text('Finalizar'),
+                      ),
+                    ],
+                  ),
+                ],
+              );
+            },
+          ),
+        );
+      },
+    );
+
+    durationController.dispose();
+    notesController.dispose();
   }
 
   Future<void> _saveSession(
@@ -371,6 +458,64 @@ class _SessionSummary extends StatelessWidget {
             ? provider.customTypeName!
             : 'Personalizado';
     }
+  }
+}
+
+class _ConfigurationCard extends StatefulWidget {
+  const _ConfigurationCard({required this.provider, required this.onConfirmTypeChange});
+
+  final WorkoutProProvider provider;
+  final Future<bool> Function(BuildContext context, String message) onConfirmTypeChange;
+
+  @override
+  State<_ConfigurationCard> createState() => _ConfigurationCardState();
+}
+
+class _ConfigurationCardState extends State<_ConfigurationCard> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: ExpansionTile(
+        maintainState: true,
+        initiallyExpanded: _expanded,
+        onExpansionChanged: (value) => setState(() => _expanded = value),
+        title: const Text('Configuración', style: TextStyle(fontWeight: FontWeight.w700)),
+        subtitle: const Text('Tipo y plantilla'),
+        childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        children: [
+          WorkoutTypeSelector(
+            selected: widget.provider.selectedType,
+            customName: widget.provider.customTypeName,
+            onCustomNameChanged: widget.provider.setCustomTypeName,
+            onSelected: (type) async {
+              if (widget.provider.selectedType == WorkoutType.strength &&
+                  type != WorkoutType.strength &&
+                  widget.provider.exercises.isNotEmpty) {
+                final confirmed = await widget.onConfirmTypeChange(
+                  context,
+                  'Cambiar tipo borrará ejercicios. ¿Continuar?',
+                );
+                if (!confirmed) return;
+                widget.provider.setType(type, force: true);
+              } else {
+                widget.provider.setType(type);
+              }
+            },
+          ),
+          const SizedBox(height: 12),
+          TemplateSection(
+            standardTemplates: widget.provider.standardTemplates,
+            userTemplates: widget.provider.userTemplates,
+            selected: widget.provider.selectedTemplate,
+            suggestions: widget.provider.suggestedTemplates(),
+            onSelect: widget.provider.selectTemplate,
+            onClear: widget.provider.clearTemplate,
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -968,131 +1113,3 @@ class _IntensityRow extends StatelessWidget {
   }
 }
 
-class ClosingSection extends StatefulWidget {
-  const ClosingSection({required this.provider});
-
-  final WorkoutProProvider provider;
-
-  @override
-  State<ClosingSection> createState() => _ClosingSectionState();
-}
-
-class _ClosingSectionState extends State<ClosingSection> {
-  late final TextEditingController _durationController;
-  late final TextEditingController _notesController;
-
-  @override
-  void initState() {
-    super.initState();
-    _durationController = TextEditingController(
-      text: widget.provider.closingDuration?.toString() ?? '',
-    );
-    _notesController = TextEditingController(text: widget.provider.finalNotes ?? '');
-  }
-
-  @override
-  void didUpdateWidget(covariant ClosingSection oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    final durationText = widget.provider.closingDuration?.toString() ?? '';
-    if (_durationController.text != durationText) {
-      _durationController.text = durationText;
-    }
-    if (widget.provider.finalNotes != _notesController.text) {
-      _notesController.text = widget.provider.finalNotes ?? '';
-    }
-  }
-
-  @override
-  void dispose() {
-    _durationController.dispose();
-    _notesController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Cierre de entrenamiento', style: TextStyle(fontWeight: FontWeight.w700)),
-                const SizedBox(height: 4),
-                Text(
-                  'Estos datos ayudan a interpretar tu carga y progreso.',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                    controller: _durationController,
-                    decoration: const InputDecoration(
-                      labelText: 'Duración total (min)',
-                      prefixIcon: Icon(Icons.timer_outlined),
-                    ),
-                    keyboardType: TextInputType.number,
-                    onChanged: (v) => widget.provider.setClosingDuration(int.tryParse(v)),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: DropdownButtonFormField<int>(
-                    decoration: const InputDecoration(labelText: 'Fatiga general (1-5)'),
-                    value: widget.provider.closingFatigue,
-                    items: List.generate(
-                      5,
-                      (index) => DropdownMenuItem(
-                        value: index + 1,
-                        child: Text('${index + 1}'),
-                      ),
-                    ),
-                    onChanged: (v) {
-                      if (v != null) widget.provider.setClosingFatigue(v);
-                    },
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<int>(
-              decoration: const InputDecoration(labelText: 'Rendimiento percibido (1-5)'),
-              value: widget.provider.closingPerformance,
-              items: List.generate(
-                5,
-                (index) => DropdownMenuItem(
-                  value: index + 1,
-                  child: Text('${index + 1}'),
-                ),
-              ),
-              onChanged: (v) {
-                if (v != null) widget.provider.setClosingPerformance(v);
-              },
-            ),
-            const SizedBox(height: 12),
-            Card(
-              margin: EdgeInsets.zero,
-              child: ExpansionTile(
-                title: const Text('Notas finales'),
-                childrenPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                children: [
-                  TextField(
-                    controller: _notesController,
-                    decoration: const InputDecoration(
-                      labelText: 'Notas finales',
-                      prefixIcon: Icon(Icons.note_alt_outlined),
-                    ),
-                    maxLines: 3,
-                    onChanged: widget.provider.setFinalNotes,
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
