@@ -1,6 +1,6 @@
 import 'exercise_definition.dart';
 
-final List<ExerciseDefinition> exerciseLibrary = [
+final List<ExerciseDefinition> _baseExerciseLibrary = [
   ExerciseDefinition(
     id: 'bench_press',
     name: 'Press banca',
@@ -1501,142 +1501,752 @@ final List<ExerciseDefinition> exerciseLibrary = [
     isUnilateral: false,
     isTimed: false,
   ),
-  ...additionalExercises,
 ];
+
+List<ExerciseDefinition> _applyAdditionalExerciseRules() {
+  final existingIds = _baseExerciseLibrary.map((exercise) => exercise.id).toSet();
+  final deduped = <ExerciseDefinition>[];
+  final seen = <String>{};
+
+  for (final exercise in additionalExercises) {
+    if (existingIds.contains(exercise.id)) {
+      continue;
+    }
+
+    if (seen.add(exercise.id)) {
+      deduped.add(exercise);
+    }
+  }
+
+  return deduped;
+}
+
+final List<ExerciseDefinition> exerciseLibrary = (() {
+  final filteredAdditionalExercises = _applyAdditionalExerciseRules();
+  final allExercises = [
+    ..._baseExerciseLibrary,
+    ...filteredAdditionalExercises,
+  ];
+
+  assert(() {
+    final counts = <String, int>{};
+    for (final exercise in allExercises) {
+      counts.update(exercise.id, (value) => value + 1, ifAbsent: () => 1);
+    }
+
+    final duplicates = counts.entries.where((entry) => entry.value > 1).toList();
+    if (duplicates.isNotEmpty) {
+      final message = duplicates
+          .map((entry) => 'id: ${entry.key}, count: ${entry.value}')
+          .join('; ');
+      throw AssertionError('Duplicate exercise ids detected -> $message');
+    }
+
+    return true;
+  }());
+
+  return allExercises;
+})();
 
 ExerciseDefinition simpleExercise({
   required String id,
   required String name,
   List<String> aliases = const [],
-  String primary = 'cuerpo completo',
-  List<String> secondary = const ['estabilidad'],
+  List<String> primaryMuscles = const ['cuerpo completo'],
+  List<String> secondaryMuscles = const ['estabilidad'],
   String equipment = 'bodyweight',
-  String pattern = 'general',
+  String movementPattern = 'general',
   String defaultMeasurement = 'reps',
   LoadType loadType = LoadType.bodyweight_effective,
-  double bodyweightFactor = 1.0,
+  double? bodyweightFactor,
   bool allowExternalLoad = false,
   bool isUnilateral = false,
   bool isTimed = false,
 }) {
+  final double? effectiveBodyweightFactor =
+      loadType == LoadType.bodyweight_effective ? (bodyweightFactor ?? 1.0) : null;
+
   return ExerciseDefinition(
     id: id,
     name: name,
     aliases: aliases,
-    primaryMuscles: [primary],
-    secondaryMuscles: secondary,
+    primaryMuscles: primaryMuscles,
+    secondaryMuscles: secondaryMuscles,
     equipment: equipment,
-    movementPattern: pattern,
+    movementPattern: movementPattern,
     defaultMeasurement: defaultMeasurement,
     loadType: loadType,
-    bodyweightFactor: loadType == LoadType.bodyweight_effective ? bodyweightFactor : null,
+    bodyweightFactor: effectiveBodyweightFactor,
     allowExternalLoad: allowExternalLoad,
     isUnilateral: isUnilateral,
     isTimed: isTimed,
   );
 }
 
+ExerciseDefinition bwPush({
+  required String id,
+  required String name,
+  List<String> aliases = const [],
+  List<String> primaryMuscles = const ['pecho'],
+  List<String> secondaryMuscles = const ['tríceps', 'hombro anterior'],
+  String defaultMeasurement = 'reps',
+  double? bodyweightFactor,
+  bool isTimed = false,
+  bool isUnilateral = false,
+}) {
+  return simpleExercise(
+    id: id,
+    name: name,
+    aliases: aliases,
+    primaryMuscles: primaryMuscles,
+    secondaryMuscles: secondaryMuscles,
+    movementPattern: 'push',
+    defaultMeasurement: defaultMeasurement,
+    loadType: LoadType.bodyweight_effective,
+    bodyweightFactor: bodyweightFactor,
+    isTimed: isTimed,
+    isUnilateral: isUnilateral,
+  );
+}
+
+ExerciseDefinition bwSquat({
+  required String id,
+  required String name,
+  List<String> aliases = const [],
+  List<String> primaryMuscles = const ['cuádriceps'],
+  List<String> secondaryMuscles = const ['glúteos', 'isquiosurales', 'core'],
+  String defaultMeasurement = 'reps',
+  double? bodyweightFactor,
+  bool isTimed = false,
+  bool isUnilateral = false,
+}) {
+  return simpleExercise(
+    id: id,
+    name: name,
+    aliases: aliases,
+    primaryMuscles: primaryMuscles,
+    secondaryMuscles: secondaryMuscles,
+    movementPattern: 'squat',
+    defaultMeasurement: defaultMeasurement,
+    loadType: LoadType.bodyweight_effective,
+    bodyweightFactor: bodyweightFactor,
+    isTimed: isTimed,
+    isUnilateral: isUnilateral,
+  );
+}
+
+ExerciseDefinition coreTimed({
+  required String id,
+  required String name,
+  List<String> aliases = const [],
+  List<String> primaryMuscles = const ['core'],
+  List<String> secondaryMuscles = const ['estabilidad'],
+  String movementPattern = 'core',
+  bool isUnilateral = false,
+}) {
+  return simpleExercise(
+    id: id,
+    name: name,
+    aliases: aliases,
+    primaryMuscles: primaryMuscles,
+    secondaryMuscles: secondaryMuscles,
+    movementPattern: movementPattern,
+    defaultMeasurement: 'time',
+    isTimed: true,
+    isUnilateral: isUnilateral,
+  );
+}
+
+ExerciseDefinition plyo({
+  required String id,
+  required String name,
+  List<String> aliases = const [],
+  List<String> primaryMuscles = const ['piernas'],
+  List<String> secondaryMuscles = const ['cardio'],
+  String movementPattern = 'general',
+  bool isUnilateral = false,
+}) {
+  return simpleExercise(
+    id: id,
+    name: name,
+    aliases: aliases,
+    primaryMuscles: primaryMuscles,
+    secondaryMuscles: secondaryMuscles,
+    movementPattern: movementPattern,
+    isUnilateral: isUnilateral,
+  );
+}
+
+ExerciseDefinition locomotion({
+  required String id,
+  required String name,
+  List<String> aliases = const [],
+  List<String> primaryMuscles = const ['core'],
+  List<String> secondaryMuscles = const ['cardio', 'estabilidad'],
+  String movementPattern = 'general',
+  String defaultMeasurement = 'distance',
+  bool isTimed = false,
+  bool isUnilateral = false,
+}) {
+  return simpleExercise(
+    id: id,
+    name: name,
+    aliases: aliases,
+    primaryMuscles: primaryMuscles,
+    secondaryMuscles: secondaryMuscles,
+    movementPattern: movementPattern,
+    defaultMeasurement: defaultMeasurement,
+    isTimed: isTimed,
+    isUnilateral: isUnilateral,
+  );
+}
+
 final List<ExerciseDefinition> additionalExercises = [
-  simpleExercise(id: 'bear_crawl', name: 'Bear crawl'),
-  simpleExercise(id: 'crab_walk', name: 'Crab walk'),
-  simpleExercise(id: 'hollow_body_hold', name: 'Hollow body hold'),
-  simpleExercise(id: 'dead_bug', name: 'Dead bug'),
-  simpleExercise(id: 'burpee_broad_jump', name: 'Burpee broad jump'),
-  simpleExercise(id: 'skater_hop', name: 'Skater hop'),
-  simpleExercise(id: 'lateral_shuffle', name: 'Lateral shuffle'),
-  simpleExercise(id: 'spiderman_crawl', name: 'Spiderman crawl'),
-  simpleExercise(id: 'wall_sit', name: 'Wall sit'),
-  simpleExercise(id: 'copenhagen_side_plank', name: 'Copenhagen side plank'),
-  simpleExercise(id: 'single_leg_glute_bridge', name: 'Single-leg glute bridge'),
-  simpleExercise(id: 'frog_pump', name: 'Frog pump'),
-  simpleExercise(id: 'reverse_lunge_with_knee_drive', name: 'Reverse lunge with knee drive'),
-  simpleExercise(id: 'curtsy_lunge', name: 'Curtsy lunge'),
-  simpleExercise(id: 'surrender', name: 'Surrender'),
-  simpleExercise(id: 'inchworm_walkout', name: 'Inchworm walkout'),
-  simpleExercise(id: 'pike_push_up', name: 'Pike push-up'),
-  simpleExercise(id: 'dive_bomber_push_up', name: 'Dive bomber push-up'),
-  simpleExercise(id: 'hand_release_push_up', name: 'Hand release push-up'),
-  simpleExercise(id: 'clapping_push_up', name: 'Clapping push-up'),
-  simpleExercise(id: 'archer_push_up', name: 'Archer push-up'),
-  simpleExercise(id: 'pseudo_planche_push_up', name: 'Pseudo planche push-up'),
-  simpleExercise(id: 'hindu_squat', name: 'Hindu squat'),
-  simpleExercise(id: 'cossack_squat', name: 'Cossack squat'),
-  simpleExercise(id: 'sissy_squat', name: 'Sissy squat'),
-  simpleExercise(id: 'deck_squat', name: 'Deck squat'),
-  simpleExercise(id: 'pistol_squat_to_box', name: 'Pistol squat to box'),
-  simpleExercise(id: 'shrimp_squat', name: 'Shrimp squat'),
-  simpleExercise(id: 'wall_facing_handstand_hold', name: 'Wall facing handstand hold'),
-  simpleExercise(id: 'handstand_shoulder_tap', name: 'Handstand shoulder tap'),
-  simpleExercise(id: 'tuck_jump', name: 'Tuck jump'),
-  simpleExercise(id: 'jump_squat', name: 'Jump squat'),
-  simpleExercise(id: 'split_jump', name: 'Split jump'),
-  simpleExercise(id: 'broad_jump', name: 'Broad jump'),
-  simpleExercise(id: 'star_jump', name: 'Star jump'),
-  simpleExercise(id: 'mountain_climber_twist', name: 'Mountain climber twist'),
-  simpleExercise(id: 'cross_body_mountain_climber', name: 'Cross-body mountain climber'),
-  simpleExercise(id: 'plank_up_down', name: 'Plank up-down'),
-  simpleExercise(id: 'side_plank_reach_through', name: 'Side plank reach-through'),
-  simpleExercise(id: 'side_plank_leg_raise', name: 'Side plank leg raise'),
-  simpleExercise(id: 'shoulder_tap_plank', name: 'Shoulder tap plank'),
-  simpleExercise(id: 'single_leg_drop_squat', name: 'Single-leg drop squat'),
-  simpleExercise(id: 'wall_crawl', name: 'Wall crawl'),
-  simpleExercise(id: 'donkey_kick_up', name: 'Donkey kick up'),
-  simpleExercise(id: 'hollow_rock', name: 'Hollow rock'),
-  simpleExercise(id: 'v_up', name: 'V-up'),
-  simpleExercise(id: 'toe_touch_crunch', name: 'Toe touch crunch'),
-  simpleExercise(id: 'hip_dip_plank', name: 'Hip dip plank'),
-  simpleExercise(id: 'reverse_table_top', name: 'Reverse table top'),
-  simpleExercise(id: 'prone_snow_angel', name: 'Prone snow angel'),
-  simpleExercise(id: 'superman_hold', name: 'Superman hold'),
-  simpleExercise(id: 'superman_pull', name: 'Superman pull'),
-  simpleExercise(id: 'y_t_w_raise', name: 'Y-T-W raise'),
-  simpleExercise(id: 'prone_press_up', name: 'Prone press-up'),
-  simpleExercise(id: 'hip_airplane', name: 'Hip airplane'),
-  simpleExercise(id: 'worlds_greatest_stretch', name: 'Worlds greatest stretch'),
-  simpleExercise(id: 'lateral_lunge_reach', name: 'Lateral lunge reach'),
-  simpleExercise(id: 'runner_lunge_pulse', name: 'Runner lunge pulse'),
-  simpleExercise(id: 'reverse_nordic_curl', name: 'Reverse nordic curl'),
-  simpleExercise(id: 'step_down', name: 'Step-down'),
-  simpleExercise(id: 'heel_elevated_squat', name: 'Heel elevated squat'),
-  simpleExercise(id: 'tempo_squat', name: 'Tempo squat'),
-  simpleExercise(id: 'box_squat_jump', name: 'Box squat jump'),
-  simpleExercise(id: 'box_step_up_jump', name: 'Box step-up jump'),
-  simpleExercise(id: 'single_leg_calf_raise', name: 'Single-leg calf raise'),
-  simpleExercise(id: 'standing_calf_raise', name: 'Standing calf raise'),
-  simpleExercise(id: 'bent_knee_calf_raise', name: 'Bent-knee calf raise'),
-  simpleExercise(id: 'kneeling_push_up', name: 'Kneeling push-up'),
-  simpleExercise(id: 'diamond_push_up', name: 'Diamond push-up'),
-  simpleExercise(id: 'wide_push_up', name: 'Wide push-up'),
-  simpleExercise(id: 'spartan_push_up', name: 'Spartan push-up'),
-  simpleExercise(id: 'typewriter_push_up', name: 'Typewriter push-up'),
-  simpleExercise(id: 'plyo_lunge', name: 'Plyo lunge'),
-  simpleExercise(id: 'split_squat_iso_hold', name: 'Split squat iso hold'),
-  simpleExercise(id: 'bodyweight_good_morning', name: 'Bodyweight good morning'),
-  simpleExercise(id: 'good_morning_to_squat', name: 'Good morning to squat'),
-  simpleExercise(id: 'hip_circle_squat', name: 'Hip circle squat'),
-  simpleExercise(id: 'prisoner_squat', name: 'Prisoner squat'),
-  simpleExercise(id: 'duck_walk', name: 'Duck walk'),
-  simpleExercise(id: 'wall_march', name: 'Wall march'),
-  simpleExercise(id: 'knee_drive_hop', name: 'Knee drive hop'),
-  simpleExercise(id: 'high_knees', name: 'High knees'),
-  simpleExercise(id: 'butt_kicks', name: 'Butt kicks'),
-  simpleExercise(id: 'a_skips', name: 'A-skips'),
-  simpleExercise(id: 'carioca', name: 'Carioca'),
-  simpleExercise(id: 'bear_plank_shoulder_tap', name: 'Bear plank shoulder tap'),
-  simpleExercise(id: 'beast_crawl_forward', name: 'Beast crawl forward'),
-  simpleExercise(id: 'beast_crawl_lateral', name: 'Beast crawl lateral'),
-  simpleExercise(id: 'hurdle_step', name: 'Hurdle step'),
-  simpleExercise(id: 'single_leg_deadlift_reach', name: 'Single-leg deadlift reach'),
-  simpleExercise(id: 'knee_tap_squat', name: 'Knee tap squat'),
-  simpleExercise(id: 'lateral_box_step_over', name: 'Lateral box step-over'),
-  simpleExercise(id: 'alternating_lateral_lunge', name: 'Alternating lateral lunge'),
-  simpleExercise(id: 'runner_jump', name: 'Runner jump'),
-  simpleExercise(id: 'triple_hop', name: 'Triple hop'),
-  simpleExercise(id: 'bound_sprint_start', name: 'Bound sprint start'),
-  simpleExercise(id: 'standing_long_lunge_hold', name: 'Standing long lunge hold'),
-  simpleExercise(id: 'bird_dog_row_hold', name: 'Bird dog row hold'),
-  simpleExercise(id: 'quadruped_thoracic_rotation', name: 'Quadruped thoracic rotation'),
-  simpleExercise(id: 'standing_thoracic_opener', name: 'Standing thoracic opener'),
+  locomotion(
+    id: 'bear_crawl',
+    name: 'Bear crawl',
+    secondaryMuscles: ['cardio', 'hombros', 'estabilidad'],
+  ),
+  locomotion(
+    id: 'crab_walk',
+    name: 'Crab walk',
+    primaryMuscles: ['glúteos'],
+    secondaryMuscles: ['core', 'estabilidad'],
+  ),
+  coreTimed(id: 'hollow_body_hold', name: 'Hollow body hold'),
+  coreTimed(id: 'dead_bug', name: 'Dead bug'),
+  plyo(
+    id: 'burpee_broad_jump',
+    name: 'Burpee broad jump',
+    secondaryMuscles: ['cardio', 'core'],
+  ),
+  plyo(
+    id: 'skater_hop',
+    name: 'Skater hop',
+    movementPattern: 'squat',
+    secondaryMuscles: ['cardio', 'glúteos'],
+  ),
+  locomotion(
+    id: 'lateral_shuffle',
+    name: 'Lateral shuffle',
+    secondaryMuscles: ['cardio', 'aductores'],
+    defaultMeasurement: 'distance',
+  ),
+  locomotion(id: 'spiderman_crawl', name: 'Spiderman crawl'),
+  bwSquat(
+    id: 'wall_sit',
+    name: 'Wall sit',
+    defaultMeasurement: 'time',
+    isTimed: true,
+    secondaryMuscles: ['glúteos', 'core'],
+  ),
+  coreTimed(
+    id: 'copenhagen_side_plank',
+    name: 'Copenhagen side plank',
+    secondaryMuscles: ['aductores', 'estabilidad'],
+  ),
+  simpleExercise(
+    id: 'single_leg_glute_bridge',
+    name: 'Single-leg glute bridge',
+    primaryMuscles: ['glúteos'],
+    secondaryMuscles: ['isquiosurales', 'core'],
+    movementPattern: 'hinge',
+    isUnilateral: true,
+  ),
+  simpleExercise(
+    id: 'frog_pump',
+    name: 'Frog pump',
+    primaryMuscles: ['glúteos'],
+    secondaryMuscles: ['isquiosurales'],
+    movementPattern: 'hinge',
+  ),
+  bwSquat(
+    id: 'reverse_lunge_with_knee_drive',
+    name: 'Reverse lunge with knee drive',
+    isUnilateral: true,
+  ),
+  bwSquat(
+    id: 'curtsy_lunge',
+    name: 'Curtsy lunge',
+    isUnilateral: true,
+    secondaryMuscles: ['glúteos', 'aductores', 'core'],
+  ),
+  bwSquat(id: 'surrender', name: 'Surrender'),
+  locomotion(
+    id: 'inchworm_walkout',
+    name: 'Inchworm walkout',
+    primaryMuscles: ['core'],
+    secondaryMuscles: ['hombros', 'estabilidad'],
+    defaultMeasurement: 'reps',
+  ),
+  bwPush(
+    id: 'pike_push_up',
+    name: 'Pike push-up',
+    primaryMuscles: ['hombros'],
+    secondaryMuscles: ['tríceps', 'core'],
+  ),
+  bwPush(
+    id: 'dive_bomber_push_up',
+    name: 'Dive bomber push-up',
+    secondaryMuscles: ['tríceps', 'core', 'hombro anterior'],
+  ),
+  bwPush(id: 'hand_release_push_up', name: 'Hand release push-up'),
+  bwPush(
+    id: 'clapping_push_up',
+    name: 'Clapping push-up',
+    secondaryMuscles: ['tríceps', 'hombro anterior', 'cardio'],
+  ),
+  bwPush(id: 'archer_push_up', name: 'Archer push-up', isUnilateral: true),
+  bwPush(
+    id: 'pseudo_planche_push_up',
+    name: 'Pseudo planche push-up',
+    primaryMuscles: ['hombros'],
+    secondaryMuscles: ['tríceps', 'pecho'],
+  ),
+  bwSquat(id: 'hindu_squat', name: 'Hindu squat'),
+  bwSquat(
+    id: 'cossack_squat',
+    name: 'Cossack squat',
+    isUnilateral: true,
+    secondaryMuscles: ['aductores', 'glúteos', 'core'],
+  ),
+  bwSquat(
+    id: 'sissy_squat',
+    name: 'Sissy squat',
+    primaryMuscles: ['cuádriceps'],
+    secondaryMuscles: ['core'],
+  ),
+  bwSquat(
+    id: 'deck_squat',
+    name: 'Deck squat',
+    secondaryMuscles: ['glúteos', 'core'],
+  ),
+  bwSquat(
+    id: 'pistol_squat_to_box',
+    name: 'Pistol squat to box',
+    isUnilateral: true,
+    secondaryMuscles: ['glúteos', 'core', 'isquiosurales'],
+  ),
+  bwSquat(
+    id: 'shrimp_squat',
+    name: 'Shrimp squat',
+    isUnilateral: true,
+    secondaryMuscles: ['glúteos', 'core', 'isquiosurales'],
+  ),
+  coreTimed(
+    id: 'wall_facing_handstand_hold',
+    name: 'Wall facing handstand hold',
+    primaryMuscles: ['hombros'],
+    secondaryMuscles: ['core'],
+    movementPattern: 'push',
+  ),
+  coreTimed(
+    id: 'handstand_shoulder_tap',
+    name: 'Handstand shoulder tap',
+    primaryMuscles: ['hombros'],
+    secondaryMuscles: ['core', 'estabilidad'],
+    movementPattern: 'push',
+    isUnilateral: true,
+  ),
+  plyo(
+    id: 'tuck_jump',
+    name: 'Tuck jump',
+    movementPattern: 'squat',
+    secondaryMuscles: ['cardio', 'core'],
+  ),
+  plyo(
+    id: 'jump_squat',
+    name: 'Jump squat',
+    movementPattern: 'squat',
+    secondaryMuscles: ['cardio', 'glúteos'],
+  ),
+  plyo(
+    id: 'split_jump',
+    name: 'Split jump',
+    movementPattern: 'squat',
+    secondaryMuscles: ['cardio', 'glúteos'],
+    isUnilateral: true,
+  ),
+  plyo(
+    id: 'broad_jump',
+    name: 'Broad jump',
+    movementPattern: 'hinge',
+    secondaryMuscles: ['cardio', 'glúteos'],
+  ),
+  plyo(
+    id: 'star_jump',
+    name: 'Star jump',
+    movementPattern: 'squat',
+    secondaryMuscles: ['cardio', 'core'],
+  ),
+  coreTimed(
+    id: 'mountain_climber_twist',
+    name: 'Mountain climber twist',
+    secondaryMuscles: ['cardio', 'hombros'],
+    movementPattern: 'core',
+  ),
+  coreTimed(
+    id: 'cross_body_mountain_climber',
+    name: 'Cross-body mountain climber',
+    secondaryMuscles: ['cardio', 'hombros'],
+    movementPattern: 'core',
+  ),
+  coreTimed(
+    id: 'plank_up_down',
+    name: 'Plank up-down',
+    secondaryMuscles: ['hombros', 'tríceps'],
+    movementPattern: 'core',
+  ),
+  coreTimed(
+    id: 'side_plank_reach_through',
+    name: 'Side plank reach-through',
+    secondaryMuscles: ['oblicuos', 'estabilidad'],
+    movementPattern: 'core',
+  ),
+  coreTimed(
+    id: 'side_plank_leg_raise',
+    name: 'Side plank leg raise',
+    secondaryMuscles: ['glúteos', 'estabilidad'],
+    movementPattern: 'core',
+    isUnilateral: true,
+  ),
+  coreTimed(
+    id: 'shoulder_tap_plank',
+    name: 'Shoulder tap plank',
+    secondaryMuscles: ['hombros', 'tríceps'],
+    movementPattern: 'core',
+  ),
+  bwSquat(
+    id: 'single_leg_drop_squat',
+    name: 'Single-leg drop squat',
+    isUnilateral: true,
+  ),
+  locomotion(id: 'wall_crawl', name: 'Wall crawl'),
+  plyo(
+    id: 'donkey_kick_up',
+    name: 'Donkey kick up',
+    primaryMuscles: ['glúteos'],
+    secondaryMuscles: ['core'],
+    movementPattern: 'hinge',
+  ),
+  coreTimed(id: 'hollow_rock', name: 'Hollow rock'),
+  coreTimed(
+    id: 'v_up',
+    name: 'V-up',
+    secondaryMuscles: ['flexores de cadera'],
+  ),
+  coreTimed(id: 'toe_touch_crunch', name: 'Toe touch crunch'),
+  coreTimed(
+    id: 'hip_dip_plank',
+    name: 'Hip dip plank',
+    secondaryMuscles: ['oblicuos'],
+  ),
+  coreTimed(
+    id: 'reverse_table_top',
+    name: 'Reverse table top',
+    primaryMuscles: ['glúteos'],
+    secondaryMuscles: ['core', 'hombros'],
+  ),
+  coreTimed(
+    id: 'prone_snow_angel',
+    name: 'Prone snow angel',
+    primaryMuscles: ['espalda alta'],
+    secondaryMuscles: ['hombros'],
+    movementPattern: 'isolation',
+  ),
+  coreTimed(
+    id: 'superman_hold',
+    name: 'Superman hold',
+    primaryMuscles: ['espalda baja'],
+    secondaryMuscles: ['glúteos', 'core'],
+    movementPattern: 'hinge',
+  ),
+  simpleExercise(
+    id: 'superman_pull',
+    name: 'Superman pull',
+    primaryMuscles: ['espalda'],
+    secondaryMuscles: ['glúteos', 'core'],
+    movementPattern: 'pull',
+  ),
+  simpleExercise(
+    id: 'y_t_w_raise',
+    name: 'Y-T-W raise',
+    primaryMuscles: ['espalda alta'],
+    secondaryMuscles: ['hombros'],
+    movementPattern: 'pull',
+  ),
+  simpleExercise(
+    id: 'prone_press_up',
+    name: 'Prone press-up',
+    primaryMuscles: ['espalda baja'],
+    secondaryMuscles: ['glúteos'],
+    movementPattern: 'hinge',
+  ),
+  simpleExercise(
+    id: 'hip_airplane',
+    name: 'Hip airplane',
+    primaryMuscles: ['glúteos'],
+    secondaryMuscles: ['core', 'estabilidad'],
+    movementPattern: 'hinge',
+    isUnilateral: true,
+  ),
+  coreTimed(
+    id: 'worlds_greatest_stretch',
+    name: 'Worlds greatest stretch',
+    primaryMuscles: ['movilidad'],
+    secondaryMuscles: ['core'],
+    movementPattern: 'general',
+  ),
+  bwSquat(
+    id: 'lateral_lunge_reach',
+    name: 'Lateral lunge reach',
+    isUnilateral: true,
+    secondaryMuscles: ['aductores', 'glúteos', 'core'],
+  ),
+  bwSquat(
+    id: 'runner_lunge_pulse',
+    name: 'Runner lunge pulse',
+    isUnilateral: true,
+    secondaryMuscles: ['glúteos', 'core'],
+  ),
+  simpleExercise(
+    id: 'reverse_nordic_curl',
+    name: 'Reverse nordic curl',
+    primaryMuscles: ['cuádriceps'],
+    secondaryMuscles: ['core'],
+    movementPattern: 'hinge',
+  ),
+  bwSquat(id: 'step_down', name: 'Step-down', isUnilateral: true),
+  bwSquat(
+    id: 'heel_elevated_squat',
+    name: 'Heel elevated squat',
+    secondaryMuscles: ['glúteos', 'core'],
+  ),
+  bwSquat(id: 'tempo_squat', name: 'Tempo squat', secondaryMuscles: ['glúteos', 'core']),
+  plyo(
+    id: 'box_squat_jump',
+    name: 'Box squat jump',
+    movementPattern: 'squat',
+    secondaryMuscles: ['cardio', 'glúteos'],
+  ),
+  plyo(
+    id: 'box_step_up_jump',
+    name: 'Box step-up jump',
+    movementPattern: 'squat',
+    secondaryMuscles: ['cardio', 'glúteos'],
+    isUnilateral: true,
+  ),
+  simpleExercise(
+    id: 'single_leg_calf_raise',
+    name: 'Single-leg calf raise',
+    primaryMuscles: ['pantorrillas'],
+    secondaryMuscles: ['estabilidad'],
+    movementPattern: 'isolation',
+    isUnilateral: true,
+  ),
+  simpleExercise(
+    id: 'standing_calf_raise',
+    name: 'Standing calf raise',
+    primaryMuscles: ['pantorrillas'],
+    movementPattern: 'isolation',
+  ),
+  simpleExercise(
+    id: 'bent_knee_calf_raise',
+    name: 'Bent-knee calf raise',
+    primaryMuscles: ['pantorrillas'],
+    movementPattern: 'isolation',
+  ),
+  bwPush(
+    id: 'kneeling_push_up',
+    name: 'Kneeling push-up',
+    bodyweightFactor: 0.4,
+  ),
+  bwPush(
+    id: 'diamond_push_up',
+    name: 'Diamond push-up',
+    secondaryMuscles: ['tríceps', 'pecho', 'hombro anterior'],
+  ),
+  bwPush(
+    id: 'wide_push_up',
+    name: 'Wide push-up',
+    secondaryMuscles: ['pecho', 'hombro anterior', 'tríceps'],
+  ),
+  bwPush(
+    id: 'spartan_push_up',
+    name: 'Spartan push-up',
+    secondaryMuscles: ['tríceps', 'hombro anterior'],
+    isUnilateral: true,
+  ),
+  bwPush(
+    id: 'typewriter_push_up',
+    name: 'Typewriter push-up',
+    secondaryMuscles: ['tríceps', 'hombro anterior'],
+    isUnilateral: true,
+  ),
+  plyo(
+    id: 'plyo_lunge',
+    name: 'Plyo lunge',
+    movementPattern: 'squat',
+    secondaryMuscles: ['cardio', 'glúteos'],
+    isUnilateral: true,
+  ),
+  coreTimed(
+    id: 'split_squat_iso_hold',
+    name: 'Split squat iso hold',
+    movementPattern: 'squat',
+    secondaryMuscles: ['glúteos', 'core'],
+    isUnilateral: true,
+  ),
+  simpleExercise(
+    id: 'bodyweight_good_morning',
+    name: 'Bodyweight good morning',
+    primaryMuscles: ['isquiosurales'],
+    secondaryMuscles: ['glúteos', 'espalda baja'],
+    movementPattern: 'hinge',
+  ),
+  bwSquat(
+    id: 'good_morning_to_squat',
+    name: 'Good morning to squat',
+    secondaryMuscles: ['isquiosurales', 'glúteos', 'core'],
+  ),
+  bwSquat(
+    id: 'hip_circle_squat',
+    name: 'Hip circle squat',
+    secondaryMuscles: ['glúteos', 'core'],
+  ),
+  bwSquat(id: 'prisoner_squat', name: 'Prisoner squat'),
+  locomotion(
+    id: 'duck_walk',
+    name: 'Duck walk',
+    primaryMuscles: ['cuádriceps'],
+    secondaryMuscles: ['glúteos', 'cardio'],
+    movementPattern: 'squat',
+  ),
+  locomotion(
+    id: 'wall_march',
+    name: 'Wall march',
+    primaryMuscles: ['core'],
+    secondaryMuscles: ['piernas'],
+    defaultMeasurement: 'reps',
+  ),
+  plyo(
+    id: 'knee_drive_hop',
+    name: 'Knee drive hop',
+    movementPattern: 'squat',
+    secondaryMuscles: ['cardio', 'glúteos'],
+    isUnilateral: true,
+  ),
+  plyo(
+    id: 'high_knees',
+    name: 'High knees',
+    secondaryMuscles: ['cardio', 'core'],
+  ),
+  plyo(
+    id: 'butt_kicks',
+    name: 'Butt kicks',
+    secondaryMuscles: ['cardio', 'isquiosurales'],
+  ),
+  plyo(id: 'a_skips', name: 'A-skips', secondaryMuscles: ['cardio', 'core']),
+  locomotion(
+    id: 'carioca',
+    name: 'Carioca',
+    primaryMuscles: ['piernas'],
+    secondaryMuscles: ['cardio', 'estabilidad'],
+  ),
+  coreTimed(
+    id: 'bear_plank_shoulder_tap',
+    name: 'Bear plank shoulder tap',
+    secondaryMuscles: ['hombros', 'tríceps'],
+  ),
+  locomotion(
+    id: 'beast_crawl_forward',
+    name: 'Beast crawl forward',
+    primaryMuscles: ['core'],
+    secondaryMuscles: ['cardio', 'estabilidad'],
+  ),
+  locomotion(
+    id: 'beast_crawl_lateral',
+    name: 'Beast crawl lateral',
+    primaryMuscles: ['core'],
+    secondaryMuscles: ['cardio', 'estabilidad'],
+  ),
+  locomotion(
+    id: 'hurdle_step',
+    name: 'Hurdle step',
+    primaryMuscles: ['glúteos'],
+    secondaryMuscles: ['core', 'estabilidad'],
+    movementPattern: 'squat',
+  ),
+  simpleExercise(
+    id: 'single_leg_deadlift_reach',
+    name: 'Single-leg deadlift reach',
+    primaryMuscles: ['isquiosurales'],
+    secondaryMuscles: ['glúteos', 'core'],
+    movementPattern: 'hinge',
+    isUnilateral: true,
+  ),
+  bwSquat(id: 'knee_tap_squat', name: 'Knee tap squat', secondaryMuscles: ['glúteos', 'core']),
+  bwSquat(
+    id: 'lateral_box_step_over',
+    name: 'Lateral box step-over',
+    isUnilateral: true,
+    secondaryMuscles: ['glúteos', 'core'],
+  ),
+  bwSquat(
+    id: 'alternating_lateral_lunge',
+    name: 'Alternating lateral lunge',
+    isUnilateral: true,
+    secondaryMuscles: ['aductores', 'glúteos', 'core'],
+  ),
+  plyo(
+    id: 'runner_jump',
+    name: 'Runner jump',
+    movementPattern: 'squat',
+    secondaryMuscles: ['cardio', 'glúteos'],
+    isUnilateral: true,
+  ),
+  plyo(
+    id: 'triple_hop',
+    name: 'Triple hop',
+    movementPattern: 'squat',
+    secondaryMuscles: ['cardio', 'glúteos'],
+    isUnilateral: true,
+  ),
+  plyo(
+    id: 'bound_sprint_start',
+    name: 'Bound sprint start',
+    movementPattern: 'hinge',
+    secondaryMuscles: ['cardio', 'glúteos'],
+  ),
+  coreTimed(
+    id: 'standing_long_lunge_hold',
+    name: 'Standing long lunge hold',
+    movementPattern: 'squat',
+    secondaryMuscles: ['glúteos', 'core'],
+    isUnilateral: true,
+  ),
+  coreTimed(
+    id: 'bird_dog_row_hold',
+    name: 'Bird dog row hold',
+    primaryMuscles: ['core'],
+    secondaryMuscles: ['espalda', 'estabilidad'],
+    movementPattern: 'core',
+    isUnilateral: true,
+  ),
+  coreTimed(
+    id: 'quadruped_thoracic_rotation',
+    name: 'Quadruped thoracic rotation',
+    primaryMuscles: ['movilidad'],
+    secondaryMuscles: ['core'],
+    movementPattern: 'general',
+  ),
+  coreTimed(
+    id: 'standing_thoracic_opener',
+    name: 'Standing thoracic opener',
+    primaryMuscles: ['movilidad'],
+    secondaryMuscles: ['core'],
+    movementPattern: 'general',
+  ),
   simpleExercise(id: 'dumbbell_floor_press', name: 'Dumbbell floor press', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
   simpleExercise(id: 'dumbbell_bench_supported_row', name: 'Dumbbell bench supported row', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
   simpleExercise(id: 'dumbbell_renegade_row', name: 'Dumbbell renegade row', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
