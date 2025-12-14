@@ -5,15 +5,16 @@ import 'core/data/local_storage_service.dart';
 import 'core/data/remote_sync_service.dart';
 import 'core/data/repositories.dart';
 import 'core/data/statistics_service.dart';
+import 'core/domain/entities.dart';
 import 'features/analytics/analytics_overview_screen.dart';
 import 'features/auth/presentation/login_screen.dart';
 import 'features/auth/presentation/signup_screen.dart';
-import 'features/home/presentation/home_summary_screen.dart';
 import 'features/groups/presentation/pages/groups_list_screen.dart';
+import 'features/home/presentation/home_summary_screen.dart';
 import 'features/nutrition/nutrition_screens.dart';
 import 'features/onboarding/onboarding_screen.dart';
-import 'features/sleep/sleep_screens.dart';
 import 'features/sleep/presentation/sleep_regularity_screen.dart';
+import 'features/sleep/sleep_screens.dart';
 import 'features/streak/presentation/streak_screen.dart';
 import 'features/workout/pro/workout_pro_screen.dart';
 import 'features/workout/workout_screens.dart';
@@ -21,10 +22,53 @@ import 'features/workout/workout_screens.dart';
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // --- Services (local + remote sync) ---
+  final local = LocalStorageService();
+  final statistics = StatisticsService();
+
+  // DEV bootstrap: compila sin backend real.
+  // En producción: reemplazar transport/network/session/queue por implementaciones reales.
+  final remote = RemoteSyncService(
+    transport: NoopRemoteSyncTransport(),
+    session: const StaticSyncSession(userId: 'local-dev'),
+    network: const AlwaysOnlineNetworkStatus(),
+    queue: MemorySyncQueueStore(),
+    policy: const SyncPolicy(),
+
+    workoutAdapter: SyncAdapter<WorkoutEntry>(
+      kind: SyncEntityKind.workout,
+      idOf: (e) => e.id,
+      updatedAtOf: (e) => e.updatedAt,
+      deletedOf: (e) => e.deleted,
+      toJson: (e) => e.toJson(),
+    ),
+    mealAdapter: SyncAdapter<MealEntry>(
+      kind: SyncEntityKind.meal,
+      idOf: (e) => e.id,
+      updatedAtOf: (e) => e.updatedAt,
+      deletedOf: (e) => e.deleted,
+      toJson: (e) => e.toJson(),
+    ),
+    sleepAdapter: SyncAdapter<SleepEntry>(
+      kind: SyncEntityKind.sleep,
+      idOf: (e) => e.id,
+      updatedAtOf: (e) => e.updatedAt,
+      deletedOf: (e) => e.deleted,
+      toJson: (e) => e.toJson(),
+    ),
+    preferencesAdapter: SyncAdapter<UserPreferences>(
+      kind: SyncEntityKind.preferences,
+      idOf: (e) => e.id,
+      updatedAtOf: (e) => e.updatedAt,
+      deletedOf: (e) => e.deleted,
+      toJson: (e) => e.toJson(),
+    ),
+  );
+
   final repository = FitnessRepository(
-    local: LocalStorageService(),
-    remote: const RemoteSyncService(),
-    statistics: StatisticsService(),
+    local: local,
+    remote: remote,
+    statistics: statistics,
   );
 
   runApp(FitApp(repository: repository));
