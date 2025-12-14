@@ -66,7 +66,7 @@ class _ExerciseCardState extends State<ExerciseCard> {
     final summary = '${widget.exercise.sets.length} series · '
         '${widget.exercise.sets.fold<int>(0, (s, e) => s + (e.reps ?? 0))} reps';
     final weightAvailable = widget.exercise.sets.any((s) => s.externalLoadKg != null);
-    final collapsedSummary = _buildCollapsedSummary();
+    final collapsedSummary = widget._buildCollapsedSummary();
     return AnimatedSize(
       duration: const Duration(milliseconds: 200),
       child: Card(
