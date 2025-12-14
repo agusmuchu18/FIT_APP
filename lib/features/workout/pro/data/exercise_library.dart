@@ -1504,18 +1504,38 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
 ];
 
 List<ExerciseDefinition> _applyAdditionalExerciseRules() {
-  final existingIds = _baseExerciseLibrary.map((exercise) => exercise.id).toSet();
+  final existingIds = _baseExerciseLibrary.map((e) => e.id).toSet();
   final deduped = <ExerciseDefinition>[];
   final seen = <String>{};
 
-  for (final exercise in additionalExercises) {
-    if (existingIds.contains(exercise.id)) {
-      continue;
+  assert(() {
+    final skipped = <String>[];
+    final dupInsideAdditional = <String>[];
+
+    final localSeen = <String>{};
+    for (final e in additionalExercises) {
+      if (existingIds.contains(e.id)) {
+        skipped.add(e.id);
+      }
+      if (!localSeen.add(e.id)) {
+        dupInsideAdditional.add(e.id);
+      }
     }
 
-    if (seen.add(exercise.id)) {
-      deduped.add(exercise);
+    if (skipped.isNotEmpty) {
+      // ignore: avoid_print
+      print('additionalExercises ignorados (ya existen en base): ${skipped.toSet().join(', ')}');
     }
+    if (dupInsideAdditional.isNotEmpty) {
+      // ignore: avoid_print
+      print('IDs duplicados dentro de additionalExercises: ${dupInsideAdditional.toSet().join(', ')}');
+    }
+    return true;
+  }());
+
+  for (final e in additionalExercises) {
+    if (existingIds.contains(e.id)) continue;
+    if (seen.add(e.id)) deduped.add(e);
   }
 
   return deduped;
@@ -1657,6 +1677,27 @@ ExerciseDefinition coreTimed({
   );
 }
 
+ExerciseDefinition coreReps({
+  required String id,
+  required String name,
+  List<String> aliases = const [],
+  List<String> primaryMuscles = const ['core'],
+  List<String> secondaryMuscles = const [],
+  bool isUnilateral = false,
+}) {
+  return simpleExercise(
+    id: id,
+    name: name,
+    aliases: aliases,
+    primaryMuscles: primaryMuscles,
+    secondaryMuscles: secondaryMuscles,
+    movementPattern: 'core',
+    defaultMeasurement: 'reps',
+    isTimed: false,
+    isUnilateral: isUnilateral,
+  );
+}
+
 ExerciseDefinition plyo({
   required String id,
   required String name,
@@ -1684,7 +1725,7 @@ ExerciseDefinition locomotion({
   List<String> primaryMuscles = const ['core'],
   List<String> secondaryMuscles = const ['cardio', 'estabilidad'],
   String movementPattern = 'general',
-  String defaultMeasurement = 'distance',
+  String defaultMeasurement = 'reps',
   bool isTimed = false,
   bool isUnilateral = false,
 }) {
@@ -1706,15 +1747,16 @@ final List<ExerciseDefinition> additionalExercises = [
     id: 'bear_crawl',
     name: 'Bear crawl',
     secondaryMuscles: ['cardio', 'hombros', 'estabilidad'],
+    defaultMeasurement: 'distance',
   ),
   locomotion(
     id: 'crab_walk',
     name: 'Crab walk',
     primaryMuscles: ['glúteos'],
     secondaryMuscles: ['core', 'estabilidad'],
+    defaultMeasurement: 'distance',
   ),
   coreTimed(id: 'hollow_body_hold', name: 'Hollow body hold'),
-  coreTimed(id: 'dead_bug', name: 'Dead bug'),
   plyo(
     id: 'burpee_broad_jump',
     name: 'Burpee broad jump',
@@ -1732,7 +1774,11 @@ final List<ExerciseDefinition> additionalExercises = [
     secondaryMuscles: ['cardio', 'aductores'],
     defaultMeasurement: 'distance',
   ),
-  locomotion(id: 'spiderman_crawl', name: 'Spiderman crawl'),
+  locomotion(
+    id: 'spiderman_crawl',
+    name: 'Spiderman crawl',
+    defaultMeasurement: 'distance',
+  ),
   bwSquat(
     id: 'wall_sit',
     name: 'Wall sit',
@@ -1855,12 +1901,6 @@ final List<ExerciseDefinition> additionalExercises = [
     secondaryMuscles: ['cardio', 'core'],
   ),
   plyo(
-    id: 'jump_squat',
-    name: 'Jump squat',
-    movementPattern: 'squat',
-    secondaryMuscles: ['cardio', 'glúteos'],
-  ),
-  plyo(
     id: 'split_jump',
     name: 'Split jump',
     movementPattern: 'squat',
@@ -1879,23 +1919,20 @@ final List<ExerciseDefinition> additionalExercises = [
     movementPattern: 'squat',
     secondaryMuscles: ['cardio', 'core'],
   ),
-  coreTimed(
+  coreReps(
     id: 'mountain_climber_twist',
     name: 'Mountain climber twist',
     secondaryMuscles: ['cardio', 'hombros'],
-    movementPattern: 'core',
   ),
-  coreTimed(
+  coreReps(
     id: 'cross_body_mountain_climber',
     name: 'Cross-body mountain climber',
     secondaryMuscles: ['cardio', 'hombros'],
-    movementPattern: 'core',
   ),
-  coreTimed(
+  coreReps(
     id: 'plank_up_down',
     name: 'Plank up-down',
     secondaryMuscles: ['hombros', 'tríceps'],
-    movementPattern: 'core',
   ),
   coreTimed(
     id: 'side_plank_reach_through',
@@ -1921,7 +1958,11 @@ final List<ExerciseDefinition> additionalExercises = [
     name: 'Single-leg drop squat',
     isUnilateral: true,
   ),
-  locomotion(id: 'wall_crawl', name: 'Wall crawl'),
+  locomotion(
+    id: 'wall_crawl',
+    name: 'Wall crawl',
+    defaultMeasurement: 'distance',
+  ),
   plyo(
     id: 'donkey_kick_up',
     name: 'Donkey kick up',
@@ -2014,7 +2055,7 @@ final List<ExerciseDefinition> additionalExercises = [
     name: 'Reverse nordic curl',
     primaryMuscles: ['cuádriceps'],
     secondaryMuscles: ['core'],
-    movementPattern: 'hinge',
+    movementPattern: 'isolation',
   ),
   bwSquat(id: 'step_down', name: 'Step-down', isUnilateral: true),
   bwSquat(
@@ -2039,21 +2080,15 @@ final List<ExerciseDefinition> additionalExercises = [
   simpleExercise(
     id: 'single_leg_calf_raise',
     name: 'Single-leg calf raise',
-    primaryMuscles: ['pantorrillas'],
+    primaryMuscles: ['pantorrilla'],
     secondaryMuscles: ['estabilidad'],
     movementPattern: 'isolation',
     isUnilateral: true,
   ),
   simpleExercise(
-    id: 'standing_calf_raise',
-    name: 'Standing calf raise',
-    primaryMuscles: ['pantorrillas'],
-    movementPattern: 'isolation',
-  ),
-  simpleExercise(
     id: 'bent_knee_calf_raise',
     name: 'Bent-knee calf raise',
-    primaryMuscles: ['pantorrillas'],
+    primaryMuscles: ['pantorrilla'],
     movementPattern: 'isolation',
   ),
   bwPush(
@@ -2121,6 +2156,7 @@ final List<ExerciseDefinition> additionalExercises = [
     primaryMuscles: ['cuádriceps'],
     secondaryMuscles: ['glúteos', 'cardio'],
     movementPattern: 'squat',
+    defaultMeasurement: 'distance',
   ),
   locomotion(
     id: 'wall_march',
@@ -2152,6 +2188,7 @@ final List<ExerciseDefinition> additionalExercises = [
     name: 'Carioca',
     primaryMuscles: ['piernas'],
     secondaryMuscles: ['cardio', 'estabilidad'],
+    defaultMeasurement: 'distance',
   ),
   coreTimed(
     id: 'bear_plank_shoulder_tap',
@@ -2163,12 +2200,14 @@ final List<ExerciseDefinition> additionalExercises = [
     name: 'Beast crawl forward',
     primaryMuscles: ['core'],
     secondaryMuscles: ['cardio', 'estabilidad'],
+    defaultMeasurement: 'distance',
   ),
   locomotion(
     id: 'beast_crawl_lateral',
     name: 'Beast crawl lateral',
     primaryMuscles: ['core'],
     secondaryMuscles: ['cardio', 'estabilidad'],
+    defaultMeasurement: 'distance',
   ),
   locomotion(
     id: 'hurdle_step',
@@ -2176,6 +2215,7 @@ final List<ExerciseDefinition> additionalExercises = [
     primaryMuscles: ['glúteos'],
     secondaryMuscles: ['core', 'estabilidad'],
     movementPattern: 'squat',
+    defaultMeasurement: 'distance',
   ),
   simpleExercise(
     id: 'single_leg_deadlift_reach',
