@@ -1,5 +1,8 @@
 import 'dart:async';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 import '../domain/entities.dart';
 
 /// RemoteSyncService (versión pro)
@@ -37,6 +40,13 @@ class SyncCursor {
   final String value;
 
   static const zero = SyncCursor('0');
+
+  int get asMillis {
+    final parsed = int.tryParse(value);
+    return parsed ?? 0;
+  }
+
+  static SyncCursor fromMillis(int millis) => SyncCursor(millis.toString());
 
   @override
   String toString() => value;
@@ -337,7 +347,6 @@ class TransportPullItem {
 }
 
 /// Adaptador para convertir tus entities a JSON + metadata.
-/// (Lo mantenemos inyectable para poder migrar entidades sin romper.)
 class SyncAdapter<T> {
   const SyncAdapter({
     required this.kind,
@@ -379,7 +388,7 @@ class SyncTask {
 
   final DateTime createdAt;
 
-  /// Cantidad de intentos ya realizados (incrementa cuando hay fallo transitorio).
+  /// Cantidad de intentos ya realizados.
   int attempts;
 
   SyncTask copyWith({
@@ -403,31 +412,24 @@ class SyncTask {
 
 abstract interface class SyncQueueStore {
   Future<void> enqueue(SyncTask task);
-
-  /// Devuelve tasks en orden (FIFO).
   Future<List<SyncTask>> peek({int limit = 50});
-
   Future<void> remove(SyncTask task);
-
   Future<void> update(SyncTask task);
-
   Future<int> count();
 }
 
-/// Default: memoria (para dev/tests). En producción: implementá Hive/Sqflite/Isar.
+/// Default: memoria (para dev/tests).
 class MemorySyncQueueStore implements SyncQueueStore {
   final List<SyncTask> _q = <SyncTask>[];
 
   @override
   Future<void> enqueue(SyncTask task) async {
-    // Dedupe por kind+entityId: mantenemos la versión más reciente (updatedAt mayor).
-    final idx = _q.indexWhere((t) => t.kind == task.kind && t.entityId == task.entityId);
+    final idx =
+        _q.indexWhere((t) => t.kind == task.kind && t.entityId == task.entityId);
     if (idx >= 0) {
       final existing = _q[idx];
       if (task.updatedAt.isAfter(existing.updatedAt)) {
         _q[idx] = task;
-      } else {
-        // Si por alguna razón llegó “más viejo”, ignoramos.
       }
     } else {
       _q.add(task);
@@ -437,7 +439,6 @@ class MemorySyncQueueStore implements SyncQueueStore {
   @override
   Future<List<SyncTask>> peek({int limit = 50}) async {
     if (_q.isEmpty) return const [];
-    // FIFO por createdAt (más estable que el orden de lista si hicimos reemplazos).
     final sorted = List<SyncTask>.from(_q)
       ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
     return List<SyncTask>.unmodifiable(sorted.take(limit));
@@ -517,7 +518,8 @@ class RemoteSyncService {
   final SyncAdapter<SleepEntry> _sleepAdapter;
   final SyncAdapter<UserPreferences> _preferencesAdapter;
 
-  final Future<SyncConflictResolution> Function(SyncConflict conflict)? _onConflict;
+  final Future<SyncConflictResolution> Function(SyncConflict conflict)?
+      _onConflict;
 
   final StreamController<SyncEvent> _events;
   Stream<SyncEvent> get events => _events.stream;
@@ -548,7 +550,7 @@ class RemoteSyncService {
   Future<SyncOutcome> upsertPreferences(UserPreferences prefs) async =>
       _enqueueAndMaybeFlush(_preferencesAdapter, prefs);
 
-  /// Pull incremental: baja cambios desde cursor. El repo aplica merge al storage local.
+  /// Pull incremental
   Future<PullResult> pullChanges({required SyncCursor since}) async {
     _events.add(SyncPullStarted(since: since));
 
@@ -561,8 +563,7 @@ class RemoteSyncService {
     return PullResult(nextCursor: res.nextCursor, items: res.items);
   }
 
-  /// Intenta vaciar la cola. Ideal: llamarlo al abrir la app, al volver a foreground,
-  /// al recuperar conectividad, o cada X minutos.
+  /// Vacía la cola
   Future<void> flushQueue() async {
     if (_flushing) return;
     _flushing = true;
@@ -578,8 +579,8 @@ class RemoteSyncService {
 
       int synced = 0;
       int failed = 0;
+      int processed = 0;
 
-      // Procesa FIFO por batches.
       while (true) {
         final batch = await _queue.peek(limit: 50);
         if (batch.isEmpty) break;
@@ -589,9 +590,10 @@ class RemoteSyncService {
         for (final task in batch) {
           final outcome = await _sendTask(task);
 
+          processed++;
           _events.add(
             SyncFlushProgress(
-              done: synced + failed + 1,
+              done: processed,
               total: totalPending,
               kind: task.kind,
               entityId: task.entityId,
@@ -607,7 +609,9 @@ class RemoteSyncService {
           if (outcome is TransportWriteConflict) {
             failed++;
             await _queue.remove(task);
-            _events.add(SyncConflictEvent(kind: task.kind, entityId: task.entityId));
+            _events.add(
+              SyncConflictEvent(kind: task.kind, entityId: task.entityId),
+            );
             continue;
           }
 
@@ -624,17 +628,13 @@ class RemoteSyncService {
             final updated = task.copyWith(attempts: task.attempts + 1);
             await _queue.update(updated);
 
-            // Para UX/batería: si hubo transitorio, cortamos acá.
             if (_policy.stopBatchOnTransientFailure) break;
           }
         }
 
         if (!sawTransientFailure) {
-          // Si se procesó todo sin transitorios, seguimos viendo si queda algo.
           continue;
         }
-
-        // Si hubo transitorio (y policy lo indica), salimos para reintentar en el próximo flush.
         break;
       }
 
@@ -689,11 +689,9 @@ class RemoteSyncService {
       return SyncQueued(reason: online ? 'queued' : 'offline');
     }
 
-    // Fast-path: intentamos enviar este task ya mismo
     final outcome = await _sendTask(task);
 
     if (outcome is TransportWriteSuccess) {
-      // Removemos todos los tasks pendientes para este entity (si los hubiera)
       await _removeAllForEntity(adapter.kind, entityId);
       return const SyncSuccess();
     }
@@ -724,7 +722,6 @@ class RemoteSyncService {
     }
 
     if (outcome is TransportWriteTransientFailure) {
-      // Queda en cola (ya está).
       return SyncQueued(reason: 'transient_failure_queued');
     }
 
@@ -749,13 +746,11 @@ class RemoteSyncService {
         return conflict;
 
       case SyncConflictResolutionDecision.acceptRemote:
-        // El repo debe aplicar remotePayload al storage local.
         return conflict;
 
       case SyncConflictResolutionDecision.keepLocalForceWrite:
         final now = DateTime.now().toUtc();
 
-        // Intentamos re-escritura forzada (si tu backend lo soporta).
         final req = TransportWriteRequest(
           userId: _session.userId,
           kind: conflict.kind,
@@ -779,8 +774,6 @@ class RemoteSyncService {
           return SyncFailure(error: out.error, isRetryable: false);
         }
         if (out is TransportWriteTransientFailure) {
-          // Dejamos en cola un task “force” no lo soporta la cola hoy (por simplicidad).
-          // El caller puede reintentar luego con keepLocalForceWrite.
           return SyncQueued(reason: 'force_write_transient_queued');
         }
         return conflict;
@@ -788,14 +781,12 @@ class RemoteSyncService {
   }
 
   Future<TransportWriteOutcome> _sendTask(SyncTask task) async {
-    // Control de attempts + backoff.
     if (task.attempts >= _policy.maxAttempts) {
       return TransportWritePermanentFailure(
         StateError('Max attempts reached for ${task.kind}:${task.entityId}'),
       );
     }
 
-    // Backoff antes del intento (si ya falló antes).
     if (task.attempts > 0) {
       final delay = _computeBackoff(
         attempts: task.attempts,
@@ -824,9 +815,7 @@ class RemoteSyncService {
     required Duration base,
     required Duration cap,
   }) {
-    // Exponencial con cap.
-    // attempts: 1 => base*2, 2 => base*4, etc.
-    final factor = 1 << attempts; // 2^attempts
+    final factor = 1 << attempts;
     final ms = base.inMilliseconds * factor;
     final cappedMs = ms > cap.inMilliseconds ? cap.inMilliseconds : ms;
     return Duration(milliseconds: cappedMs);
@@ -844,18 +833,224 @@ class RemoteSyncService {
   }
 
   Map<String, Object?> _safeMapCopy(Object local) {
-    // Best-effort: si local ya es Map, lo copia.
     if (local is Map<String, Object?>) return Map<String, Object?>.from(local);
 
-    // Si local es una entidad del dominio con toJson(), intentamos usarlo.
-    // (No usamos `dynamic` en público; esto es interno y controlado.)
     try {
       final dyn = local as dynamic;
-      final Map<String, Object?> json = (dyn.toJson() as Map).cast<String, Object?>();
+      final Map<String, Object?> json =
+          (dyn.toJson() as Map).cast<String, Object?>();
       return Map<String, Object?>.from(json);
     } catch (_) {
       return <String, Object?>{};
     }
+  }
+}
+
+/// ------------------------------------------------------------------
+/// Firestore transport (REAL)
+/// ------------------------------------------------------------------
+
+class FirestoreRemoteSyncTransport implements RemoteSyncTransport {
+  FirestoreRemoteSyncTransport({
+    FirebaseFirestore? firestore,
+  }) : _db = firestore ?? FirebaseFirestore.instance;
+
+  final FirebaseFirestore _db;
+
+  static String _collectionForKind(SyncEntityKind kind) {
+    switch (kind) {
+      case SyncEntityKind.workout:
+        return 'workouts';
+      case SyncEntityKind.meal:
+        return 'meals';
+      case SyncEntityKind.sleep:
+        return 'sleep';
+      case SyncEntityKind.preferences:
+        return 'preferences';
+    }
+  }
+
+  CollectionReference<Map<String, Object?>> _userRoot(String userId) {
+    return _db.collection('users').doc(userId).collection('_root');
+  }
+
+  /// Guardamos por subcolecciones “reales” dentro de users/{uid}/
+  CollectionReference<Map<String, Object?>> _kindCollection(
+    String userId,
+    SyncEntityKind kind,
+  ) {
+    return _db
+        .collection('users')
+        .doc(userId)
+        .collection(_collectionForKind(kind));
+  }
+
+  DocumentReference<Map<String, Object?>> _docRef(
+    String userId,
+    SyncEntityKind kind,
+    String entityId,
+  ) {
+    return _kindCollection(userId, kind).doc(entityId);
+  }
+
+  @override
+  Future<TransportWriteOutcome> write(TransportWriteRequest request) async {
+    try {
+      final ref = _docRef(request.userId, request.kind, request.entityId);
+
+      // Conflicto simple: si existe remoto y es más nuevo, y mode = normal => conflicto.
+      final snap = await ref.get();
+      if (snap.exists && request.mode == SyncWriteMode.normal) {
+        final data = snap.data();
+        final remoteTs = data?['updatedAt'];
+        final remoteUpdatedAt = remoteTs is Timestamp
+            ? remoteTs.toDate().toUtc()
+            : DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
+
+        if (remoteUpdatedAt.isAfter(request.updatedAt.toUtc())) {
+          return TransportWriteConflict(
+            remotePayload: _docToPayload(data),
+            remoteUpdatedAt: remoteUpdatedAt,
+          );
+        }
+      }
+
+      final envelope = <String, Object?>{
+        'kind': request.kind.name,
+        'entityId': request.entityId,
+        'updatedAt': Timestamp.fromDate(request.updatedAt.toUtc()),
+        'deleted': request.deleted,
+        'idempotencyKey': request.idempotencyKey,
+        'data': request.deleted ? <String, Object?>{} : request.payload,
+      };
+
+      // merge:true evita pisar campos nuevos si más adelante agregás cosas.
+      await ref.set(envelope, SetOptions(merge: true));
+
+      return const TransportWriteSuccess();
+    } on FirebaseException catch (e) {
+      if (_isPermanentFirebaseError(e)) {
+        return TransportWritePermanentFailure(e);
+      }
+      return TransportWriteTransientFailure(e);
+    } catch (e) {
+      // Unknown => lo tratamos como transient para no perder datos.
+      return TransportWriteTransientFailure(e);
+    }
+  }
+
+  @override
+  Future<TransportPullResponse> pull(TransportPullRequest request) async {
+    try {
+      final sinceMillis = request.since.asMillis;
+      final sinceTs = Timestamp.fromMillisecondsSinceEpoch(sinceMillis);
+
+      final List<TransportPullItem> all = [];
+
+      for (final kind in SyncEntityKind.values) {
+        final col = _kindCollection(request.userId, kind);
+
+        // Query incremental: updatedAt > since
+        final q = await col
+            .where('updatedAt', isGreaterThan: sinceTs)
+            .orderBy('updatedAt')
+            .limit(500)
+            .get();
+
+        for (final doc in q.docs) {
+          final data = doc.data();
+
+          final updatedAtTs = data['updatedAt'];
+          final updatedAt = updatedAtTs is Timestamp
+              ? updatedAtTs.toDate().toUtc()
+              : DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
+
+          final deleted = (data['deleted'] as bool?) ?? false;
+
+          final payloadRaw = data['data'];
+          final payload = (payloadRaw is Map)
+              ? payloadRaw.cast<String, Object?>()
+              : <String, Object?>{};
+
+          all.add(
+            TransportPullItem(
+              kind: kind,
+              entityId: doc.id,
+              payload: payload,
+              updatedAt: updatedAt,
+              deleted: deleted,
+            ),
+          );
+        }
+      }
+
+      all.sort((a, b) => a.updatedAt.compareTo(b.updatedAt));
+
+      int nextMillis = sinceMillis;
+      for (final it in all) {
+        final ms = it.updatedAt.toUtc().millisecondsSinceEpoch;
+        if (ms > nextMillis) nextMillis = ms;
+      }
+
+      return TransportPullResponse(
+        nextCursor: SyncCursor.fromMillis(nextMillis),
+        items: all,
+      );
+    } on FirebaseException catch (e) {
+      // Pull falla => devolvemos cursor igual (no avanzamos) y lista vacía
+      // y dejamos que el caller reintente más tarde.
+      return TransportPullResponse(
+        nextCursor: request.since,
+        items: const [],
+      );
+    } catch (_) {
+      return TransportPullResponse(
+        nextCursor: request.since,
+        items: const [],
+      );
+    }
+  }
+
+  Map<String, Object?> _docToPayload(Map<String, Object?>? doc) {
+    if (doc == null) return <String, Object?>{};
+    final raw = doc['data'];
+    if (raw is Map) return raw.cast<String, Object?>();
+    return <String, Object?>{};
+  }
+
+  bool _isPermanentFirebaseError(FirebaseException e) {
+    // Errores típicos "no reintentar"
+    // (si el usuario no tiene permiso o no está autenticado, no sirve reintentar)
+    switch (e.code) {
+      case 'permission-denied':
+      case 'unauthenticated':
+      case 'invalid-argument':
+      case 'failed-precondition':
+        return true;
+      default:
+        return false;
+    }
+  }
+}
+
+/// ------------------------------------------------------------------
+/// Sesión FirebaseAuth (REAL)
+/// ------------------------------------------------------------------
+
+class FirebaseAuthSyncSession implements SyncSession {
+  FirebaseAuthSyncSession(this._auth);
+  final FirebaseAuth _auth;
+
+  @override
+  String get userId {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw StateError(
+        'FirebaseAuthSyncSession: no hay usuario autenticado. '
+        'Necesitás hacer login (o signInAnonymously) antes de sync.',
+      );
+    }
+    return user.uid;
   }
 }
 
@@ -866,13 +1061,11 @@ class RemoteSyncService {
 class NoopRemoteSyncTransport implements RemoteSyncTransport {
   @override
   Future<TransportWriteOutcome> write(TransportWriteRequest request) async {
-    // Simula OK.
     return const TransportWriteSuccess();
   }
 
   @override
   Future<TransportPullResponse> pull(TransportPullRequest request) async {
-    // No trae cambios.
     return TransportPullResponse(nextCursor: request.since, items: const []);
   }
 }
