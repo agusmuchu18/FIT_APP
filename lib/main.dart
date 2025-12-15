@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'firebase_options.dart';
-
 import 'package:hive_flutter/hive_flutter.dart';
+
+import 'firebase_options.dart';
 
 import 'app/theme/app_theme.dart';
 import 'core/data/local_storage_service.dart';
@@ -11,6 +11,7 @@ import 'core/data/repositories.dart';
 import 'core/data/statistics_service.dart';
 import 'core/domain/entities.dart';
 import 'core/data/hive_sync_queue_store.dart';
+
 import 'features/analytics/analytics_overview_screen.dart';
 import 'features/auth/presentation/login_screen.dart';
 import 'features/auth/presentation/signup_screen.dart';
@@ -26,6 +27,13 @@ import 'features/workout/workout_screens.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // 1) Firebase primero: así queda listo antes de cualquier servicio que lo necesite.
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  // 2) Hive (storage local)
   await Hive.initFlutter();
 
   // --- Services (local + remote sync) ---
@@ -34,14 +42,14 @@ Future<void> main() async {
   final syncQueue = await HiveSyncQueueStore.create();
 
   // DEV bootstrap: compila sin backend real.
-  // En producción: reemplazar transport/network/session/queue por implementaciones reales.
+  // Próximo paso: reemplazar NoopRemoteSyncTransport + StaticSyncSession
+  // por FirestoreRemoteSyncTransport + una sesión basada en FirebaseAuth (uid real).
   final remote = RemoteSyncService(
     transport: NoopRemoteSyncTransport(),
     session: const StaticSyncSession(userId: 'local-dev'),
     network: const AlwaysOnlineNetworkStatus(),
     queue: syncQueue,
     policy: const SyncPolicy(),
-
     workoutAdapter: SyncAdapter<WorkoutEntry>(
       kind: SyncEntityKind.workout,
       idOf: (e) => e.id,
