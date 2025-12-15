@@ -1,5 +1,7 @@
 import 'dart:math' as math;
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/domain/entities.dart';
@@ -41,8 +43,7 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
     final nutritionTodayFuture = repository.getDailyNutritionStats(today);
     final weeklyNutritionFuture = repository.getWeeklyNutritionStats(days: 7);
     final macroDistributionFuture = repository.getMacroDistribution(days: 7);
-    final workoutDurationsFuture =
-        repository.getWorkoutDurationByDay(days: 14);
+    final workoutDurationsFuture = repository.getWorkoutDurationByDay(days: 14);
 
     final meals = await mealsFuture;
     final workouts = await workoutsFuture;
@@ -113,9 +114,8 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
         ),
       );
 
-      final calories = meal.calories > 0
-          ? meal.calories
-          : matchingFood.caloriesPer100g;
+      final calories =
+          meal.calories > 0 ? meal.calories : matchingFood.caloriesPer100g;
       final macros = meal.macros.carbs + meal.macros.protein + meal.macros.fat >
               0
           ? meal.macros
@@ -145,8 +145,7 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
         return !date.isBefore(start) && !date.isAfter(end);
       }).toList();
       if (filtered.isEmpty) return 0;
-      final total =
-          filtered.fold<double>(0, (sum, entry) => sum + entry.hours);
+      final total = filtered.fold<double>(0, (sum, entry) => sum + entry.hours);
       return total / filtered.length;
     }
 
@@ -162,10 +161,9 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
       }
       if (times.length < 2) return 0;
       final mean = times.reduce((a, b) => a + b) / times.length;
-      final variance = times
-              .map((t) => math.pow(t - mean, 2))
-              .reduce((a, b) => a + b) /
-          times.length;
+      final variance =
+          times.map((t) => math.pow(t - mean, 2)).reduce((a, b) => a + b) /
+              times.length;
       return math.sqrt(variance);
     }
 
@@ -186,8 +184,8 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
 
     var averageCalories = 0.0;
     if (weeklyNutrition.isNotEmpty) {
-      final totalCalories = weeklyNutrition
-          .fold<int>(0, (sum, entry) => sum + entry.totalCalories);
+      final totalCalories =
+          weeklyNutrition.fold<int>(0, (sum, entry) => sum + entry.totalCalories);
       averageCalories = totalCalories / weeklyNutrition.length;
     } else if (nutritionToday != null) {
       averageCalories = nutritionToday.totalCalories.toDouble();
@@ -466,8 +464,47 @@ class _QuickActionsFab extends StatefulWidget {
 }
 
 class _QuickActionsFabState extends State<_QuickActionsFab> {
+  Future<void> _testFirebaseWrite(BuildContext context) async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+
+    if (uid == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Tenés que iniciar sesión para guardar en Firebase.'),
+        ),
+      );
+      return;
+    }
+
+    try {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .collection('debug')
+          .add({
+        'createdAt': FieldValue.serverTimestamp(),
+        'from': 'home_summary',
+        'note': 'test write',
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('✅ Guardado OK en Firestore (users/{uid}/debug)'),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('❌ Error guardando en Firestore: $e')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    // Guardamos el context de la pantalla (no el del bottom sheet),
+    // porque el del bottom sheet se destruye cuando hacemos pop().
+    final rootContext = context;
+
     return FloatingActionButton(
       backgroundColor: const Color(0xFF1D6C6F),
       onPressed: () {
@@ -498,7 +535,7 @@ class _QuickActionsFabState extends State<_QuickActionsFab> {
                     label: 'Registrar actividad',
                     onTap: () async {
                       Navigator.pop(context);
-                      await Navigator.pushNamed(context, '/workout/lite');
+                      await Navigator.pushNamed(rootContext, '/workout/lite');
                       widget.onRefresh();
                     },
                   ),
@@ -507,8 +544,16 @@ class _QuickActionsFabState extends State<_QuickActionsFab> {
                     label: 'Ver estadísticas',
                     onTap: () async {
                       Navigator.pop(context);
-                      await Navigator.pushNamed(context, '/analytics/overview');
+                      await Navigator.pushNamed(rootContext, '/analytics/overview');
                       widget.onRefresh();
+                    },
+                  ),
+                  _FabAction(
+                    icon: Icons.cloud_done_rounded,
+                    label: 'Probar guardado en Firebase',
+                    onTap: () async {
+                      Navigator.pop(context);
+                      await _testFirebaseWrite(rootContext);
                     },
                   ),
                   _FabAction(
@@ -516,7 +561,7 @@ class _QuickActionsFabState extends State<_QuickActionsFab> {
                     label: 'Ir a grupos',
                     onTap: () async {
                       Navigator.pop(context);
-                      await Navigator.pushNamed(context, '/groups/list');
+                      await Navigator.pushNamed(rootContext, '/groups/list');
                     },
                   ),
                 ],
@@ -1195,11 +1240,12 @@ class _TrainingChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final effectiveDistribution = distribution.isEmpty
-        ? List.filled(7, 0)
-        : distribution;
-    final maxMinutes =
-        effectiveDistribution.fold<int>(0, (max, value) => value > max ? value : max);
+    final effectiveDistribution =
+        distribution.isEmpty ? List.filled(7, 0) : distribution;
+    final maxMinutes = effectiveDistribution.fold<int>(
+      0,
+      (max, value) => value > max ? value : max,
+    );
     const maxHeight = 40.0;
 
     return Column(
@@ -1211,9 +1257,8 @@ class _TrainingChart extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: List.generate(effectiveDistribution.length, (index) {
               final value = effectiveDistribution[index];
-              final normalized = maxMinutes == 0
-                  ? 0.2
-                  : (value / maxMinutes).clamp(0.2, 1.0);
+              final normalized =
+                  maxMinutes == 0 ? 0.2 : (value / maxMinutes).clamp(0.2, 1.0);
               final barHeight = maxHeight * normalized;
               return _MiniBar(height: barHeight);
             }),
@@ -1240,9 +1285,14 @@ class TrendChipData {
   const TrendChipData({required this.label, required this.tone});
 
   factory TrendChipData.fromDelta(int delta) {
-    if (delta == 0) return const TrendChipData(label: 'En rango', tone: TrendTone.neutral);
+    if (delta == 0) {
+      return const TrendChipData(label: 'En rango', tone: TrendTone.neutral);
+    }
     if (delta > 0) {
-      return TrendChipData(label: '+$delta% esta semana', tone: TrendTone.positive);
+      return TrendChipData(
+        label: '+$delta% esta semana',
+        tone: TrendTone.positive,
+      );
     }
     return TrendChipData(label: '$delta% esta semana', tone: TrendTone.negative);
   }
@@ -1349,7 +1399,8 @@ class _NutritionCharts extends StatelessWidget {
                 child: Container(
                   decoration: const BoxDecoration(
                     color: Color(0xFFFFD438),
-                    borderRadius: BorderRadius.horizontal(left: Radius.circular(999)),
+                    borderRadius:
+                        BorderRadius.horizontal(left: Radius.circular(999)),
                   ),
                 ),
               ),
@@ -1362,7 +1413,8 @@ class _NutritionCharts extends StatelessWidget {
                 child: Container(
                   decoration: const BoxDecoration(
                     color: Color(0xFF3FA7FF),
-                    borderRadius: BorderRadius.horizontal(right: Radius.circular(999)),
+                    borderRadius:
+                        BorderRadius.horizontal(right: Radius.circular(999)),
                   ),
                 ),
               ),
@@ -1504,9 +1556,8 @@ class _SleepInfoCard extends StatelessWidget {
                 deltaPositive
                     ? Icons.arrow_upward_rounded
                     : Icons.arrow_downward_rounded,
-                color: deltaPositive
-                    ? const Color(0xFF7CF4FF)
-                    : const Color(0xFFFF6A6A),
+                color:
+                    deltaPositive ? const Color(0xFF7CF4FF) : const Color(0xFFFF6A6A),
                 size: 18,
               ),
               const SizedBox(width: 6),
@@ -1578,12 +1629,8 @@ class _SleepMetricsCard extends StatelessWidget {
                 ),
               ),
               Icon(
-                improved
-                    ? Icons.trending_up_rounded
-                    : Icons.trending_down_rounded,
-                color: improved
-                    ? const Color(0xFF34D27B)
-                    : const Color(0xFFFF6A6A),
+                improved ? Icons.trending_up_rounded : Icons.trending_down_rounded,
+                color: improved ? const Color(0xFF34D27B) : const Color(0xFFFF6A6A),
                 size: 20,
               ),
             ],
@@ -1612,12 +1659,8 @@ class _SleepMetricsCard extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Icon(
-                improved
-                    ? Icons.arrow_downward_rounded
-                    : Icons.arrow_upward_rounded,
-                color: improved
-                    ? const Color(0xFF34D27B)
-                    : const Color(0xFFFF6A6A),
+                improved ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded,
+                color: improved ? const Color(0xFF34D27B) : const Color(0xFFFF6A6A),
                 size: 18,
               ),
               const SizedBox(width: 4),
