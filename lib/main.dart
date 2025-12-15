@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 import 'firebase_options.dart';
@@ -28,12 +29,18 @@ import 'features/workout/workout_screens.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 1) Firebase primero: así queda listo antes de cualquier servicio que lo necesite.
+  // 1) Firebase primero
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // 2) Hive (storage local)
+  // 2) Login anónimo (para que Firestore tenga un uid real)
+  // Más adelante lo reemplazamos por tu LoginScreen (email/pass, Google, etc).
+  if (FirebaseAuth.instance.currentUser == null) {
+    await FirebaseAuth.instance.signInAnonymously();
+  }
+
+  // 3) Hive (storage local)
   await Hive.initFlutter();
 
   // --- Services (local + remote sync) ---
@@ -41,12 +48,10 @@ Future<void> main() async {
   final statistics = StatisticsService();
   final syncQueue = await HiveSyncQueueStore.create();
 
-  // DEV bootstrap: compila sin backend real.
-  // Próximo paso: reemplazar NoopRemoteSyncTransport + StaticSyncSession
-  // por FirestoreRemoteSyncTransport + una sesión basada en FirebaseAuth (uid real).
+  // 🔥 REAL: Firestore + sesión FirebaseAuth
   final remote = RemoteSyncService(
-    transport: NoopRemoteSyncTransport(),
-    session: const StaticSyncSession(userId: 'local-dev'),
+    transport: FirestoreRemoteSyncTransport(),
+    session: FirebaseAuthSyncSession(FirebaseAuth.instance),
     network: const AlwaysOnlineNetworkStatus(),
     queue: syncQueue,
     policy: const SyncPolicy(),
