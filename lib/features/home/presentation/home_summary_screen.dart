@@ -10,6 +10,7 @@ import '../../common/theme/app_colors.dart';
 import '../../common/widgets/summary_card.dart';
 import '../../home/domain/goal_insight_service.dart';
 import '../../nutrition/data/food_repository.dart';
+import '../../sleep/domain/sleep_time_utils.dart';
 
 class HomeSummaryScreen extends StatefulWidget {
   const HomeSummaryScreen({super.key});
@@ -63,7 +64,7 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
       activityDays.add(_dateOnly(_safeParseDate(meal.id)));
     }
     for (final sleep in sleepEntries) {
-      activityDays.add(_dateOnly(_safeParseDate(sleep.id)));
+      activityDays.add(dateOnly(sleepEntryDate(sleep)));
     }
 
     var streak = 0;
@@ -141,7 +142,7 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
       List<SleepEntry> entries,
     ) {
       final filtered = entries.where((entry) {
-        final date = _dateOnly(_safeParseDate(entry.id));
+        final date = sleepEntryDate(entry);
         return !date.isBefore(start) && !date.isAfter(end);
       }).toList();
       if (filtered.isEmpty) return 0;
@@ -149,22 +150,21 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
       return total / filtered.length;
     }
 
-    double _regularityStdDev(DateTime start, DateTime end) {
-      final times = <int>[];
-      for (final entry in sleepEntries) {
-        final date = _dateOnly(_safeParseDate(entry.id));
-        if (date.isBefore(start) || date.isAfter(end)) continue;
-        final bedMinutes = _parseMinutes(entry.bedtime);
-        final wakeMinutes = _parseMinutes(entry.wakeTime);
-        if (bedMinutes != null) times.add(bedMinutes);
-        if (wakeMinutes != null) times.add(wakeMinutes);
-      }
-      if (times.length < 2) return 0;
-      final mean = times.reduce((a, b) => a + b) / times.length;
-      final variance =
-          times.map((t) => math.pow(t - mean, 2)).reduce((a, b) => a + b) /
-              times.length;
-      return math.sqrt(variance);
+    double _circularStdDev(
+      DateTime start,
+      DateTime end,
+      List<SleepEntry> entries,
+      int? Function(SleepEntry) extractor,
+    ) {
+      final minutes = entries
+          .where((e) {
+            final date = sleepEntryDate(e);
+            return !date.isBefore(start) && !date.isAfter(end);
+          })
+          .map(extractor)
+          .whereType<int>()
+          .toList();
+      return circularStdDevMinutes(minutes);
     }
 
     final avgSleepDuration =
@@ -173,13 +173,36 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
         _averageHoursForRange(previousWeekStart, previousWeekEnd, sleepEntries);
     final avgSleepDelta = avgSleepDuration - previousSleepAvg;
 
-    final regularityScore = _regularityStdDev(lastWeekStart, today)
-        .clamp(0, double.infinity)
-        .toDouble();
-    final previousRegularity = _regularityStdDev(
+    final bedStd = _circularStdDev(
+      lastWeekStart,
+      today,
+      sleepEntries,
+      (e) => parseHHmmToMinutes(e.bedtime),
+    );
+    final wakeStd = _circularStdDev(
+      lastWeekStart,
+      today,
+      sleepEntries,
+      (e) => parseHHmmToMinutes(e.wakeTime),
+    );
+    final previousBedStd = _circularStdDev(
       previousWeekStart,
       previousWeekEnd,
-    ).clamp(0, double.infinity).toDouble();
+      sleepEntries,
+      (e) => parseHHmmToMinutes(e.bedtime),
+    );
+    final previousWakeStd = _circularStdDev(
+      previousWeekStart,
+      previousWeekEnd,
+      sleepEntries,
+      (e) => parseHHmmToMinutes(e.wakeTime),
+    );
+    final regularityScore = ((bedStd + wakeStd) / 2)
+        .clamp(0, double.infinity)
+        .toDouble();
+    final previousRegularity = ((previousBedStd + previousWakeStd) / 2)
+        .clamp(0, double.infinity)
+        .toDouble();
     final regularityWeekDelta = regularityScore - previousRegularity;
 
     var averageCalories = 0.0;
@@ -239,16 +262,6 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
 
   DateTime _safeParseDate(String raw) {
     return DateTime.tryParse(raw) ?? DateTime.now();
-  }
-
-  int? _parseMinutes(String? time) {
-    if (time == null || time.isEmpty) return null;
-    final parts = time.split(':');
-    if (parts.length < 2) return null;
-    final hours = int.tryParse(parts[0]);
-    final minutes = int.tryParse(parts[1]);
-    if (hours == null || minutes == null) return null;
-    return hours * 60 + minutes;
   }
 
   @override
@@ -350,7 +363,7 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
                                 onTap: () async {
                                   await Navigator.pushNamed(
                                     context,
-                                    '/sleep/lite',
+                                    '/sleep/overview',
                                   );
                                   _refreshSummary();
                                 },
@@ -364,7 +377,7 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
                                 onTap: () {
                                   Navigator.pushNamed(
                                     context,
-                                    '/sleep/regularity',
+                                    '/sleep/overview',
                                   );
                                 },
                               ),

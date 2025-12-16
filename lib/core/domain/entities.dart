@@ -373,6 +373,9 @@ class SleepEntry with SyncEntityMetaMixin implements SyncEntity {
     this.screenUsageBeforeSleep,
     this.stressLevel,
     this.wakeEnergy,
+    this.sleepDate,
+    this.tags,
+    this.qualityScore,
     EntityMeta? meta,
   }) : meta = meta ?? EntityMeta.now();
 
@@ -387,6 +390,9 @@ class SleepEntry with SyncEntityMetaMixin implements SyncEntity {
     bool? screenUsageBeforeSleep,
     int? stressLevel,
     int? wakeEnergy,
+    String? sleepDate,
+    List<String>? tags,
+    int? qualityScore,
     String? deviceId,
   }) {
     return SleepEntry(
@@ -400,6 +406,9 @@ class SleepEntry with SyncEntityMetaMixin implements SyncEntity {
       screenUsageBeforeSleep: screenUsageBeforeSleep,
       stressLevel: stressLevel,
       wakeEnergy: wakeEnergy,
+      sleepDate: sleepDate,
+      tags: tags,
+      qualityScore: qualityScore,
       meta: EntityMeta.now(deviceId: deviceId),
     );
   }
@@ -414,6 +423,15 @@ class SleepEntry with SyncEntityMetaMixin implements SyncEntity {
   /// Mantengo String? para compatibilidad (ideal: ISO 8601).
   final String? bedtime;
   final String? wakeTime;
+
+  /// ISO date (yyyy-MM-dd) representing wake-up day.
+  final String? sleepDate;
+
+  /// Quick habit tags.
+  final List<String>? tags;
+
+  /// Numerical quality score for calculations (1..5).
+  final int? qualityScore;
 
   final bool? screenUsageBeforeSleep;
   final int? stressLevel;
@@ -432,6 +450,9 @@ class SleepEntry with SyncEntityMetaMixin implements SyncEntity {
     bool? screenUsageBeforeSleep,
     int? stressLevel,
     int? wakeEnergy,
+    String? sleepDate,
+    List<String>? tags,
+    int? qualityScore,
     EntityMeta? meta,
     String? deviceIdForTouch,
   }) {
@@ -443,6 +464,9 @@ class SleepEntry with SyncEntityMetaMixin implements SyncEntity {
       template: template ?? this.template,
       bedtime: bedtime ?? this.bedtime,
       wakeTime: wakeTime ?? this.wakeTime,
+      sleepDate: sleepDate ?? this.sleepDate,
+      tags: tags ?? this.tags,
+      qualityScore: qualityScore ?? this.qualityScore,
       screenUsageBeforeSleep:
           screenUsageBeforeSleep ?? this.screenUsageBeforeSleep,
       stressLevel: stressLevel ?? this.stressLevel,
@@ -460,6 +484,9 @@ class SleepEntry with SyncEntityMetaMixin implements SyncEntity {
       template: template,
       bedtime: bedtime,
       wakeTime: wakeTime,
+      sleepDate: sleepDate,
+      tags: tags,
+      qualityScore: qualityScore,
       screenUsageBeforeSleep: screenUsageBeforeSleep,
       stressLevel: stressLevel,
       wakeEnergy: wakeEnergy,
@@ -475,6 +502,9 @@ class SleepEntry with SyncEntityMetaMixin implements SyncEntity {
         'template': template,
         'bedtime': bedtime,
         'wakeTime': wakeTime,
+        'sleepDate': sleepDate,
+        'tags': tags,
+        'qualityScore': qualityScore,
         'screenUsageBeforeSleep': screenUsageBeforeSleep,
         'stressLevel': stressLevel,
         'wakeEnergy': wakeEnergy,
@@ -482,20 +512,63 @@ class SleepEntry with SyncEntityMetaMixin implements SyncEntity {
       };
 
   factory SleepEntry.fromJson(Map<String, Object?> json) {
+    final id = (json['id'] as String?) ?? '';
+    final meta = EntityMeta.fromJson(_readMap(json['_meta']));
+    final parsedSleepDate = json['sleepDate'] as String?;
+    final derivedDate = parsedSleepDate ??
+        _deriveSleepDate(
+          id: id,
+          meta: meta,
+        );
+    final tagsJson = json['tags'];
+    final tags = tagsJson is List
+        ? tagsJson.whereType<String>().toList()
+        : <String>[];
+    final quality = (json['quality'] as String?) ?? '';
+    final qualityScore = _readInt(json['qualityScore']) ??
+        _mapQualityToScore(quality: quality);
+
     return SleepEntry(
-      id: (json['id'] as String?) ?? '',
+      id: id,
       hours: _readDouble(json['hours']) ?? 0.0,
-      quality: (json['quality'] as String?) ?? '',
+      quality: quality,
       notes: json['notes'] as String?,
       template: json['template'] as String?,
       bedtime: json['bedtime'] as String?,
       wakeTime: json['wakeTime'] as String?,
+      sleepDate: derivedDate,
+      tags: tags,
+      qualityScore: qualityScore,
       screenUsageBeforeSleep: _readBool(json['screenUsageBeforeSleep']),
       stressLevel: _readInt(json['stressLevel']),
       wakeEnergy: _readInt(json['wakeEnergy']),
-      meta: EntityMeta.fromJson(_readMap(json['_meta'])),
+      meta: meta,
     );
   }
+}
+
+String? _deriveSleepDate({required String id, required EntityMeta meta}) {
+  final fromId = DateTime.tryParse(id);
+  if (fromId != null) {
+    final normalized = DateTime(fromId.year, fromId.month, fromId.day);
+    return normalized.toIso8601String().split('T').first;
+  }
+
+  final created = meta.createdAt;
+  return DateTime(created.year, created.month, created.day)
+      .toIso8601String()
+      .split('T')
+      .first;
+}
+
+int _mapQualityToScore({required String quality}) {
+  final normalized = quality.toLowerCase();
+  if (normalized.contains('excel')) return 5;
+  if (normalized.contains('muy') || normalized.contains('buena')) return 4;
+  if (normalized.contains('ok') || normalized.contains('normal')) return 3;
+  if (normalized.contains('lig')) return 2;
+  if (normalized.contains('mala')) return 1;
+  return 3;
 }
 
 /// ------------------------------
