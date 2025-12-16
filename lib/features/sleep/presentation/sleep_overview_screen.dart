@@ -71,8 +71,8 @@ class _SleepOverviewScreenState extends State<SleepOverviewScreen> {
           final recent = entries.take(14).toList();
           final lastSeven = _filterByDays(entries, 7);
           final lastEntry = entries.isNotEmpty ? entries.first : null;
-          final avg7Days = lastSeven.isEmpty
-              ? 0
+          final double avg7Days = lastSeven.isEmpty
+              ? 0.0
               : lastSeven.map((e) => e.hours).reduce((a, b) => a + b) /
                   lastSeven.length;
           final goal = data.prefs?.preferredSleep ?? 8.0;
@@ -604,7 +604,7 @@ class _OverviewData {
   final UserPreferences? prefs;
 }
 
-const _empty = SleepEntry(
+final _empty = SleepEntry(
   id: '',
   hours: 0,
   quality: '',
