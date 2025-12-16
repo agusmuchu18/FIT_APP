@@ -18,6 +18,8 @@ class WorkoutBottomBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final hasExercises = exerciseCount > 0;
+
     return Material(
       elevation: 3,
       child: SafeArea(
@@ -46,13 +48,14 @@ class WorkoutBottomBar extends StatelessWidget {
                 children: [
                   FilledButton(
                     onPressed: onSave,
-                    child: const Text('Guardar entrenamiento'),
+                    child: const Text('Guardar borrador'),
                   ),
                   const SizedBox(height: 6),
                   TextButton.icon(
-                    onPressed: onFinish,
+                    onPressed: hasExercises ? onFinish : null,
                     icon: const Icon(Icons.flag_outlined),
-                    label: const Text('Finalizar y limpiar'),
+                    label: const Text('Finalizar sesión'),
+                    style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
                   ),
                 ],
               ),
