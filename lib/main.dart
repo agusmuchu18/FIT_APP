@@ -21,6 +21,8 @@ import 'features/home/presentation/home_summary_screen.dart';
 import 'features/nutrition/nutrition_screens.dart';
 import 'features/onboarding/onboarding_screen.dart';
 import 'features/sleep/presentation/sleep_regularity_screen.dart';
+import 'features/sleep/presentation/sleep_overview_screen.dart';
+import 'features/sleep/presentation/sleep_history_screen.dart';
 import 'features/sleep/sleep_screens.dart';
 import 'features/streak/presentation/streak_screen.dart';
 import 'features/workout/pro/workout_pro_screen.dart';
@@ -44,7 +46,7 @@ Future<void> main() async {
   await Hive.initFlutter();
 
   // --- Services (local + remote sync) ---
-  final local = LocalStorageService();
+  final local = await LocalStorageService.create();
   final statistics = StatisticsService();
   final syncQueue = await HiveSyncQueueStore.create();
 
@@ -121,6 +123,8 @@ class FitApp extends StatelessWidget {
           '/nutrition/pro': (_) => const NutritionProScreen(),
           '/sleep/lite': (_) => const SleepLiteScreen(),
           '/sleep/pro': (_) => const SleepProScreen(),
+          '/sleep/overview': (_) => const SleepOverviewScreen(),
+          '/sleep/history': (_) => const SleepHistoryScreen(),
           '/sleep/regularity': (_) => const SleepRegularityScreen(),
           '/analytics/overview': (_) => const AnalyticsOverviewScreen(),
           '/groups/list': (_) => const GroupsListScreen(),
