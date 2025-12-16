@@ -693,9 +693,11 @@ class StrengthSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final hasExercises = provider.exercises.isNotEmpty;
+
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -703,62 +705,39 @@ class StrengthSection extends StatelessWidget {
               children: [
                 const Text('Ejercicios', style: TextStyle(fontWeight: FontWeight.w700)),
                 const Spacer(),
-                TextButton.icon(
-                  onPressed: () => _openAddExercise(context, provider),
-                  icon: const Icon(Icons.add),
-                  label: const Text('Agregar ejercicio'),
-                ),
+                if (hasExercises)
+                  TextButton.icon(
+                    onPressed: () => _openAddExercise(context, provider),
+                    icon: const Icon(Icons.add),
+                    label: const Text('Agregar'),
+                    style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+                  ),
               ],
             ),
             const SizedBox(height: 8),
-            if (provider.exercises.isEmpty)
+            if (!hasExercises)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Agregá ejercicios para registrar series, reps y peso',
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                    const SizedBox(height: 10),
-                    FilledButton(
+                    Text('Agregá ejercicios para registrar series, reps y peso',
+                        style: Theme.of(context).textTheme.bodyMedium),
+                    const SizedBox(height: 12),
+                    FilledButton.icon(
                       onPressed: () => _openAddExercise(context, provider),
-                      child: const Text('Agregar ejercicio'),
+                      icon: const Icon(Icons.add),
+                      label: const Text('Agregar ejercicio'),
                     ),
                     const SizedBox(height: 12),
-                    const Text('Sugeridos'),
-                    const SizedBox(height: 6),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 6,
-                      children: [
-                        'Press banca',
-                        'Dominadas',
-                        'Sentadilla',
-                        'Peso muerto',
-                      ]
-                          .map(
-                          (name) => ActionChip(
-                            label: Text(name),
-                            onPressed: () {
-                              final match = exerciseIndex.findByQuery(name);
-                              final exercise = match != null
-                                  ? provider.fromDefinition(match)
-                                  : WorkoutExercise(
-                                      id: const Uuid().v4(),
-                                      name: name,
-                                    );
-                              provider.addExerciseWithDefaults(exercise);
-                            },
-                          ),
-                        )
-                        .toList(),
+                    _SuggestedExercisesRow(
+                      suggestions: const ['Press banca', 'Dominadas', 'Sentadilla', 'Peso muerto'],
+                      onPick: (name) => _addSuggested(name, context),
                     ),
                   ],
                 ),
               ),
-            if (provider.exercises.isNotEmpty)
+            if (hasExercises)
               ReorderableListView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
@@ -788,12 +767,40 @@ class StrengthSection extends StatelessWidget {
                   );
                 },
               ),
-            const SizedBox(height: 12),
-            _MetricsRow(provider: provider),
+            if (hasExercises) ...[
+              const SizedBox(height: 12),
+              ExpansionTile(
+                tilePadding: EdgeInsets.zero,
+                title: const Text('Métricas (opcional)'),
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: _MetricsRow(provider: provider),
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
       ),
     );
+  }
+
+
+  void _addSuggested(String name, BuildContext context) {
+    if (name == '__open_selector__') {
+      _openAddExercise(context, provider);
+      return;
+    }
+
+    final match = exerciseIndex.findByQuery(name);
+    final exercise = match != null
+        ? provider.fromDefinition(match)
+        : WorkoutExercise(
+            id: const Uuid().v4(),
+            name: name,
+          );
+    provider.addExerciseWithDefaults(exercise);
   }
 
 
@@ -811,6 +818,53 @@ class StrengthSection extends StatelessWidget {
     if (chosen == null) return;
 
     provider.addExerciseWithDefaults(chosen);
+  }
+}
+
+class _SuggestedExercisesRow extends StatelessWidget {
+  const _SuggestedExercisesRow({
+    required this.suggestions,
+    required this.onPick,
+  });
+
+  final List<String> suggestions;
+  final ValueChanged<String> onPick;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text('Sugeridos', style: Theme.of(context).textTheme.labelLarge),
+            const Spacer(),
+            TextButton(
+              onPressed: () => onPick('__open_selector__'),
+              child: const Text('Ver más'),
+              style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          height: 36,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: suggestions.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 8),
+            itemBuilder: (context, i) {
+              final name = suggestions[i];
+              return ActionChip(
+                visualDensity: VisualDensity.compact,
+                label: Text(name),
+                onPressed: () => onPick(name),
+              );
+            },
+          ),
+        ),
+      ],
+    );
   }
 }
 
