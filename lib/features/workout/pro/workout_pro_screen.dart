@@ -1145,23 +1145,6 @@ class StrengthSection extends StatelessWidget {
           );
     provider.addExerciseWithDefaults(exercise);
   }
-
-
-  Future<void> _openAddExercise(
-    BuildContext context,
-    WorkoutProProvider provider,
-  ) async {
-    final chosen = await showModalBottomSheet<WorkoutExercise>(
-      context: context,
-      showDragHandle: true,
-      isScrollControlled: true,
-      builder: (context) => _ExerciseSelector(provider: provider),
-    );
-
-    if (chosen == null) return;
-
-    provider.addExerciseWithDefaults(chosen);
-  }
 }
 
 class _EmptyExercisesState extends StatelessWidget {
@@ -1276,6 +1259,22 @@ class _SuggestedChips extends StatelessWidget {
       ],
     );
   }
+}
+
+Future<void> _openAddExercise(
+  BuildContext context,
+  WorkoutProProvider provider,
+) async {
+  final chosen = await showModalBottomSheet<WorkoutExercise>(
+    context: context,
+    showDragHandle: true,
+    isScrollControlled: true,
+    builder: (context) => _ExerciseSelector(provider: provider),
+  );
+
+  if (chosen == null) return;
+
+  provider.addExerciseWithDefaults(chosen);
 }
 
 Future<bool> _confirmDelete(BuildContext context) async {
