@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../core/data/statistics_service.dart';
+import '../../common/theme/app_colors.dart';
+import '../../common/widgets/summary_card.dart';
 import 'data/exercise_definition.dart';
 import 'data/exercise_library.dart';
 import 'models/workout_models.dart';
@@ -11,19 +13,6 @@ import 'widgets/exercise_card.dart';
 import 'widgets/template_section.dart';
 import 'widgets/workout_bottom_bar.dart';
 import 'widgets/workout_type_selector.dart';
-
-Widget _metric(BuildContext context, String label, String value) {
-  return Expanded(
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(value, style: const TextStyle(fontWeight: FontWeight.w700)),
-        const SizedBox(height: 4),
-        Text(label, style: Theme.of(context).textTheme.bodySmall),
-      ],
-    ),
-  );
-}
 
 class WorkoutProScreen extends StatelessWidget {
   const WorkoutProScreen({super.key});
@@ -46,6 +35,8 @@ class _WorkoutProContent extends StatefulWidget {
 
 class _WorkoutProContentState extends State<_WorkoutProContent> {
   late final ExerciseLibraryIndex _exerciseIndex;
+  final _scrollController = ScrollController();
+  final _configKey = GlobalKey();
 
   @override
   void initState() {
@@ -58,33 +49,82 @@ class _WorkoutProContentState extends State<_WorkoutProContent> {
     final provider = context.watch<WorkoutProProvider>();
 
     return Scaffold(
-      appBar: AppBar(
-        titleSpacing: 0,
-        title: _AppBarTitle(dateLabel: StatisticsService.formatShortDate(DateTime.now())),
-        actions: [
-          PopupMenuButton<String>(
-            onSelected: (value) => _handleMenuAction(context, provider, value),
-            itemBuilder: (context) => const [
-              PopupMenuItem(value: 'save_template', child: Text('Guardar como plantilla')),
-              PopupMenuItem(value: 'load_template', child: Text('Cargar plantilla')),
-              PopupMenuItem(value: 'reset', child: Text('Reiniciar entrenamiento')),
-              PopupMenuItem(value: 'export', child: Text('Exportar JSON (debug)')),
-            ],
-          ),
-        ],
-      ),
       body: provider.initialized
-          ? SafeArea(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 140),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _SessionSummary(provider: provider),
-                    const SizedBox(height: 12),
-                    _ConfigurationCard(provider: provider, onConfirmTypeChange: _confirmDialog),
-                    const SizedBox(height: 12),
+          ? Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color(0xFF0F1826),
+                    Color(0xFF0C1220),
+                  ],
+                ),
+              ),
+              child: SafeArea(
+                child: CustomScrollView(
+                  controller: _scrollController,
+                  slivers: [
+                    SliverAppBar(
+                      pinned: true,
+                      titleSpacing: 0,
+                      backgroundColor: Colors.transparent,
+                      title: _AppBarTitle(
+                        dateLabel: StatisticsService.formatShortDate(DateTime.now()),
+                      ),
+                      actions: [
+                        IconButton(
+                          onPressed: _scrollToConfiguration,
+                          icon: const Icon(Icons.tune, size: 20),
+                          tooltip: 'Ajustes rápidos',
+                        ),
+                        PopupMenuButton<String>(
+                          onSelected: (value) => _handleMenuAction(context, provider, value),
+                          itemBuilder: (context) => const [
+                            PopupMenuItem(
+                              value: 'save_template',
+                              child: Text('Guardar como plantilla'),
+                            ),
+                            PopupMenuItem(
+                              value: 'load_template',
+                              child: Text('Cargar plantilla'),
+                            ),
+                            PopupMenuItem(
+                              value: 'reset',
+                              child: Text('Reiniciar entrenamiento'),
+                            ),
+                            PopupMenuItem(
+                              value: 'export',
+                              child: Text('Exportar JSON (debug)'),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _SessionHeroCard(
+                              provider: provider,
+                              onAddExercise: () => _openAddExercise(context, provider),
+                              onConfigure: _scrollToConfiguration,
+                            ),
+                            const SizedBox(height: 24),
+                            _ConfigurationCard(
+                              key: _configKey,
+                              provider: provider,
+                              onConfirmTypeChange: _confirmDialog,
+                            ),
+                            const SizedBox(height: 24),
+                          ],
+                        ),
+                      ),
+                    ),
                     _buildDynamicSection(provider),
+                    const SliverToBoxAdapter(child: SizedBox(height: 120)),
                   ],
                 ),
               ),
@@ -94,38 +134,76 @@ class _WorkoutProContentState extends State<_WorkoutProContent> {
         exerciseCount: provider.selectedType == WorkoutType.strength ? provider.totalExercises : 0,
         setCount: provider.selectedType == WorkoutType.strength ? provider.totalSets : 0,
         durationLabel: provider.getDurationLabel(),
+        onAddExercise: () => _openAddExercise(context, provider),
         onSave: () => _saveSession(context, provider, finalize: false),
         onFinish: () => _showFinishSheet(context, provider),
       ),
     );
   }
 
-  Widget _buildDynamicSection(WorkoutProProvider provider) {
+  void _scrollToConfiguration() {
+    final context = _configKey.currentContext;
+    if (context != null) {
+      Scrollable.ensureVisible(
+        context,
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeOutCubic,
+      );
+    }
+  }
+
+  SliverToBoxAdapter _buildDynamicSection(WorkoutProProvider provider) {
     switch (provider.selectedType) {
       case WorkoutType.strength:
-        return StrengthSection(
-          provider: provider,
-          exerciseIndex: _exerciseIndex,
+        return SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: StrengthSection(
+              provider: provider,
+              exerciseIndex: _exerciseIndex,
+              onAddExercise: () => _openAddExercise(context, provider),
+            ),
+          ),
         );
       case WorkoutType.cardio:
-        return SimpleWorkoutSection(
-          provider: provider,
-          title: 'Cardio',
+        return SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: SimpleWorkoutSection(
+              provider: provider,
+              title: 'Cardio',
+            ),
+          ),
         );
       case WorkoutType.functional:
-        return SimpleWorkoutSection(
-          provider: provider,
-          title: 'Funcional',
+        return SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: SimpleWorkoutSection(
+              provider: provider,
+              title: 'Funcional',
+            ),
+          ),
         );
       case WorkoutType.sport:
-        return SimpleWorkoutSection(
-          provider: provider,
-          title: 'Deporte',
+        return SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: SimpleWorkoutSection(
+              provider: provider,
+              title: 'Deporte',
+            ),
+          ),
         );
       case WorkoutType.custom:
-        return SimpleWorkoutSection(
-          provider: provider,
-          title: 'Otro',
+        return SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: SimpleWorkoutSection(
+              provider: provider,
+              title: 'Otro',
+            ),
+          ),
         );
     }
   }
@@ -424,52 +502,308 @@ class _AppBarTitle extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Entrenamiento', style: TextStyle(fontWeight: FontWeight.w700)),
-        Text(dateLabel, style: Theme.of(context).textTheme.bodySmall),
+        Text(
+          'Entrenamiento',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                color: AppColors.textPrimary,
+              ),
+        ),
+        Text(
+          dateLabel,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: AppColors.textMuted,
+              ),
+        ),
       ],
     );
   }
 }
 
-class _SessionSummary extends StatelessWidget {
-  const _SessionSummary({required this.provider});
+class _SessionHeroCard extends StatelessWidget {
+  const _SessionHeroCard({
+    required this.provider,
+    required this.onAddExercise,
+    required this.onConfigure,
+  });
 
   final WorkoutProProvider provider;
+  final VoidCallback onAddExercise;
+  final VoidCallback onConfigure;
+
+  String _typeLabel() {
+    switch (provider.selectedType) {
+      case WorkoutType.strength:
+        return 'Sesión de Fuerza';
+      case WorkoutType.cardio:
+        return 'Cardio';
+      case WorkoutType.functional:
+        return 'Funcional';
+      case WorkoutType.sport:
+        return 'Deporte';
+      case WorkoutType.custom:
+        return provider.customTypeName?.isNotEmpty == true
+            ? provider.customTypeName!
+            : 'Sesión personal';
+    }
+  }
+
+  String _primaryDurationLabel() {
+    final diff = DateTime.now().difference(provider.sessionStart);
+    final minutes = diff.inMinutes;
+    if (minutes >= 60) {
+      final hours = diff.inHours;
+      final remainder = minutes - hours * 60;
+      return remainder == 0 ? '${hours}h' : '${hours}h ${remainder.toString().padLeft(2, '0')}m';
+    }
+    final secs = diff.inSeconds % 60;
+    return '${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            Chip(
-              label: Text(_typeLabel()),
-              avatar: const Icon(Icons.fitness_center, size: 18),
-            ),
-            Chip(
-              label: Text(provider.selectedTemplate?.name ?? 'Sin plantilla'),
-              avatar: const Icon(Icons.view_module_outlined, size: 18),
-            ),
-            Text('Duración: ${provider.liveDurationLabel}', style: Theme.of(context).textTheme.bodyMedium),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surfaceVariant,
-                borderRadius: BorderRadius.circular(16),
+    final miniTextStyle = Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: AppColors.textMuted,
+        );
+    final valueStyle = Theme.of(context).textTheme.titleMedium?.copyWith(
+          color: AppColors.textPrimary,
+          fontSize: 13,
+        );
+
+    return SummaryCard(
+      padding: const EdgeInsets.all(18),
+      minHeight: 160,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Icon(Icons.fitness_center, color: AppColors.accent),
               ),
-              child: const Text('Estado: Borrador'),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _typeLabel(),
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.textPrimary,
+                          ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      provider.selectedTemplate?.name ?? 'Sin plantilla',
+                      style: miniTextStyle,
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: const [
+                    Icon(Icons.circle, size: 8, color: AppColors.accent),
+                    SizedBox(width: 6),
+                    Text('Borrador', style: TextStyle(color: AppColors.textPrimary, fontSize: 12)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                _primaryDurationLabel(),
+                style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 40,
+                      color: AppColors.textPrimary,
+                    ),
+              ),
+              const SizedBox(width: 10),
+              Text('activo', style: miniTextStyle),
+              const Spacer(),
+              FilledButton(
+                onPressed: onAddExercise,
+                child: const Text('Agregar ejercicio'),
+              ),
+              const SizedBox(width: 8),
+              OutlinedButton(
+                onPressed: onConfigure,
+                child: const Text('Configurar'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              _miniMetric('Ejercicios', provider.totalExercises.toString(), valueStyle, miniTextStyle),
+              _miniMetric('Series', provider.totalSets.toString(), valueStyle, miniTextStyle),
+              _miniMetric('Volumen', '${provider.totalVolume.toStringAsFixed(0)} kg', valueStyle, miniTextStyle),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _miniMetric(String label, String value, TextStyle? valueStyle, TextStyle? miniStyle) {
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(value, style: valueStyle?.copyWith(fontWeight: FontWeight.w800)),
+          const SizedBox(height: 4),
+          Text(label, style: miniStyle),
+        ],
+      ),
+    );
+  }
+}
+
+class _ConfigurationCard extends StatefulWidget {
+  const _ConfigurationCard({super.key, required this.provider, required this.onConfirmTypeChange});
+
+  final WorkoutProProvider provider;
+  final Future<bool> Function(BuildContext context, String message) onConfirmTypeChange;
+
+  @override
+  State<_ConfigurationCard> createState() => _ConfigurationCardState();
+}
+
+class _ConfigurationCardState extends State<_ConfigurationCard> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = <Widget>[
+      _SettingRow(
+        label: 'Tipo',
+        value: _typeLabel(widget.provider),
+        onTap: () => _openTypeSelector(),
+      ),
+      _SettingRow(
+        label: 'Plantilla',
+        value: widget.provider.selectedTemplate?.name ?? 'Sin plantilla',
+        onTap: () => _openTemplateSelector(context),
+      ),
+      _SettingRow(
+        label: 'Modo',
+        value: 'Libre',
+        onTap: () => _openTemplateSelector(context),
+      ),
+      _SettingRow(
+        label: 'Descanso',
+        value: 'Auto',
+        onTap: () {},
+      ),
+    ];
+
+    return SummaryCard(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      child: AnimatedSize(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeInOut,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Text(
+                  'Configuración',
+                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: AppColors.textPrimary),
+                ),
+                const Spacer(),
+                TextButton(
+                  onPressed: () => setState(() => _expanded = !_expanded),
+                  child: Text(_expanded ? 'Ver menos' : 'Ver más'),
+                ),
+              ],
             ),
+            const SizedBox(height: 8),
+            ...List.generate(_expanded ? rows.length : 2, (index) => rows[index]),
+            if (!_expanded) const Divider(height: 20, color: AppColors.borderSubtle),
+            if (!_expanded)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: () => setState(() => _expanded = true),
+                  icon: const Icon(Icons.unfold_more),
+                  label: const Text('Más opciones'),
+                  style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+                ),
+              ),
           ],
         ),
       ),
     );
   }
 
-  String _typeLabel() {
+  void _openTypeSelector() async {
+    await showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        child: WorkoutTypeSelector(
+          selected: widget.provider.selectedType,
+          customName: widget.provider.customTypeName,
+          onCustomNameChanged: widget.provider.setCustomTypeName,
+          onSelected: (type) async {
+            if (widget.provider.selectedType == WorkoutType.strength &&
+                type != WorkoutType.strength &&
+                widget.provider.exercises.isNotEmpty) {
+              final confirmed = await widget.onConfirmTypeChange(
+                context,
+                'Cambiar tipo borrará ejercicios. ¿Continuar?',
+              );
+              if (!confirmed) return;
+              widget.provider.setType(type, force: true);
+            } else {
+              widget.provider.setType(type);
+            }
+            Navigator.of(ctx).pop();
+          },
+        ),
+      ),
+    );
+  }
+
+  void _openTemplateSelector(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      builder: (_) => TemplateSection(
+        standardTemplates: widget.provider.standardTemplates,
+        userTemplates: widget.provider.userTemplates,
+        selected: widget.provider.selectedTemplate,
+        suggestions: widget.provider.suggestedTemplates(),
+        onSelect: (template) {
+          widget.provider.selectTemplate(template);
+          Navigator.of(context).pop();
+        },
+        onClear: widget.provider.clearTemplate,
+      ),
+    );
+  }
+
+  String _typeLabel(WorkoutProProvider provider) {
     switch (provider.selectedType) {
       case WorkoutType.strength:
         return 'Fuerza';
@@ -487,60 +821,56 @@ class _SessionSummary extends StatelessWidget {
   }
 }
 
-class _ConfigurationCard extends StatefulWidget {
-  const _ConfigurationCard({required this.provider, required this.onConfirmTypeChange});
+class _SettingRow extends StatelessWidget {
+  const _SettingRow({
+    required this.label,
+    required this.value,
+    required this.onTap,
+  });
 
-  final WorkoutProProvider provider;
-  final Future<bool> Function(BuildContext context, String message) onConfirmTypeChange;
-
-  @override
-  State<_ConfigurationCard> createState() => _ConfigurationCardState();
-}
-
-class _ConfigurationCardState extends State<_ConfigurationCard> {
-  bool _expanded = false;
+  final String label;
+  final String value;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: ExpansionTile(
-        maintainState: true,
-        initiallyExpanded: _expanded,
-        onExpansionChanged: (value) => setState(() => _expanded = value),
-        title: const Text('Configuración', style: TextStyle(fontWeight: FontWeight.w700)),
-        subtitle: const Text('Tipo y plantilla'),
-        childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        children: [
-          WorkoutTypeSelector(
-            selected: widget.provider.selectedType,
-            customName: widget.provider.customTypeName,
-            onCustomNameChanged: widget.provider.setCustomTypeName,
-            onSelected: (type) async {
-              if (widget.provider.selectedType == WorkoutType.strength &&
-                  type != WorkoutType.strength &&
-                  widget.provider.exercises.isNotEmpty) {
-                final confirmed = await widget.onConfirmTypeChange(
-                  context,
-                  'Cambiar tipo borrará ejercicios. ¿Continuar?',
-                );
-                if (!confirmed) return;
-                widget.provider.setType(type, force: true);
-              } else {
-                widget.provider.setType(type);
-              }
-            },
+    return Column(
+      children: [
+        InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(14),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        label,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: AppColors.textMuted,
+                            ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        value,
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              color: AppColors.textPrimary,
+                              fontWeight: FontWeight.w700,
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+              ],
+            ),
           ),
-          const SizedBox(height: 12),
-          TemplateSection(
-            standardTemplates: widget.provider.standardTemplates,
-            userTemplates: widget.provider.userTemplates,
-            selected: widget.provider.selectedTemplate,
-            suggestions: widget.provider.suggestedTemplates(),
-            onSelect: widget.provider.selectTemplate,
-            onClear: widget.provider.clearTemplate,
-          ),
-        ],
-      ),
+        ),
+        const Divider(height: 1, color: AppColors.borderSubtle),
+      ],
     );
   }
 }
@@ -686,103 +1016,116 @@ class StrengthSection extends StatelessWidget {
   const StrengthSection({
     required this.provider,
     required this.exerciseIndex,
+    required this.onAddExercise,
   });
 
   final WorkoutProProvider provider;
   final ExerciseLibraryIndex exerciseIndex;
+  final VoidCallback onAddExercise;
 
   @override
   Widget build(BuildContext context) {
     final hasExercises = provider.exercises.isNotEmpty;
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Text('Ejercicios', style: TextStyle(fontWeight: FontWeight.w700)),
-                const Spacer(),
-                if (hasExercises)
-                  TextButton.icon(
-                    onPressed: () => _openAddExercise(context, provider),
-                    icon: const Icon(Icons.add),
-                    label: const Text('Agregar'),
-                    style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+    final suggested = [
+      ...provider.recentExercises,
+      ...provider.mostUsedExercises,
+      'Press banca',
+      'Dominadas',
+      'Sentadilla',
+      'Peso muerto',
+      'Remo con barra',
+    ]
+        .toSet()
+        .take(14)
+        .toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SummaryCard(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Text(
+                    'Ejercicios',
+                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: AppColors.textPrimary),
                   ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            if (!hasExercises)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Agregá ejercicios para registrar series, reps y peso',
-                        style: Theme.of(context).textTheme.bodyMedium),
-                    const SizedBox(height: 12),
-                    FilledButton.icon(
+                  const Spacer(),
+                  if (hasExercises)
+                    TextButton.icon(
                       onPressed: () => _openAddExercise(context, provider),
                       icon: const Icon(Icons.add),
-                      label: const Text('Agregar ejercicio'),
+                      label: const Text('Agregar'),
+                      style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
                     ),
-                    const SizedBox(height: 12),
-                    _SuggestedExercisesRow(
-                      suggestions: const ['Press banca', 'Dominadas', 'Sentadilla', 'Peso muerto'],
-                      onPick: (name) => _addSuggested(name, context),
-                    ),
-                  ],
-                ),
-              ),
-            if (hasExercises)
-              ReorderableListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: provider.exercises.length,
-                onReorder: provider.reorderExercise,
-                itemBuilder: (context, index) {
-                  final exercise = provider.exercises[index];
-                  final definition = exerciseIndex.findByQuery(exercise.name);
-                  return ExerciseCard(
-                    key: ValueKey(exercise.id),
-                    exercise: exercise,
-                    definition: definition,
-                    onDuplicate: () => provider.duplicateExercise(exercise.id),
-                    onDelete: () async {
-                      final confirm = await _confirmDelete(context);
-                      if (confirm) provider.removeExercise(exercise.id);
-                    },
-                    onAddSet: () => provider.addSet(exercise.id),
-                    onCopySet: () => provider.copyPreviousSet(exercise.id),
-                    onBumpReps: () => provider.bumpReps(exercise.id, 1),
-                    onBumpWeight: () => provider.bumpWeight(exercise.id, 2.5),
-                    onUpdateSet: (set) => provider.updateSet(exercise.id, set.id, set),
-                    onDeleteSet: (setId) => provider.removeSet(exercise.id, setId),
-                    onRestoreSet: (setIndex, set) =>
-                        provider.insertSet(exercise.id, setIndex, set),
-                    onUpdateNotes: (notes) => provider.updateExerciseNotes(exercise.id, notes),
-                  );
-                },
-              ),
-            if (hasExercises) ...[
-              const SizedBox(height: 12),
-              ExpansionTile(
-                tilePadding: EdgeInsets.zero,
-                title: const Text('Métricas (opcional)'),
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: _MetricsRow(provider: provider),
-                  ),
                 ],
               ),
+              const SizedBox(height: 10),
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 250),
+                child: hasExercises
+                    ? Column(
+                        key: const ValueKey('list'),
+                        children: [
+                          ReorderableListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: provider.exercises.length,
+                            onReorder: provider.reorderExercise,
+                            itemBuilder: (context, index) {
+                              final exercise = provider.exercises[index];
+                              final definition = exerciseIndex.findByQuery(exercise.name);
+                              return Padding(
+                                key: ValueKey(exercise.id),
+                                padding: const EdgeInsets.only(bottom: 10),
+                                child: ExerciseCard(
+                                  exercise: exercise,
+                                  definition: definition,
+                                  onDuplicate: () => provider.duplicateExercise(exercise.id),
+                                  onDelete: () async {
+                                    final confirm = await _confirmDelete(context);
+                                    if (confirm) provider.removeExercise(exercise.id);
+                                  },
+                                  onAddSet: () => provider.addSet(exercise.id),
+                                  onCopySet: () => provider.copyPreviousSet(exercise.id),
+                                  onBumpReps: () => provider.bumpReps(exercise.id, 1),
+                                  onBumpWeight: () => provider.bumpWeight(exercise.id, 2.5),
+                                  onUpdateSet: (set) => provider.updateSet(exercise.id, set.id, set),
+                                  onDeleteSet: (setId) => provider.removeSet(exercise.id, setId),
+                                  onRestoreSet: (setIndex, set) =>
+                                      provider.insertSet(exercise.id, setIndex, set),
+                                  onUpdateNotes: (notes) => provider.updateExerciseNotes(exercise.id, notes),
+                                ),
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 4),
+                          ExpansionTile(
+                            tilePadding: EdgeInsets.zero,
+                            childrenPadding: const EdgeInsets.only(top: 8),
+                            title: const Text('Métricas (opcional)'),
+                            children: [
+                              _MetricsRow(provider: provider),
+                            ],
+                          ),
+                        ],
+                      )
+                    : _EmptyExercisesState(onAddExercise: onAddExercise, onOpenLibrary: () => _openAddExercise(context, provider)),
+              ),
             ],
-          ],
+          ),
         ),
-      ),
+        const SizedBox(height: 16),
+        _SuggestedChips(
+          suggestions: suggested,
+          onPick: (name) => _addSuggested(name, context),
+          onOpenLibrary: () => _openAddExercise(context, provider),
+        ),
+      ],
     );
   }
 
@@ -821,14 +1164,63 @@ class StrengthSection extends StatelessWidget {
   }
 }
 
-class _SuggestedExercisesRow extends StatelessWidget {
-  const _SuggestedExercisesRow({
+class _EmptyExercisesState extends StatelessWidget {
+  const _EmptyExercisesState({required this.onAddExercise, required this.onOpenLibrary});
+
+  final VoidCallback onAddExercise;
+  final VoidCallback onOpenLibrary;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.fitness_center_outlined, size: 46, color: AppColors.textSecondary),
+          const SizedBox(height: 10),
+          Text(
+            'Agregá tu primer ejercicio',
+            style: textTheme.titleMedium?.copyWith(
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Registrá series, reps y peso.',
+            style: textTheme.bodyMedium?.copyWith(color: AppColors.textMuted),
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: onAddExercise,
+              child: const Text('Agregar primer ejercicio'),
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextButton(
+            onPressed: onOpenLibrary,
+            child: const Text('Buscar en biblioteca'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SuggestedChips extends StatelessWidget {
+  const _SuggestedChips({
     required this.suggestions,
     required this.onPick,
+    required this.onOpenLibrary,
   });
 
   final List<String> suggestions;
   final ValueChanged<String> onPick;
+  final VoidCallback onOpenLibrary;
 
   @override
   Widget build(BuildContext context) {
@@ -837,28 +1229,46 @@ class _SuggestedExercisesRow extends StatelessWidget {
       children: [
         Row(
           children: [
-            Text('Sugeridos', style: Theme.of(context).textTheme.labelLarge),
+            const Text(
+              'Sugeridos',
+              style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+            ),
             const Spacer(),
             TextButton(
-              onPressed: () => onPick('__open_selector__'),
-              child: const Text('Ver más'),
+              onPressed: onOpenLibrary,
               style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+              child: const Text('Ver más'),
             ),
           ],
         ),
         const SizedBox(height: 8),
         SizedBox(
-          height: 36,
+          height: 34,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: suggestions.length,
             separatorBuilder: (_, __) => const SizedBox(width: 8),
             itemBuilder: (context, i) {
               final name = suggestions[i];
-              return ActionChip(
-                visualDensity: VisualDensity.compact,
-                label: Text(name),
-                onPressed: () => onPick(name),
+              return InkWell(
+                onTap: () => onPick(name),
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.borderSubtle),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.add, size: 14, color: AppColors.textSecondary),
+                      const SizedBox(width: 6),
+                      Text(name, style: const TextStyle(color: AppColors.textPrimary)),
+                    ],
+                  ),
+                ),
               );
             },
           ),
