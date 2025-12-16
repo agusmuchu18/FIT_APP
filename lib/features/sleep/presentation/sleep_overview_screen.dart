@@ -15,24 +15,26 @@ class SleepOverviewScreen extends StatefulWidget {
 }
 
 class _SleepOverviewScreenState extends State<SleepOverviewScreen> {
-  late Future<_OverviewData> _future;
+  FitnessRepository? _repository;
+  Future<_OverviewData>? _future;
 
   @override
-  void initState() {
-    super.initState();
-    _future = _load();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _repository ??= RepositoryScope.of(context);
+    _future ??= _load(_repository!);
   }
 
-  Future<_OverviewData> _load() async {
-    final repository = RepositoryScope.of(context);
+  Future<_OverviewData> _load(FitnessRepository repository) async {
     final sleep = await repository.getSleep();
     final prefs = await repository.getPreferences();
     return _OverviewData(entries: sleep, prefs: prefs);
   }
 
   Future<void> _refresh() async {
+    final repo = _repository!;
     setState(() {
-      _future = _load();
+      _future = _load(repo);
     });
     await _future;
   }
@@ -55,12 +57,39 @@ class _SleepOverviewScreenState extends State<SleepOverviewScreen> {
       body: FutureBuilder<_OverviewData>(
         future: _future,
         builder: (context, snapshot) {
+          if (_future == null) {
+            return const Center(child: CircularProgressIndicator.adaptive());
+          }
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator.adaptive());
           }
           final data = snapshot.data;
           if (data == null) {
-            return const SizedBox();
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: SummaryCard(
+                  padding: const EdgeInsets.all(18),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.error_outline, color: AppColors.textSecondary),
+                      const SizedBox(height: 8),
+                      const Text('No se pudo cargar Sueño',
+                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+                      const SizedBox(height: 6),
+                      const Text('Probá refrescar o volver a entrar.',
+                          style: TextStyle(color: AppColors.textMuted)),
+                      const SizedBox(height: 12),
+                      FilledButton(
+                        onPressed: _refresh,
+                        child: const Text('Reintentar'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
           }
 
           final entries = data.entries
@@ -182,6 +211,9 @@ class _LastNightCard extends StatelessWidget {
   }
 }
 
+bool _sameDay(DateTime a, DateTime b) =>
+    a.year == b.year && a.month == b.month && a.day == b.day;
+
 class _TrendCard extends StatelessWidget {
   const _TrendCard({required this.entries});
 
@@ -194,7 +226,7 @@ class _TrendCard extends StatelessWidget {
     for (var i = 6; i >= 0; i--) {
       final day = today.subtract(Duration(days: i));
       final entry = entries.firstWhere(
-        (e) => sleepEntryDate(e) == day,
+        (e) => _sameDay(sleepEntryDate(e), day),
         orElse: () => _empty,
       );
       final hours = entry.id.isEmpty ? 0.0 : entry.hours;
