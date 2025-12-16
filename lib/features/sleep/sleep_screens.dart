@@ -252,6 +252,7 @@ class _SleepLiteScreenState extends State<SleepLiteScreen> {
       bedtime: formatMinutesToHHmm(_bedMinutes!),
       wakeTime: formatMinutesToHHmm(_wakeMinutes!),
       sleepDate: _formatDateIso(_selectedDate),
+      source: 'manual_lite',
       tags: const [],
     );
 
@@ -651,6 +652,7 @@ class _SleepProScreenState extends State<SleepProScreen> {
       screenUsageBeforeSleep: _usedScreensBeforeSleep,
       stressLevel: _stressLevel,
       wakeEnergy: _energyLevel,
+      source: 'manual_pro',
     );
 
     final repository = RepositoryScope.of(context);

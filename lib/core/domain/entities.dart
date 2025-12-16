@@ -373,6 +373,10 @@ class SleepEntry with SyncEntityMetaMixin implements SyncEntity {
     this.screenUsageBeforeSleep,
     this.stressLevel,
     this.wakeEnergy,
+    this.napMinutes,
+    this.sleepLatencyMinutes,
+    this.awakenings,
+    this.source,
     this.sleepDate,
     this.tags,
     this.qualityScore,
@@ -390,6 +394,10 @@ class SleepEntry with SyncEntityMetaMixin implements SyncEntity {
     bool? screenUsageBeforeSleep,
     int? stressLevel,
     int? wakeEnergy,
+    int? napMinutes,
+    int? sleepLatencyMinutes,
+    int? awakenings,
+    String? source,
     String? sleepDate,
     List<String>? tags,
     int? qualityScore,
@@ -406,6 +414,10 @@ class SleepEntry with SyncEntityMetaMixin implements SyncEntity {
       screenUsageBeforeSleep: screenUsageBeforeSleep,
       stressLevel: stressLevel,
       wakeEnergy: wakeEnergy,
+      napMinutes: napMinutes,
+      sleepLatencyMinutes: sleepLatencyMinutes,
+      awakenings: awakenings,
+      source: source,
       sleepDate: sleepDate,
       tags: tags,
       qualityScore: qualityScore,
@@ -426,6 +438,18 @@ class SleepEntry with SyncEntityMetaMixin implements SyncEntity {
 
   /// ISO date (yyyy-MM-dd) representing wake-up day.
   final String? sleepDate;
+
+  /// Minutes spent on naps.
+  final int? napMinutes;
+
+  /// Minutes it took to fall asleep.
+  final int? sleepLatencyMinutes;
+
+  /// Number of awakenings during the night.
+  final int? awakenings;
+
+  /// Source of the entry.
+  final String? source;
 
   /// Quick habit tags.
   final List<String>? tags;
@@ -450,6 +474,10 @@ class SleepEntry with SyncEntityMetaMixin implements SyncEntity {
     bool? screenUsageBeforeSleep,
     int? stressLevel,
     int? wakeEnergy,
+    int? napMinutes,
+    int? sleepLatencyMinutes,
+    int? awakenings,
+    String? source,
     String? sleepDate,
     List<String>? tags,
     int? qualityScore,
@@ -464,6 +492,10 @@ class SleepEntry with SyncEntityMetaMixin implements SyncEntity {
       template: template ?? this.template,
       bedtime: bedtime ?? this.bedtime,
       wakeTime: wakeTime ?? this.wakeTime,
+      napMinutes: napMinutes ?? this.napMinutes,
+      sleepLatencyMinutes: sleepLatencyMinutes ?? this.sleepLatencyMinutes,
+      awakenings: awakenings ?? this.awakenings,
+      source: source ?? this.source,
       sleepDate: sleepDate ?? this.sleepDate,
       tags: tags ?? this.tags,
       qualityScore: qualityScore ?? this.qualityScore,
@@ -484,6 +516,10 @@ class SleepEntry with SyncEntityMetaMixin implements SyncEntity {
       template: template,
       bedtime: bedtime,
       wakeTime: wakeTime,
+      napMinutes: napMinutes,
+      sleepLatencyMinutes: sleepLatencyMinutes,
+      awakenings: awakenings,
+      source: source,
       sleepDate: sleepDate,
       tags: tags,
       qualityScore: qualityScore,
@@ -503,6 +539,10 @@ class SleepEntry with SyncEntityMetaMixin implements SyncEntity {
         'bedtime': bedtime,
         'wakeTime': wakeTime,
         'sleepDate': sleepDate,
+        'napMinutes': napMinutes,
+        'sleepLatencyMinutes': sleepLatencyMinutes,
+        'awakenings': awakenings,
+        'source': source,
         'tags': tags,
         'qualityScore': qualityScore,
         'screenUsageBeforeSleep': screenUsageBeforeSleep,
@@ -536,6 +576,10 @@ class SleepEntry with SyncEntityMetaMixin implements SyncEntity {
       template: json['template'] as String?,
       bedtime: json['bedtime'] as String?,
       wakeTime: json['wakeTime'] as String?,
+      napMinutes: _readInt(json['napMinutes']),
+      sleepLatencyMinutes: _readInt(json['sleepLatencyMinutes']),
+      awakenings: _readInt(json['awakenings']),
+      source: json['source'] as String?,
       sleepDate: derivedDate,
       tags: tags,
       qualityScore: qualityScore,
@@ -554,8 +598,8 @@ String? _deriveSleepDate({required String id, required EntityMeta meta}) {
     return normalized.toIso8601String().split('T').first;
   }
 
-  final created = meta.createdAt;
-  return DateTime(created.year, created.month, created.day)
+  final updated = meta.updatedAt;
+  return DateTime(updated.year, updated.month, updated.day)
       .toIso8601String()
       .split('T')
       .first;
