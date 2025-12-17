@@ -309,7 +309,7 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const _HeaderSection(),
+                        _HeaderSection(data: data, onRefresh: _refreshSummary),
                         const SizedBox(height: 24),
                         _StreakCard(
                           activeDays: data.activeStreak,
@@ -589,12 +589,14 @@ class _QuickActionsFabState extends State<_QuickActionsFab> {
 }
 
 class _HeaderSection extends StatelessWidget {
-  const _HeaderSection();
+  const _HeaderSection({required this.data, required this.onRefresh});
+
+  final _HomeSummaryData data;
+  final VoidCallback onRefresh;
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    final nameGreeting = 'Hola';
     final now = DateTime.now();
     final weekdayNames = [
       'lunes',
@@ -621,35 +623,273 @@ class _HeaderSection extends StatelessWidget {
     ];
     final formattedDate =
         '${weekdayNames[now.weekday - 1]}, ${now.day} de ${monthNames[now.month - 1]}';
+    final userName =
+        FirebaseAuth.instance.currentUser?.displayName?.split(' ').first ??
+            'Atleta';
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Hoy · $formattedDate',
-          style: textTheme.labelMedium?.copyWith(
-            color: const Color(0xFF9BA7B4),
-            fontWeight: FontWeight.w600,
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [
+            Color(0xFF1E3C72),
+            Color(0xFF1D6C6F),
+            Color(0xFF121826),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x44111629),
+            blurRadius: 24,
+            offset: Offset(0, 16),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: const Color(0x26FFFFFF),
+                  borderRadius: BorderRadius.circular(50),
+                  border: Border.all(color: const Color(0x33FFFFFF)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.calendar_today_rounded,
+                      size: 16,
+                      color: Colors.white,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      formattedDate,
+                      style: textTheme.labelMedium?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Spacer(),
+              IconButton(
+                visualDensity: VisualDensity.compact,
+                style: IconButton.styleFrom(
+                  backgroundColor: const Color(0x1AFFFFFF),
+                ),
+                onPressed: () async {
+                  await Navigator.pushNamed(context, '/analytics/overview');
+                  onRefresh();
+                },
+                icon: const Icon(
+                  Icons.auto_graph_rounded,
+                  color: Colors.white,
+                ),
+                tooltip: 'Ver analytics',
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Text(
+            'Hola, $userName 👋',
+            style: textTheme.headlineMedium?.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.w800,
+              fontSize: 30,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Te preparamos un cockpit con tus hábitos críticos para ganar hoy.',
+            style: textTheme.bodySmall?.copyWith(
+              color: const Color(0xFFDAE8FF),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              _StatPill(
+                label: 'Racha',
+                value: '${data.activeStreak} días',
+                icon: Icons.local_fire_department_rounded,
+              ),
+              _StatPill(
+                label: 'Entrenaste hoy',
+                value: data.trainingToday > 0
+                    ? '${data.trainingToday} min'
+                    : 'Pendiente',
+                icon: Icons.fitness_center_rounded,
+              ),
+              _StatPill(
+                label: 'Energía',
+                value: data.caloriesToday > 0
+                    ? '${data.caloriesToday} kcal'
+                    : 'Registra tu comida',
+                icon: Icons.bolt_rounded,
+              ),
+              _StatPill(
+                label: 'Sueño',
+                value: '${data.avgSleepDuration.toStringAsFixed(1)} h',
+                icon: Icons.bedtime_rounded,
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _QuickActionButton(
+                  label: 'Registrar entreno',
+                  icon: Icons.timer_rounded,
+                  onTap: () async {
+                    await Navigator.pushNamed(context, '/workout/lite');
+                    onRefresh();
+                  },
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _QuickActionButton(
+                  label: 'Sumar comida',
+                  icon: Icons.restaurant_menu_rounded,
+                  onTap: () async {
+                    await Navigator.pushNamed(context, '/nutrition/lite');
+                    onRefresh();
+                  },
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _QuickActionButton(
+                  label: 'Registrar sueño',
+                  icon: Icons.nightlight_round,
+                  onTap: () async {
+                    await Navigator.pushNamed(context, '/sleep/overview');
+                    onRefresh();
+                  },
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatPill extends StatelessWidget {
+  const _StatPill({
+    required this.label,
+    required this.value,
+    required this.icon,
+  });
+
+  final String label;
+  final String value;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0x14FFFFFF),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0x1FFFFFFF)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: Colors.white, size: 18),
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(
+                  color: Color(0xFFDAE8FF),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  fontFamily: 'Inter',
+                ),
+              ),
+              Text(
+                value,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  fontFamily: 'Inter',
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _QuickActionButton extends StatelessWidget {
+  const _QuickActionButton({
+    required this.label,
+    required this.icon,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white.withOpacity(0.08),
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                color: Colors.white,
+                size: 18,
+              ),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  label,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                    fontFamily: 'Inter',
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
-        const SizedBox(height: 6),
-        Text(
-          '$nameGreeting 👋',
-          style: textTheme.headlineMedium?.copyWith(
-            color: Colors.white,
-            fontWeight: FontWeight.w700,
-            fontSize: 30,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          'Este es tu resumen de hoy',
-          style: textTheme.bodySmall?.copyWith(
-            color: const Color(0xFF9BA7B4),
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
+      ),
     );
   }
 }
