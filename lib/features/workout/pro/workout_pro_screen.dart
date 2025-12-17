@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
@@ -37,11 +39,37 @@ class _WorkoutProContentState extends State<_WorkoutProContent> {
   late final ExerciseLibraryIndex _exerciseIndex;
   final _scrollController = ScrollController();
   final _configKey = GlobalKey();
+  final ValueNotifier<int> _elapsedSeconds = ValueNotifier(0);
+  Timer? _elapsedTimer;
+  DateTime? _lastSessionStart;
 
   @override
   void initState() {
     super.initState();
     _exerciseIndex = ExerciseLibraryIndex(exerciseLibrary);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _attachProviderListener());
+  }
+
+  void _attachProviderListener() {
+    final provider = context.read<WorkoutProProvider>();
+    provider.addListener(_syncElapsedFromProvider);
+    _syncElapsedFromProvider();
+  }
+
+  void _syncElapsedFromProvider() {
+    final provider = context.read<WorkoutProProvider>();
+    if (!provider.initialized) return;
+    if (_lastSessionStart == provider.sessionStart) return;
+    _startElapsedTimer(provider.sessionStart);
+  }
+
+  void _startElapsedTimer(DateTime start) {
+    _elapsedTimer?.cancel();
+    _lastSessionStart = start;
+    _elapsedSeconds.value = DateTime.now().difference(start).inSeconds;
+    _elapsedTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      _elapsedSeconds.value = DateTime.now().difference(_lastSessionStart!).inSeconds;
+    });
   }
 
   @override
@@ -109,8 +137,8 @@ class _WorkoutProContentState extends State<_WorkoutProContent> {
                           children: [
                             _SessionHeroCard(
                               provider: provider,
-                              onAddExercise: () => _openAddExercise(context, provider),
                               onConfigure: _scrollToConfiguration,
+                              elapsedSeconds: _elapsedSeconds,
                             ),
                             const SizedBox(height: 24),
                             _ConfigurationCard(
@@ -130,15 +158,31 @@ class _WorkoutProContentState extends State<_WorkoutProContent> {
               ),
             )
           : const Center(child: CircularProgressIndicator()),
-      bottomNavigationBar: WorkoutBottomBar(
-        exerciseCount: provider.selectedType == WorkoutType.strength ? provider.totalExercises : 0,
-        setCount: provider.selectedType == WorkoutType.strength ? provider.totalSets : 0,
-        durationLabel: provider.getDurationLabel(),
-        onAddExercise: () => _openAddExercise(context, provider),
-        onSave: () => _saveSession(context, provider, finalize: false),
-        onFinish: () => _showFinishSheet(context, provider),
+      bottomNavigationBar: ValueListenableBuilder<int>(
+        valueListenable: _elapsedSeconds,
+        builder: (_, elapsed, __) {
+          final isStrength = provider.selectedType == WorkoutType.strength;
+          return WorkoutBottomBar(
+            exerciseCount: isStrength ? provider.totalExercises : 0,
+            setCount: isStrength ? provider.totalSets : 0,
+            durationLabel: provider.getDurationLabel(elapsedSeconds: elapsed),
+            onSave: () => _saveSession(context, provider, finalize: false),
+            onFinish: () => _showFinishSheet(context, provider),
+            canSaveDraft: provider.canSaveDraft,
+            canFinish: provider.canFinish,
+            validationHint: provider.canSaveDraft ? null : provider.validationHint,
+          );
+        },
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _elapsedTimer?.cancel();
+    _elapsedSeconds.dispose();
+    context.read<WorkoutProProvider>().removeListener(_syncElapsedFromProvider);
+    super.dispose();
   }
 
   void _scrollToConfiguration() {
@@ -161,7 +205,7 @@ class _WorkoutProContentState extends State<_WorkoutProContent> {
             child: StrengthSection(
               provider: provider,
               exerciseIndex: _exerciseIndex,
-              onAddExercise: () => _openAddExercise(context, provider),
+              onAddExercise: () => _openAddExercise(context, provider, _exerciseIndex),
             ),
           ),
         );
@@ -371,7 +415,7 @@ class _WorkoutProContentState extends State<_WorkoutProContent> {
     if (!mounted) return;
     if (!ok) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Faltan datos mínimos para guardar.')),
+        SnackBar(content: Text(provider.validationHint ?? 'Faltan datos mínimos para guardar.')),
       );
       return;
     }
@@ -524,13 +568,13 @@ class _AppBarTitle extends StatelessWidget {
 class _SessionHeroCard extends StatelessWidget {
   const _SessionHeroCard({
     required this.provider,
-    required this.onAddExercise,
     required this.onConfigure,
+    required this.elapsedSeconds,
   });
 
   final WorkoutProProvider provider;
-  final VoidCallback onAddExercise;
   final VoidCallback onConfigure;
+  final ValueListenable<int> elapsedSeconds;
 
   String _typeLabel() {
     switch (provider.selectedType) {
@@ -549,15 +593,28 @@ class _SessionHeroCard extends StatelessWidget {
     }
   }
 
-  String _primaryDurationLabel() {
-    final diff = DateTime.now().difference(provider.sessionStart);
-    final minutes = diff.inMinutes;
-    if (minutes >= 60) {
-      final hours = diff.inHours;
-      final remainder = minutes - hours * 60;
-      return remainder == 0 ? '${hours}h' : '${hours}h ${remainder.toString().padLeft(2, '0')}m';
+  String _primaryDurationLabel(int seconds) {
+    final overrideMinutes = provider.closingDuration ?? provider.durationMinutes;
+    if (overrideMinutes != null && overrideMinutes > 0) {
+      if (overrideMinutes >= 60) {
+        final hours = overrideMinutes ~/ 60;
+        final remainder = overrideMinutes % 60;
+        return remainder == 0
+            ? '${hours}h'
+            : '${hours}h ${remainder.toString().padLeft(2, '0')}m';
+      }
+      return '${overrideMinutes.toString().padLeft(2, '0')}:00';
     }
-    final secs = diff.inSeconds % 60;
+
+    final minutes = seconds ~/ 60;
+    if (minutes >= 60) {
+      final hours = minutes ~/ 60;
+      final remainder = minutes % 60;
+      return remainder == 0
+          ? '${hours}h'
+          : '${hours}h ${remainder.toString().padLeft(2, '0')}m';
+    }
+    final secs = seconds % 60;
     return '${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
   }
 
@@ -625,30 +682,31 @@ class _SessionHeroCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 18),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                _primaryDurationLabel(),
-                style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                      fontWeight: FontWeight.w900,
-                      fontSize: 40,
-                      color: AppColors.textPrimary,
-                    ),
-              ),
-              const SizedBox(width: 10),
-              Text('activo', style: miniTextStyle),
-              const Spacer(),
-              FilledButton(
-                onPressed: onAddExercise,
-                child: const Text('Agregar ejercicio'),
-              ),
-              const SizedBox(width: 8),
-              OutlinedButton(
-                onPressed: onConfigure,
-                child: const Text('Configurar'),
-              ),
-            ],
+          ValueListenableBuilder<int>(
+            valueListenable: elapsedSeconds,
+            builder: (_, elapsed, __) {
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    _primaryDurationLabel(elapsed),
+                    style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                          fontWeight: FontWeight.w900,
+                          fontSize: 40,
+                          color: AppColors.textPrimary,
+                        ),
+                  ),
+                  const SizedBox(width: 10),
+                  Text('activo', style: miniTextStyle),
+                  const Spacer(),
+                  FilledButton.tonalIcon(
+                    onPressed: onConfigure,
+                    icon: const Icon(Icons.tune),
+                    label: const Text('Configurar'),
+                  ),
+                ],
+              );
+            },
           ),
           const SizedBox(height: 14),
           Row(
@@ -1012,7 +1070,7 @@ class _SimpleWorkoutSectionState extends State<SimpleWorkoutSection> {
   }
 }
 
-class StrengthSection extends StatelessWidget {
+class StrengthSection extends StatefulWidget {
   const StrengthSection({
     required this.provider,
     required this.exerciseIndex,
@@ -1024,12 +1082,19 @@ class StrengthSection extends StatelessWidget {
   final VoidCallback onAddExercise;
 
   @override
+  State<StrengthSection> createState() => _StrengthSectionState();
+}
+
+class _StrengthSectionState extends State<StrengthSection> {
+  bool _showAllSuggestions = false;
+
+  @override
   Widget build(BuildContext context) {
-    final hasExercises = provider.exercises.isNotEmpty;
+    final hasExercises = widget.provider.exercises.isNotEmpty;
 
     final suggested = [
-      ...provider.recentExercises,
-      ...provider.mostUsedExercises,
+      ...widget.provider.recentExercises,
+      ...widget.provider.mostUsedExercises,
       'Press banca',
       'Dominadas',
       'Sentadilla',
@@ -1039,6 +1104,9 @@ class StrengthSection extends StatelessWidget {
         .toSet()
         .take(14)
         .toList();
+
+    final visibleSuggestions = suggested.take(hasExercises ? 5 : 6).toList();
+    final expandedSuggestions = suggested.take(14).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1056,49 +1124,58 @@ class StrengthSection extends StatelessWidget {
                   ),
                   const Spacer(),
                   if (hasExercises)
-                    TextButton.icon(
-                      onPressed: () => _openAddExercise(context, provider),
+                    IconButton(
+                      tooltip: 'Agregar ejercicio',
+                      onPressed: () => _openAddExercise(context, widget.provider, widget.exerciseIndex),
                       icon: const Icon(Icons.add),
-                      label: const Text('Agregar'),
-                      style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
                     ),
                 ],
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 8),
               AnimatedSwitcher(
                 duration: const Duration(milliseconds: 250),
                 child: hasExercises
                     ? Column(
                         key: const ValueKey('list'),
                         children: [
+                          if (suggested.isNotEmpty)
+                            _SuggestionsRow(
+                              suggestions: expandedSuggestions,
+                              visibleSuggestions: visibleSuggestions,
+                              expanded: _showAllSuggestions,
+                              onToggle: () => setState(() => _showAllSuggestions = !_showAllSuggestions),
+                              onPick: _addSuggested,
+                              onOpenLibrary: () => _openAddExercise(context, widget.provider, widget.exerciseIndex),
+                            ),
+                          const SizedBox(height: 8),
                           ReorderableListView.builder(
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),
-                            itemCount: provider.exercises.length,
-                            onReorder: provider.reorderExercise,
+                            itemCount: widget.provider.exercises.length,
+                            onReorder: widget.provider.reorderExercise,
                             itemBuilder: (context, index) {
-                              final exercise = provider.exercises[index];
-                              final definition = exerciseIndex.findByQuery(exercise.name);
+                              final exercise = widget.provider.exercises[index];
+                              final definition = widget.exerciseIndex.findByQuery(exercise.name);
                               return Padding(
                                 key: ValueKey(exercise.id),
                                 padding: const EdgeInsets.only(bottom: 10),
                                 child: ExerciseCard(
                                   exercise: exercise,
                                   definition: definition,
-                                  onDuplicate: () => provider.duplicateExercise(exercise.id),
+                                  onDuplicate: () => widget.provider.duplicateExercise(exercise.id),
                                   onDelete: () async {
                                     final confirm = await _confirmDelete(context);
-                                    if (confirm) provider.removeExercise(exercise.id);
+                                    if (confirm) widget.provider.removeExercise(exercise.id);
                                   },
-                                  onAddSet: () => provider.addSet(exercise.id),
-                                  onCopySet: () => provider.copyPreviousSet(exercise.id),
-                                  onBumpReps: () => provider.bumpReps(exercise.id, 1),
-                                  onBumpWeight: () => provider.bumpWeight(exercise.id, 2.5),
-                                  onUpdateSet: (set) => provider.updateSet(exercise.id, set.id, set),
-                                  onDeleteSet: (setId) => provider.removeSet(exercise.id, setId),
+                                  onAddSet: () => widget.provider.addSet(exercise.id),
+                                  onCopySet: () => widget.provider.copyPreviousSet(exercise.id),
+                                  onBumpReps: () => widget.provider.bumpReps(exercise.id, 1),
+                                  onBumpWeight: () => widget.provider.bumpWeight(exercise.id, 2.5),
+                                  onUpdateSet: (set) => widget.provider.updateSet(exercise.id, set.id, set),
+                                  onDeleteSet: (setId) => widget.provider.removeSet(exercise.id, setId),
                                   onRestoreSet: (setIndex, set) =>
-                                      provider.insertSet(exercise.id, setIndex, set),
-                                  onUpdateNotes: (notes) => provider.updateExerciseNotes(exercise.id, notes),
+                                      widget.provider.insertSet(exercise.id, setIndex, set),
+                                  onUpdateNotes: (notes) => widget.provider.updateExerciseNotes(exercise.id, notes),
                                 ),
                               );
                             },
@@ -1109,49 +1186,61 @@ class StrengthSection extends StatelessWidget {
                             childrenPadding: const EdgeInsets.only(top: 8),
                             title: const Text('Métricas (opcional)'),
                             children: [
-                              _MetricsRow(provider: provider),
+                              _MetricsRow(provider: widget.provider),
                             ],
                           ),
                         ],
                       )
-                    : _EmptyExercisesState(onAddExercise: onAddExercise, onOpenLibrary: () => _openAddExercise(context, provider)),
+                    : _EmptyExercisesState(
+                        onAddExercise: widget.onAddExercise,
+                        onOpenLibrary: () => _openAddExercise(context, widget.provider, widget.exerciseIndex),
+                        suggestions: suggested.isNotEmpty
+                            ? _SuggestionsRow(
+                                suggestions: expandedSuggestions,
+                                visibleSuggestions: visibleSuggestions,
+                                expanded: _showAllSuggestions,
+                                dense: true,
+                                onToggle: () => setState(() => _showAllSuggestions = !_showAllSuggestions),
+                                onPick: _addSuggested,
+                                onOpenLibrary: () => _openAddExercise(context, widget.provider, widget.exerciseIndex),
+                              )
+                            : null,
+                      ),
               ),
             ],
           ),
-        ),
-        const SizedBox(height: 16),
-        _SuggestedChips(
-          suggestions: suggested,
-          onPick: (name) => _addSuggested(name, context),
-          onOpenLibrary: () => _openAddExercise(context, provider),
         ),
       ],
     );
   }
 
-
-  void _addSuggested(String name, BuildContext context) {
+  void _addSuggested(String name) {
     if (name == '__open_selector__') {
-      _openAddExercise(context, provider);
+      _openAddExercise(context, widget.provider, widget.exerciseIndex);
       return;
     }
 
-    final match = exerciseIndex.findByQuery(name);
+    final match = widget.exerciseIndex.findByQuery(name);
     final exercise = match != null
-        ? provider.fromDefinition(match)
+        ? widget.provider.fromDefinition(match)
         : WorkoutExercise(
             id: const Uuid().v4(),
             name: name,
           );
-    provider.addExerciseWithDefaults(exercise);
+    widget.provider.addExerciseWithDefaults(exercise);
   }
 }
 
 class _EmptyExercisesState extends StatelessWidget {
-  const _EmptyExercisesState({required this.onAddExercise, required this.onOpenLibrary});
+  const _EmptyExercisesState({
+    required this.onAddExercise,
+    required this.onOpenLibrary,
+    this.suggestions,
+  });
 
   final VoidCallback onAddExercise;
   final VoidCallback onOpenLibrary;
+  final Widget? suggestions;
 
   @override
   Widget build(BuildContext context) {
@@ -1175,7 +1264,12 @@ class _EmptyExercisesState extends StatelessWidget {
             'Registrá series, reps y peso.',
             style: textTheme.bodyMedium?.copyWith(color: AppColors.textMuted),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 10),
+          if (suggestions != null) ...[
+            suggestions!,
+            const SizedBox(height: 8),
+          ],
+          const SizedBox(height: 6),
           SizedBox(
             width: double.infinity,
             child: FilledButton(
@@ -1194,69 +1288,107 @@ class _EmptyExercisesState extends StatelessWidget {
   }
 }
 
-class _SuggestedChips extends StatelessWidget {
-  const _SuggestedChips({
+class _SuggestionsRow extends StatelessWidget {
+  const _SuggestionsRow({
     required this.suggestions,
+    required this.visibleSuggestions,
+    required this.expanded,
+    required this.onToggle,
     required this.onPick,
     required this.onOpenLibrary,
+    this.dense = false,
   });
 
   final List<String> suggestions;
+  final List<String> visibleSuggestions;
+  final bool expanded;
+  final VoidCallback onToggle;
   final ValueChanged<String> onPick;
   final VoidCallback onOpenLibrary;
+  final bool dense;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
+    final chips = expanded ? suggestions : visibleSuggestions;
+    final showToggle = suggestions.length > visibleSuggestions.length;
+    return AnimatedSize(
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOutCubic,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text(
+                'Sugeridos',
+                style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+              ),
+              const Spacer(),
+              if (showToggle)
+                TextButton(
+                  onPressed: onToggle,
+                  style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+                  child: Text(expanded ? 'Ver menos' : 'Ver más'),
+                ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          SizedBox(
+            height: dense ? 32 : 34,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: chips.length + 1,
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              itemBuilder: (context, i) {
+                if (i == chips.length) {
+                  return _SuggestionChip(
+                    label: 'Más',
+                    icon: Icons.chevron_right,
+                    onTap: onOpenLibrary,
+                  );
+                }
+                final name = chips[i];
+                return _SuggestionChip(
+                  label: name,
+                  onTap: () => onPick(name),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SuggestionChip extends StatelessWidget {
+  const _SuggestionChip({required this.label, required this.onTap, this.icon});
+
+  final String label;
+  final VoidCallback onTap;
+  final IconData? icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.borderSubtle),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
-              'Sugeridos',
-              style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.textPrimary),
-            ),
-            const Spacer(),
-            TextButton(
-              onPressed: onOpenLibrary,
-              style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
-              child: const Text('Ver más'),
-            ),
+            Icon(icon ?? Icons.add, size: 14, color: AppColors.textSecondary),
+            const SizedBox(width: 6),
+            Text(label, style: const TextStyle(color: AppColors.textPrimary)),
           ],
         ),
-        const SizedBox(height: 8),
-        SizedBox(
-          height: 34,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: suggestions.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 8),
-            itemBuilder: (context, i) {
-              final name = suggestions[i];
-              return InkWell(
-                onTap: () => onPick(name),
-                borderRadius: BorderRadius.circular(16),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppColors.borderSubtle),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.add, size: 14, color: AppColors.textSecondary),
-                      const SizedBox(width: 6),
-                      Text(name, style: const TextStyle(color: AppColors.textPrimary)),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-      ],
+      ),
     );
   }
 }
@@ -1264,12 +1396,13 @@ class _SuggestedChips extends StatelessWidget {
 Future<void> _openAddExercise(
   BuildContext context,
   WorkoutProProvider provider,
+  ExerciseLibraryIndex exerciseIndex,
 ) async {
   final chosen = await showModalBottomSheet<WorkoutExercise>(
     context: context,
     showDragHandle: true,
     isScrollControlled: true,
-    builder: (context) => _ExerciseSelector(provider: provider),
+    builder: (context) => _ExerciseSelector(provider: provider, exerciseIndex: exerciseIndex),
   );
 
   if (chosen == null) return;
@@ -1357,9 +1490,10 @@ class _MetricsRowState extends State<_MetricsRow> {
 }
 
 class _ExerciseSelector extends StatefulWidget {
-  const _ExerciseSelector({required this.provider});
+  const _ExerciseSelector({required this.provider, required this.exerciseIndex});
 
   final WorkoutProProvider provider;
+  final ExerciseLibraryIndex exerciseIndex;
 
   @override
   State<_ExerciseSelector> createState() => _ExerciseSelectorState();
@@ -1367,139 +1501,223 @@ class _ExerciseSelector extends StatefulWidget {
 
 class _ExerciseSelectorState extends State<_ExerciseSelector> {
   final TextEditingController _queryController = TextEditingController();
+  Timer? _debounce;
   String? muscleFilter;
   String? equipmentFilter;
   String? patternFilter;
+  bool _showFilters = false;
 
   @override
   void dispose() {
     _queryController.dispose();
+    _debounce?.cancel();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final index = ExerciseLibraryIndex(exerciseLibrary);
     final topSuggestions = exerciseLibrary.take(8).toList();
     final recent = widget.provider.recentExercises
-        .map(index.findByQuery)
+        .map(widget.exerciseIndex.findByQuery)
         .whereType<ExerciseDefinition>()
         .toList();
     final mostUsed = widget.provider.mostUsedExercises
-        .map(index.findByQuery)
+        .map(widget.exerciseIndex.findByQuery)
         .whereType<ExerciseDefinition>()
         .toList();
-
-    final filtered = _filtered(index);
-
-    return SafeArea(
-      child: Padding(
-        padding: EdgeInsets.only(
-          left: 16,
-          right: 16,
-          top: 16,
-          bottom: MediaQuery.of(context).viewInsets.bottom + 12,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Agregar ejercicio', style: TextStyle(fontWeight: FontWeight.w700)),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _queryController,
-              decoration: const InputDecoration(
-                labelText: 'Buscar o crear',
-                prefixIcon: Icon(Icons.search),
-              ),
-              onChanged: (_) => setState(() {}),
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 6,
-              children: [
-                _chip('Pecho', muscleFilter == 'pecho', () => _toggleMuscle('pecho')),
-                _chip('Espalda', muscleFilter == 'espalda', () => _toggleMuscle('espalda')),
-                _chip('Piernas', muscleFilter == 'piernas', () => _toggleMuscle('piernas')),
-                _chip('Hombro', muscleFilter == 'hombros', () => _toggleMuscle('hombros')),
-                _chip('Bíceps', muscleFilter == 'bíceps', () => _toggleMuscle('bíceps')),
-                _chip('Tríceps', muscleFilter == 'tríceps', () => _toggleMuscle('tríceps')),
-                _chip('Core', muscleFilter == 'core', () => _toggleMuscle('core')),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 6,
-              children: [
-                _chip('Bodyweight', equipmentFilter == 'bodyweight', () => _toggleEquipment('bodyweight')),
-                _chip('Barbell', equipmentFilter == 'barbell', () => _toggleEquipment('barbell')),
-                _chip('Dumbbell', equipmentFilter == 'dumbbell', () => _toggleEquipment('dumbbell')),
-                _chip('Machine', equipmentFilter == 'machine', () => _toggleEquipment('machine')),
-                _chip('Cable', equipmentFilter == 'cable', () => _toggleEquipment('cable')),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 6,
-              children: [
-                _chip('Push', patternFilter == 'push', () => _togglePattern('push')),
-                _chip('Pull', patternFilter == 'pull', () => _togglePattern('pull')),
-                _chip('Squat', patternFilter == 'squat', () => _togglePattern('squat')),
-                _chip('Hinge', patternFilter == 'hinge', () => _togglePattern('hinge')),
-                _chip('Core', patternFilter == 'core', () => _togglePattern('core')),
-              ],
-            ),
-            const SizedBox(height: 12),
-            if (recent.isNotEmpty) ...[
-              const Text('Recientes'),
-              _horizontalList(recent),
-              const SizedBox(height: 12),
-            ],
-            if (mostUsed.isNotEmpty) ...[
-              const Text('Más usados'),
-              _horizontalList(mostUsed),
-              const SizedBox(height: 12),
-            ],
-            const Text('Sugeridos'),
-            _horizontalList(topSuggestions),
-            const SizedBox(height: 12),
-            Text('Resultados (${filtered.length})', style: Theme.of(context).textTheme.titleSmall),
-            const SizedBox(height: 6),
-            SizedBox(
-              height: 260,
-              child: ListView.builder(
-                itemCount: filtered.length,
-                itemBuilder: (context, index) {
-                  final exercise = filtered[index];
-                  return ListTile(
-                    title: Text(exercise.name),
-                    subtitle: Text(exercise.primaryMuscles.join(', ')),
-                    onTap: () => _selectDefinition(exercise),
-                  );
-                },
-              ),
-            ),
-            const SizedBox(height: 12),
-            FilledButton(
-              onPressed: () {
-                final customName = _queryController.text.trim();
-                if (customName.isEmpty) return;
-                final exercise = WorkoutExercise(
-                  id: const Uuid().v4(),
-                  name: customName,
-                  sets: [],
-                );
-                Navigator.of(context).pop(exercise);
-              },
-              child: const Text('Crear ejercicio nuevo'),
-            ),
-          ],
-        ),
-      ),
+    final filtered = _filtered();
+    final hasQuery = _queryController.text.trim().isNotEmpty;
+    final exactMatch = filtered.any(
+      (e) => e.name.toLowerCase() == _queryController.text.trim().toLowerCase(),
     );
+
+    return DraggableScrollableSheet(
+      initialChildSize: 0.75,
+      minChildSize: 0.45,
+      maxChildSize: 0.95,
+      expand: false,
+      builder: (context, scrollController) {
+        return Container(
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.5),
+                blurRadius: 24,
+                offset: const Offset(0, -4),
+              ),
+            ],
+          ),
+          child: SafeArea(
+            top: false,
+            child: Padding(
+              padding: EdgeInsets.only(
+                left: 16,
+                right: 16,
+                top: 12,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 8,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Text(
+                        'Agregar ejercicio',
+                        style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
+                      ),
+                      const Spacer(),
+                      IconButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        icon: const Icon(Icons.close),
+                        tooltip: 'Cerrar',
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: _queryController,
+                    decoration: InputDecoration(
+                      prefixIcon: const Icon(Icons.search),
+                      suffixIcon: hasQuery
+                          ? IconButton(
+                              icon: const Icon(Icons.close),
+                              onPressed: () {
+                                _queryController.clear();
+                                setState(() {});
+                              },
+                            )
+                          : null,
+                      hintText: 'Buscar o crear…',
+                    ),
+                    onChanged: (_) => _debounceSearch(),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      FilledButton.tonal(
+                        onPressed: () => setState(() => _showFilters = !_showFilters),
+                        style: FilledButton.styleFrom(visualDensity: VisualDensity.compact),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.filter_list, size: 18),
+                            const SizedBox(width: 6),
+                            Text(_showFilters ? 'Ocultar filtros' : 'Filtros'),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      if (_hasAnyFilter)
+                        TextButton(
+                          onPressed: _clearFilters,
+                          child: const Text('Limpiar filtros'),
+                        ),
+                    ],
+                  ),
+                  AnimatedCrossFade(
+                    duration: const Duration(milliseconds: 200),
+                    crossFadeState: _showFilters
+                        ? CrossFadeState.showFirst
+                        : CrossFadeState.showSecond,
+                    firstChild: Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 6,
+                            children: [
+                              _chip('Pecho', muscleFilter == 'pecho', () => _toggleMuscle('pecho')),
+                              _chip('Espalda', muscleFilter == 'espalda', () => _toggleMuscle('espalda')),
+                              _chip('Piernas', muscleFilter == 'piernas', () => _toggleMuscle('piernas')),
+                              _chip('Hombros', muscleFilter == 'hombros', () => _toggleMuscle('hombros')),
+                              _chip('Bíceps', muscleFilter == 'bíceps', () => _toggleMuscle('bíceps')),
+                              _chip('Tríceps', muscleFilter == 'tríceps', () => _toggleMuscle('tríceps')),
+                              _chip('Core', muscleFilter == 'core', () => _toggleMuscle('core')),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 6,
+                            children: [
+                              _chip('Bodyweight', equipmentFilter == 'bodyweight', () => _toggleEquipment('bodyweight')),
+                              _chip('Barbell', equipmentFilter == 'barbell', () => _toggleEquipment('barbell')),
+                              _chip('Dumbbell', equipmentFilter == 'dumbbell', () => _toggleEquipment('dumbbell')),
+                              _chip('Machine', equipmentFilter == 'machine', () => _toggleEquipment('machine')),
+                              _chip('Cable', equipmentFilter == 'cable', () => _toggleEquipment('cable')),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 6,
+                            children: [
+                              _chip('Push', patternFilter == 'push', () => _togglePattern('push')),
+                              _chip('Pull', patternFilter == 'pull', () => _togglePattern('pull')),
+                              _chip('Squat', patternFilter == 'squat', () => _togglePattern('squat')),
+                              _chip('Hinge', patternFilter == 'hinge', () => _togglePattern('hinge')),
+                              _chip('Core', patternFilter == 'core', () => _togglePattern('core')),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    secondChild: const SizedBox.shrink(),
+                  ),
+                  const SizedBox(height: 10),
+                  Expanded(
+                    child: ListView(
+                      controller: scrollController,
+                      children: [
+                        if (recent.isNotEmpty)
+                          _quickSection('Recientes', recent),
+                        if (mostUsed.isNotEmpty)
+                          _quickSection('Más usados', mostUsed),
+                        _quickSection('Sugeridos', topSuggestions),
+                        const SizedBox(height: 4),
+                        Text('Resultados (${filtered.length})',
+                            style: Theme.of(context).textTheme.titleSmall),
+                        const SizedBox(height: 6),
+                        if (hasQuery && !exactMatch)
+                          ListTile(
+                            leading: const Icon(Icons.add_circle_outline),
+                            title: Text('Crear "${_queryController.text.trim()}"'),
+                            onTap: () => _createCustom(),
+                          ),
+                        ...filtered.map(
+                          (exercise) => ListTile(
+                            title: Text(exercise.name),
+                            subtitle: Text(
+                              [
+                                if (exercise.primaryMuscles.isNotEmpty)
+                                  exercise.primaryMuscles.join(', '),
+                                if (exercise.equipment != null) exercise.equipment!,
+                              ].where((e) => e.isNotEmpty).join(' · '),
+                            ),
+                            trailing: const Icon(Icons.add_circle_outline),
+                            onTap: () => _selectDefinition(exercise),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _debounceSearch() {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 180), () => setState(() {}));
   }
 
   void _toggleMuscle(String value) {
@@ -1520,8 +1738,18 @@ class _ExerciseSelectorState extends State<_ExerciseSelector> {
     });
   }
 
-  List<ExerciseDefinition> _filtered(ExerciseLibraryIndex index) {
-    var results = index.search(_queryController.text);
+  bool get _hasAnyFilter => muscleFilter != null || equipmentFilter != null || patternFilter != null;
+
+  void _clearFilters() {
+    setState(() {
+      muscleFilter = null;
+      equipmentFilter = null;
+      patternFilter = null;
+    });
+  }
+
+  List<ExerciseDefinition> _filtered() {
+    var results = widget.exerciseIndex.search(_queryController.text);
     if (muscleFilter != null) {
       results = results
           .where((e) => e.primaryMuscles
@@ -1539,26 +1767,54 @@ class _ExerciseSelectorState extends State<_ExerciseSelector> {
   }
 
   Widget _chip(String label, bool selected, VoidCallback onSelected) {
-    return FilterChip(label: Text(label), selected: selected, onSelected: (_) => onSelected());
+    return FilterChip(
+      label: Text(label),
+      selected: selected,
+      onSelected: (_) => onSelected(),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      backgroundColor: AppColors.surface,
+      selectedColor: AppColors.borderSubtle.withOpacity(0.35),
+    );
   }
 
-  Widget _horizontalList(List<ExerciseDefinition> exercises) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: exercises
-            .map(
-              (e) => Padding(
-                padding: const EdgeInsets.only(right: 8, top: 6),
-                child: ActionChip(
-                  label: Text(e.name),
-                  onPressed: () => _selectDefinition(e),
-                ),
-              ),
-            )
-            .toList(),
+  Widget _quickSection(String title, List<ExerciseDefinition> exercises) {
+    if (exercises.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: Theme.of(context).textTheme.labelMedium),
+          const SizedBox(height: 6),
+          SizedBox(
+            height: 34,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: exercises.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              itemBuilder: (context, index) {
+                final exercise = exercises[index];
+                return _SuggestionChip(
+                  label: exercise.name,
+                  onTap: () => _selectDefinition(exercise),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
+  }
+
+  void _createCustom() {
+    final customName = _queryController.text.trim();
+    if (customName.isEmpty) return;
+    final exercise = WorkoutExercise(
+      id: const Uuid().v4(),
+      name: customName,
+      sets: [],
+    );
+    Navigator.of(context).pop(exercise);
   }
 
   void _selectDefinition(ExerciseDefinition exercise) {

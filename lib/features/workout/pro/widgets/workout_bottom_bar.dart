@@ -6,24 +6,30 @@ class WorkoutBottomBar extends StatelessWidget {
     required this.exerciseCount,
     required this.setCount,
     required this.durationLabel,
-    required this.onAddExercise,
     required this.onSave,
     required this.onFinish,
+    this.onAddExercise,
+    this.showAddExercise = false,
+    this.canSaveDraft = true,
+    this.canFinish = true,
+    this.validationHint,
   });
 
   final int exerciseCount;
   final int setCount;
   final String durationLabel;
-  final VoidCallback onAddExercise;
+  final VoidCallback? onAddExercise;
   final VoidCallback onSave;
   final VoidCallback onFinish;
+  final bool showAddExercise;
+  final bool canSaveDraft;
+  final bool canFinish;
+  final String? validationHint;
 
   @override
   Widget build(BuildContext context) {
-    final hasExercises = exerciseCount > 0;
-
     return Material(
-      color: Colors.transparent,
+      color: Colors.black.withOpacity(0.35),
       child: SafeArea(
         top: false,
         child: Padding(
@@ -42,43 +48,39 @@ class WorkoutBottomBar extends StatelessWidget {
                       'Duración $durationLabel',
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
+                    if (validationHint != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Text(
+                          validationHint!,
+                          style: Theme.of(context)
+                              .textTheme
+                              .labelSmall
+                              ?.copyWith(color: Theme.of(context).colorScheme.outline),
+                        ),
+                      ),
                   ],
                 ),
               ),
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 200),
-                child: hasExercises
-                    ? Row(
-                        key: const ValueKey('with_exercises'),
-                        children: [
-                          OutlinedButton(
-                            onPressed: onSave,
-                            child: const Text('Guardar borrador'),
-                          ),
-                          const SizedBox(width: 8),
-                          FilledButton.icon(
-                            onPressed: onFinish,
-                            icon: const Icon(Icons.flag_outlined),
-                            label: const Text('Finalizar sesión'),
-                          ),
-                        ],
-                      )
-                    : Row(
-                        key: const ValueKey('empty'),
-                        children: [
-                          OutlinedButton.icon(
-                            onPressed: onSave,
-                            icon: const Icon(Icons.save_outlined),
-                            label: const Text('Guardar borrador'),
-                            style: OutlinedButton.styleFrom(visualDensity: VisualDensity.compact),
-                          ),
-                          const SizedBox(width: 8),
-                          FilledButton(
-                            onPressed: onAddExercise,
-                            child: const Text('Agregar ejercicio'),
-                          ),
-                        ],
-                      ),
+              Wrap(
+                spacing: 8,
+                children: [
+                  if (showAddExercise)
+                    FilledButton.icon(
+                      onPressed: onAddExercise,
+                      icon: const Icon(Icons.add),
+                      label: const Text('Agregar ejercicio'),
+                    ),
+                  OutlinedButton(
+                    onPressed: canSaveDraft ? onSave : null,
+                    child: const Text('Guardar borrador'),
+                  ),
+                  FilledButton.icon(
+                    onPressed: canFinish ? onFinish : null,
+                    icon: const Icon(Icons.flag_outlined),
+                    label: const Text('Finalizar sesión'),
+                  ),
+                ],
               ),
             ],
           ),
