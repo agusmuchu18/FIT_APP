@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -18,7 +17,6 @@ class WorkoutProProvider extends ChangeNotifier {
 
   final Uuid _uuid = const Uuid();
   SharedPreferences? _prefs;
-  Timer? _ticker;
   DateTime _sessionStart = DateTime.now();
 
   WorkoutType _selectedType = WorkoutType.strength;
@@ -86,20 +84,22 @@ class WorkoutProProvider extends ChangeNotifier {
   List<WorkoutSession> get storedSessions => _storedSessions;
   DateTime get sessionStart => _sessionStart;
 
+  bool get canSaveDraft => _validationState().canSave;
+  bool get canFinish => _validationState().canFinish;
+  String? get validationHint => _validationState().message;
+
   Future<void> initialize() async {
     _prefs ??= await SharedPreferences.getInstance();
     await _loadTemplates();
     await _loadRecentExercises();
     await _loadSessions();
     await _loadDraft();
-    _ticker ??= Timer.periodic(const Duration(seconds: 1), (_) => notifyListeners());
     _initialized = true;
     notifyListeners();
   }
 
   @override
   void dispose() {
-    _ticker?.cancel();
     super.dispose();
   }
 
@@ -427,19 +427,8 @@ class WorkoutProProvider extends ChangeNotifier {
   }
 
   Future<bool> saveSession() async {
-    if (_selectedType == WorkoutType.strength) {
-      final hasExercise = _exercises.isNotEmpty;
-      final hasSetWithData = _exercises.any(
-        (e) => e.sets.any((s) => s.reps != null || s.durationSeconds != null),
-      );
-      if (!hasExercise || !hasSetWithData) {
-        return false;
-      }
-    } else {
-      if (_durationMinutes == null || _durationMinutes == 0) {
-        return false;
-      }
-    }
+    final validation = _validationState();
+    if (!validation.canFinish) return false;
 
     final session = WorkoutSession(
       id: _uuid.v4(),
@@ -507,6 +496,40 @@ class WorkoutProProvider extends ChangeNotifier {
 
   WorkoutSession? get lastSession => _storedSessions.isEmpty ? null : _storedSessions.last;
 
+  _ValidationState _validationState() {
+    if (_selectedType == WorkoutType.strength) {
+      final hasExercise = _exercises.isNotEmpty;
+      final hasSetWithData = _exercises.any(
+        (e) => e.sets.any((s) => s.reps != null || s.durationSeconds != null),
+      );
+      if (!hasExercise) {
+        return const _ValidationState(
+          canSave: false,
+          canFinish: false,
+          message: 'Agregá al menos 1 ejercicio',
+        );
+      }
+      if (!hasSetWithData) {
+        return const _ValidationState(
+          canSave: false,
+          canFinish: false,
+          message: 'Completá reps, peso o tiempo en alguna serie',
+        );
+      }
+      return const _ValidationState(canSave: true, canFinish: true);
+    }
+
+    if (_durationMinutes == null || _durationMinutes == 0) {
+      return const _ValidationState(
+        canSave: false,
+        canFinish: false,
+        message: 'Ingresá la duración para guardar',
+      );
+    }
+
+    return const _ValidationState(canSave: true, canFinish: true);
+  }
+
   List<WorkoutTemplate> suggestedTemplates() {
     final List<WorkoutTemplate> options = [];
     WorkoutSession? last;
@@ -536,17 +559,19 @@ class WorkoutProProvider extends ChangeNotifier {
     return options.where((t) => unique.add(t.id)).toList();
   }
 
-  String getDurationLabel() {
+  String getDurationLabel({int? elapsedSeconds}) {
     final minutes = _closingDuration ?? _durationMinutes;
-    if (minutes == null || minutes == 0) return liveDurationLabel;
+    if (minutes == null || minutes == 0) return _liveDurationLabel(elapsedSeconds);
     if (minutes < 60) return '${minutes}m';
     final hours = minutes ~/ 60;
     final remainder = minutes % 60;
     return remainder == 0 ? '${hours}h' : '${hours}h ${remainder}m';
   }
 
-  String get liveDurationLabel {
-    final diff = DateTime.now().difference(_sessionStart);
+  String _liveDurationLabel(int? elapsedSeconds) {
+    final diff = elapsedSeconds != null
+        ? Duration(seconds: elapsedSeconds)
+        : DateTime.now().difference(_sessionStart);
     final minutes = diff.inMinutes;
     final hours = diff.inHours;
     if (hours > 0) {
@@ -771,4 +796,16 @@ class WorkoutProProvider extends ChangeNotifier {
       ),
     ];
   }
+}
+
+class _ValidationState {
+  const _ValidationState({
+    required this.canSave,
+    required this.canFinish,
+    this.message,
+  });
+
+  final bool canSave;
+  final bool canFinish;
+  final String? message;
 }

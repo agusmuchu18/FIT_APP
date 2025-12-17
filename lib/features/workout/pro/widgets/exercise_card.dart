@@ -71,6 +71,11 @@ class _ExerciseCardState extends State<ExerciseCard> {
       duration: const Duration(milliseconds: 200),
       child: Card(
         margin: const EdgeInsets.symmetric(vertical: 8),
+        color: Colors.black.withOpacity(0.35),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant.withOpacity(0.4)),
+        ),
         child: ExpansionTile(
           maintainState: true,
           initiallyExpanded: expanded,
