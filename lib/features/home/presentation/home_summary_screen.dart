@@ -354,35 +354,15 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
                           ],
                         ),
                         const SizedBox(height: verticalSectionSpacing),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _SleepInfoCard(
-                                avgSleepHours: data.avgSleepDuration,
-                                avgSleepDelta: data.avgSleepDelta,
-                                onTap: () async {
-                                  await Navigator.pushNamed(
-                                    context,
-                                    '/sleep/overview',
-                                  );
-                                  _refreshSummary();
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: _SleepMetricsCard(
-                                regularityScore: data.regularityScore,
-                                regularityDelta: data.regularityWeekDelta,
-                                onTap: () {
-                                  Navigator.pushNamed(
-                                    context,
-                                    '/sleep/overview',
-                                  );
-                                },
-                              ),
-                            ),
-                          ],
+                        _SleepOverviewCard(
+                          avgSleepHours: data.avgSleepDuration,
+                          avgSleepDelta: data.avgSleepDelta,
+                          regularityScore: data.regularityScore,
+                          regularityDelta: data.regularityWeekDelta,
+                          onTap: () async {
+                            await Navigator.pushNamed(context, '/sleep/overview');
+                            _refreshSummary();
+                          },
                         ),
                         const SizedBox(height: verticalSectionSpacing),
                         if (!data.hasUserGoal)
@@ -739,11 +719,6 @@ class _HeaderSection extends StatelessWidget {
                     ? '${data.caloriesToday} kcal'
                     : 'Registra tu comida',
                 icon: Icons.bolt_rounded,
-              ),
-              _StatPill(
-                label: 'Sueño',
-                value: '${data.avgSleepDuration.toStringAsFixed(1)} h',
-                icon: Icons.bedtime_rounded,
               ),
             ],
           ),
@@ -1741,6 +1716,175 @@ class _MacroLegend extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _SleepOverviewCard extends StatelessWidget {
+  const _SleepOverviewCard({
+    required this.avgSleepHours,
+    required this.avgSleepDelta,
+    required this.regularityScore,
+    required this.regularityDelta,
+    required this.onTap,
+  });
+
+  final double avgSleepHours;
+  final double avgSleepDelta;
+  final double regularityScore;
+  final double regularityDelta;
+  final VoidCallback onTap;
+
+  TrendChipData _sleepTrend() {
+    final deltaPositive = avgSleepDelta >= 0;
+    final absDelta = avgSleepDelta.abs();
+    final tone = deltaPositive
+        ? TrendTone.positive
+        : absDelta < 0.3
+            ? TrendTone.neutral
+            : TrendTone.negative;
+
+    final label =
+        '${deltaPositive ? '+' : '-'}${absDelta.toStringAsFixed(1)} h vs semana';
+    return TrendChipData(label: label, tone: tone);
+  }
+
+  TrendChipData _regularityTrend() {
+    // Más bajo = mejor (más regular).
+    final improved = regularityDelta <= 0;
+    final deltaMinutes = regularityDelta.abs().round();
+    final tone = improved
+        ? TrendTone.positive
+        : deltaMinutes < 3
+            ? TrendTone.neutral
+            : TrendTone.negative;
+
+    final label = '${improved ? '-' : '+'}$deltaMinutes min vs semana';
+    return TrendChipData(label: label, tone: tone);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
+    final hoursPart = avgSleepHours.floor();
+    final minutesPart = ((avgSleepHours - hoursPart) * 60).round();
+    final sleepValue =
+        '${hoursPart.toString()} h ${minutesPart.toString().padLeft(2, '0')} min';
+
+    final variability = regularityScore.round();
+    final regularityValue = '±$variability min';
+
+    Widget metricBlock({
+      required String label,
+      required String value,
+      required Color valueColor,
+      required TrendChipData trend,
+    }) {
+      return Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: AppColors.borderSubtle),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: textTheme.labelMedium?.copyWith(
+                    color: AppColors.textMuted,
+                    fontWeight: FontWeight.w700,
+                  ) ??
+                  const TextStyle(color: AppColors.textMuted),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: textTheme.titleLarge?.copyWith(
+                    fontSize: 20,
+                    color: valueColor,
+                    fontWeight: FontWeight.w800,
+                  ) ??
+                  TextStyle(fontSize: 20, color: valueColor),
+            ),
+            const SizedBox(height: 10),
+            _TrendChip(data: trend),
+          ],
+        ),
+      );
+    }
+
+    return SummaryCard(
+      minHeight: 190,
+      padding: const EdgeInsets.all(18),
+      onTap: onTap,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  color: const Color(0x1AA4A7FF),
+                  border: Border.all(color: const Color(0x22A4A7FF)),
+                ),
+                child: const Icon(
+                  Icons.bedtime_rounded,
+                  color: Color(0xFFA4A7FF),
+                  size: 18,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                'Sueño',
+                style: textTheme.titleMedium?.copyWith(
+                      fontSize: 17,
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w800,
+                    ) ??
+                    const TextStyle(
+                      fontSize: 17,
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w800,
+                    ),
+              ),
+              const Spacer(),
+              const Icon(
+                Icons.chevron_right_rounded,
+                color: AppColors.textMuted,
+                size: 22,
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: metricBlock(
+                  label: 'Promedio (7d)',
+                  value: sleepValue,
+                  valueColor: const Color(0xFFA4A7FF),
+                  trend: _sleepTrend(),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: metricBlock(
+                  label: 'Regularidad',
+                  value: regularityValue,
+                  valueColor: AppColors.accentSecondary,
+                  trend: _regularityTrend(),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
