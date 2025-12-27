@@ -1,4 +1,8 @@
+import 'dart:ui' show FontFeature;
+
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+
 import '../../features/common/theme/app_colors.dart';
 
 class AppTheme {
@@ -21,18 +25,43 @@ class AppTheme {
       scaffoldBackgroundColor: scheme.background,
     );
 
-    final textTheme = base.textTheme
+    final baseText = GoogleFonts.interTextTheme(base.textTheme);
+
+    final textTheme = baseText
         .apply(
           bodyColor: scheme.onBackground,
           displayColor: scheme.onBackground,
         )
         .copyWith(
-          titleLarge: base.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-          titleMedium: base.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-          labelLarge: base.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
-          bodyLarge: base.textTheme.bodyLarge?.copyWith(height: 1.4),
-          bodyMedium: base.textTheme.bodyMedium?.copyWith(height: 1.45),
-          bodySmall: base.textTheme.bodySmall?.copyWith(height: 1.35),
+          // Números “Strava”: bien pesados y con tabular figures (alinean perfecto)
+          displaySmall: baseText.displaySmall?.copyWith(
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.6,
+            height: 1.05,
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ),
+
+          headlineSmall: baseText.headlineSmall?.copyWith(
+            fontWeight: FontWeight.w700,
+            letterSpacing: -0.3,
+          ),
+
+          titleLarge: baseText.titleLarge?.copyWith(
+            fontWeight: FontWeight.w700,
+            letterSpacing: -0.2,
+          ),
+
+          titleMedium: baseText.titleMedium?.copyWith(
+            fontWeight: FontWeight.w700,
+          ),
+
+          labelLarge: baseText.labelLarge?.copyWith(
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.2,
+          ),
+
+          bodyMedium: baseText.bodyMedium?.copyWith(height: 1.45),
+          bodySmall: baseText.bodySmall?.copyWith(height: 1.35),
         );
 
     return base.copyWith(

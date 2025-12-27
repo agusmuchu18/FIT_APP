@@ -271,122 +271,125 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
 
     return Scaffold(
       floatingActionButton: _QuickActionsFab(onRefresh: _refreshSummary),
-      body: SafeArea(
-        child: Container(
-          color: AppColors.background,
-          child: FutureBuilder<_HomeSummaryData>(
-            future: _summaryFuture,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(
-                  child: CircularProgressIndicator.adaptive(),
-                );
-              }
+      body: Stack(
+        children: [
+          const _HomeBackground(),
+          SafeArea(
+            child: FutureBuilder<_HomeSummaryData>(
+              future: _summaryFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(
+                    child: CircularProgressIndicator.adaptive(),
+                  );
+                }
 
-              final data = snapshot.data ?? _HomeSummaryData.empty();
+                final data = snapshot.data ?? _HomeSummaryData.empty();
 
-              return SingleChildScrollView(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    horizontalPadding,
-                    20,
-                    horizontalPadding,
-                    20,
-                  ),
-                  child: TweenAnimationBuilder<double>(
-                    duration: const Duration(milliseconds: 420),
-                    tween: Tween<double>(begin: 0, end: 1),
-                    curve: Curves.easeInOut,
-                    builder: (context, value, child) {
-                      return Opacity(
-                        opacity: value,
-                        child: Transform.translate(
-                          offset: Offset(0, (1 - value) * 16),
-                          child: child,
-                        ),
-                      );
-                    },
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _HeaderSection(data: data, onRefresh: _refreshSummary),
-                        const SizedBox(height: 24),
-                        _StreakCard(
-                          activeDays: data.activeStreak,
-                          dots: data.streakDots,
-                          onTap: () async {
-                            await Navigator.pushNamed(context, '/streak');
-                            _refreshSummary();
-                          },
-                        ),
-                        const SizedBox(height: verticalSectionSpacing),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _MetricCard.training(
-                                primaryValue: '${data.trainingToday} min',
-                                secondaryValue:
-                                    'Promedio semanal: ${data.trainingWeeklyAvg} min',
-                                distribution: data.trainingWeeklyDistribution,
-                                onTap: () async {
-                                  await Navigator.pushNamed(
-                                    context,
-                                    '/workout/lite',
-                                  );
-                                  _refreshSummary();
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: _MetricCard.nutrition(
-                                calories: data.caloriesToday,
-                                macros: data.macrosToday,
-                                onTap: () async {
-                                  await Navigator.pushNamed(
-                                    context,
-                                    '/nutrition/lite',
-                                  );
-                                  _refreshSummary();
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: verticalSectionSpacing),
-                        _SleepOverviewCard(
-                          avgSleepHours: data.avgSleepDuration,
-                          avgSleepDelta: data.avgSleepDelta,
-                          regularityScore: data.regularityScore,
-                          regularityDelta: data.regularityWeekDelta,
-                          onTap: () async {
-                            await Navigator.pushNamed(context, '/sleep/overview');
-                            _refreshSummary();
-                          },
-                        ),
-                        const SizedBox(height: verticalSectionSpacing),
-                        if (!data.hasUserGoal)
-                          _PendingGoalCard(
-                            onTap: () {
-                              Navigator.pushNamed(context, '/onboarding');
+                return SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      horizontalPadding,
+                      20,
+                      horizontalPadding,
+                      20,
+                    ),
+                    child: TweenAnimationBuilder<double>(
+                      duration: const Duration(milliseconds: 420),
+                      tween: Tween<double>(begin: 0, end: 1),
+                      curve: Curves.easeInOut,
+                      builder: (context, value, child) {
+                        return Opacity(
+                          opacity: value,
+                          child: Transform.translate(
+                            offset: Offset(0, (1 - value) * 16),
+                            child: child,
+                          ),
+                        );
+                      },
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _HeaderSection(data: data, onRefresh: _refreshSummary),
+                          const SizedBox(height: 24),
+                          _StreakCard(
+                            activeDays: data.activeStreak,
+                            dots: data.streakDots,
+                            onTap: () async {
+                              await Navigator.pushNamed(context, '/streak');
+                              _refreshSummary();
                             },
-                          )
-                        else
-                          _GoalInsightCard(data: data.goalInsight),
-                        const SizedBox(height: verticalSectionSpacing),
-                        _GroupsCard(
-                          onTap: () {
-                            Navigator.pushNamed(context, '/groups/list');
-                          },
-                        ),
-                      ],
+                          ),
+                          const SizedBox(height: verticalSectionSpacing),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _MetricCard.training(
+                                  primaryValue: '${data.trainingToday} min',
+                                  secondaryValue:
+                                      'Promedio semanal: ${data.trainingWeeklyAvg} min',
+                                  distribution: data.trainingWeeklyDistribution,
+                                  onTap: () async {
+                                    await Navigator.pushNamed(
+                                      context,
+                                      '/workout/lite',
+                                    );
+                                    _refreshSummary();
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: _MetricCard.nutrition(
+                                  calories: data.caloriesToday,
+                                  macros: data.macrosToday,
+                                  onTap: () async {
+                                    await Navigator.pushNamed(
+                                      context,
+                                      '/nutrition/lite',
+                                    );
+                                    _refreshSummary();
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: verticalSectionSpacing),
+                          if (!data.hasUserGoal)
+                            _PendingGoalCard(
+                              onTap: () {
+                                Navigator.pushNamed(context, '/onboarding');
+                              },
+                            )
+                          else
+                            _GoalInsightCard(data: data.goalInsight),
+                          const SizedBox(height: verticalSectionSpacing),
+                          _SleepOverviewCard(
+                            avgSleepHours: data.avgSleepDuration,
+                            avgSleepDelta: data.avgSleepDelta,
+                            regularityScore: data.regularityScore,
+                            regularityDelta: data.regularityWeekDelta,
+                            onTap: () async {
+                              await Navigator.pushNamed(context, '/sleep/overview');
+                              _refreshSummary();
+                            },
+                          ),
+                          const SizedBox(height: verticalSectionSpacing),
+                          _GroupsCard(
+                            onTap: () {
+                              Navigator.pushNamed(context, '/groups/list');
+                            },
+                          ),
+                          const SizedBox(height: 80),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              );
-            },
+                );
+              },
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -568,6 +571,64 @@ class _QuickActionsFabState extends State<_QuickActionsFab> {
   }
 }
 
+class _HomeBackground extends StatelessWidget {
+  const _HomeBackground();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF0B1220),
+            Color(0xFF0E1624),
+            Color(0xFF070B12),
+          ],
+        ),
+      ),
+      child: Stack(
+        children: const [
+          Positioned(
+            top: -120,
+            left: -80,
+            child: _GlowBlob(color: Color(0x662AF5D2), size: 260),
+          ),
+          Positioned(
+            bottom: -140,
+            right: -90,
+            child: _GlowBlob(color: Color(0x668AA6FF), size: 300),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GlowBlob extends StatelessWidget {
+  const _GlowBlob({required this.color, required this.size});
+
+  final Color color;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: RadialGradient(
+            colors: [color, const Color(0x00000000)],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _HeaderSection extends StatelessWidget {
   const _HeaderSection({required this.data, required this.onRefresh});
 
@@ -603,10 +664,6 @@ class _HeaderSection extends StatelessWidget {
     ];
     final formattedDate =
         '${weekdayNames[now.weekday - 1]}, ${now.day} de ${monthNames[now.month - 1]}';
-    final userName =
-        FirebaseAuth.instance.currentUser?.displayName?.split(' ').first ??
-            'Atleta';
-
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -681,7 +738,7 @@ class _HeaderSection extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           Text(
-            'Hola, $userName 👋',
+            'Hoy',
             style: textTheme.headlineMedium?.copyWith(
               color: Colors.white,
               fontWeight: FontWeight.w800,
@@ -690,7 +747,7 @@ class _HeaderSection extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            'Te preparamos un cockpit con tus hábitos críticos para ganar hoy.',
+            'Tu día, de un vistazo.',
             style: textTheme.bodySmall?.copyWith(
               color: const Color(0xFFDAE8FF),
               fontWeight: FontWeight.w600,
@@ -707,17 +764,13 @@ class _HeaderSection extends StatelessWidget {
                 icon: Icons.local_fire_department_rounded,
               ),
               _StatPill(
-                label: 'Entrenaste hoy',
-                value: data.trainingToday > 0
-                    ? '${data.trainingToday} min'
-                    : 'Pendiente',
+                label: 'Entreno',
+                value: '${data.trainingToday} min',
                 icon: Icons.fitness_center_rounded,
               ),
               _StatPill(
-                label: 'Energía',
-                value: data.caloriesToday > 0
-                    ? '${data.caloriesToday} kcal'
-                    : 'Registra tu comida',
+                label: 'Calorías',
+                value: '${data.caloriesToday} kcal',
                 icon: Icons.bolt_rounded,
               ),
             ],
@@ -727,7 +780,7 @@ class _HeaderSection extends StatelessWidget {
             children: [
               Expanded(
                 child: _QuickActionButton(
-                  label: 'Registrar entreno',
+                  label: 'Entreno',
                   icon: Icons.timer_rounded,
                   onTap: () async {
                     await Navigator.pushNamed(context, '/workout/lite');
@@ -738,7 +791,7 @@ class _HeaderSection extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: _QuickActionButton(
-                  label: 'Sumar comida',
+                  label: 'Comida',
                   icon: Icons.restaurant_menu_rounded,
                   onTap: () async {
                     await Navigator.pushNamed(context, '/nutrition/lite');
@@ -749,7 +802,7 @@ class _HeaderSection extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: _QuickActionButton(
-                  label: 'Registrar sueño',
+                  label: 'Sueño',
                   icon: Icons.nightlight_round,
                   onTap: () async {
                     await Navigator.pushNamed(context, '/sleep/overview');
@@ -799,7 +852,6 @@ class _StatPill extends StatelessWidget {
                   color: Color(0xFFDAE8FF),
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  fontFamily: 'Inter',
                 ),
               ),
               Text(
@@ -808,7 +860,6 @@ class _StatPill extends StatelessWidget {
                   color: Colors.white,
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
-                  fontFamily: 'Inter',
                 ),
               ),
             ],
@@ -857,7 +908,6 @@ class _QuickActionButton extends StatelessWidget {
                     color: Colors.white,
                     fontWeight: FontWeight.w700,
                     fontSize: 13,
-                    fontFamily: 'Inter',
                   ),
                 ),
               ),
@@ -879,6 +929,7 @@ class _GoalInsightCard extends StatelessWidget {
     return SummaryCard(
       minHeight: 150,
       padding: const EdgeInsets.all(18),
+      glass: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -895,7 +946,6 @@ class _GoalInsightCard extends StatelessWidget {
                         fontSize: 18,
                         fontWeight: FontWeight.w600,
                         color: Colors.white,
-                        fontFamily: 'Inter',
                       ),
                     ),
                     const SizedBox(height: 6),
@@ -905,7 +955,6 @@ class _GoalInsightCard extends StatelessWidget {
                         fontSize: 13,
                         color: Color(0xFF9BA7B4),
                         fontWeight: FontWeight.w500,
-                        fontFamily: 'Inter',
                       ),
                     ),
                   ],
@@ -942,7 +991,6 @@ class _GoalInsightCard extends StatelessWidget {
                     fontSize: 14,
                     color: Color(0xFFE4E8EE),
                     fontWeight: FontWeight.w500,
-                    fontFamily: 'Inter',
                   ),
                 ),
               ),
@@ -965,6 +1013,7 @@ class _PendingGoalCard extends StatelessWidget {
       minHeight: 150,
       padding: const EdgeInsets.all(18),
       onTap: onTap,
+      glass: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -977,7 +1026,6 @@ class _PendingGoalCard extends StatelessWidget {
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
                   color: Colors.white,
-                  fontFamily: 'Inter',
                 ),
               ),
               Icon(
@@ -993,7 +1041,6 @@ class _PendingGoalCard extends StatelessWidget {
               fontSize: 14,
               color: Color(0xFFE4E8EE),
               fontWeight: FontWeight.w600,
-              fontFamily: 'Inter',
             ),
           ),
           const SizedBox(height: 8),
@@ -1014,7 +1061,6 @@ class _PendingGoalCard extends StatelessWidget {
                     fontSize: 13,
                     color: Color(0xFF9BA7B4),
                     fontWeight: FontWeight.w500,
-                    fontFamily: 'Inter',
                   ),
                 ),
               ),
@@ -1046,7 +1092,6 @@ class _InsightPill extends StatelessWidget {
           fontSize: 13,
           color: Color(0xFFE4E8EE),
           fontWeight: FontWeight.w600,
-          fontFamily: 'Inter',
         ),
       ),
     );
@@ -1421,6 +1466,7 @@ class _MetricCard extends StatelessWidget {
       minHeight: 170,
       padding: const EdgeInsets.all(18),
       onTap: onTap,
+      glass: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1499,7 +1545,6 @@ class _TrainingChart extends StatelessWidget {
             fontSize: 12,
             color: Color(0xFF9BA7B4),
             fontWeight: FontWeight.w400,
-            fontFamily: 'Inter',
           ),
         ),
       ],
@@ -1655,7 +1700,7 @@ class _NutritionCharts extends StatelessWidget {
           runSpacing: 6,
           children: [
             _MacroLegend(
-              label: 'Carbs',
+              label: 'Carbohidratos',
               grams: macros.carbs,
               percent: carbsPct,
               color: const Color(0xFFFFD438),
@@ -1712,7 +1757,6 @@ class _MacroLegend extends StatelessWidget {
             fontSize: 12,
             color: Color(0xFF9BA7B4),
             fontWeight: FontWeight.w500,
-            fontFamily: 'Inter',
           ),
         ),
       ],
@@ -1820,6 +1864,7 @@ class _SleepOverviewCard extends StatelessWidget {
       minHeight: 190,
       padding: const EdgeInsets.all(18),
       onTap: onTap,
+      glass: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1924,6 +1969,7 @@ class _SleepInfoCard extends StatelessWidget {
       minHeight: 170,
       padding: const EdgeInsets.all(18),
       onTap: onTap,
+      glass: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1964,7 +2010,6 @@ class _SleepInfoCard extends StatelessWidget {
                   fontSize: 13,
                   color: Color(0xFF9BA7B4),
                   fontWeight: FontWeight.w500,
-                  fontFamily: 'Inter',
                 ),
               ),
             ],
@@ -2009,6 +2054,7 @@ class _SleepMetricsCard extends StatelessWidget {
       minHeight: 170,
       padding: const EdgeInsets.all(18),
       onTap: onTap,
+      glass: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -2093,6 +2139,7 @@ class _GroupsCard extends StatelessWidget {
       minHeight: 150,
       padding: const EdgeInsets.all(18),
       onTap: onTap,
+      glass: true,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
