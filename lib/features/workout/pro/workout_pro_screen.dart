@@ -38,30 +38,35 @@ class _WorkoutProContent extends StatefulWidget {
 
 class _WorkoutProContentState extends State<_WorkoutProContent> {
   late final ExerciseLibraryIndex _exerciseIndex;
+  late WorkoutProProvider _provider;
   final _scrollController = ScrollController();
   final _configKey = GlobalKey();
   final ValueNotifier<int> _elapsedSeconds = ValueNotifier(0);
   Timer? _elapsedTimer;
   DateTime? _lastSessionStart;
+  bool _providerListenerAttached = false;
 
   @override
   void initState() {
     super.initState();
     _exerciseIndex = ExerciseLibraryIndex(exerciseLibrary);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _attachProviderListener());
   }
 
-  void _attachProviderListener() {
-    final provider = context.read<WorkoutProProvider>();
-    provider.addListener(_syncElapsedFromProvider);
-    _syncElapsedFromProvider();
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_providerListenerAttached) {
+      _provider = context.read<WorkoutProProvider>();
+      _provider.addListener(_syncElapsedFromProvider);
+      _syncElapsedFromProvider();
+      _providerListenerAttached = true;
+    }
   }
 
   void _syncElapsedFromProvider() {
-    final provider = context.read<WorkoutProProvider>();
-    if (!provider.initialized) return;
-    if (_lastSessionStart == provider.sessionStart) return;
-    _startElapsedTimer(provider.sessionStart);
+    if (!_provider.initialized) return;
+    if (_lastSessionStart == _provider.sessionStart) return;
+    _startElapsedTimer(_provider.sessionStart);
   }
 
   void _startElapsedTimer(DateTime start) {
@@ -182,7 +187,9 @@ class _WorkoutProContentState extends State<_WorkoutProContent> {
   void dispose() {
     _elapsedTimer?.cancel();
     _elapsedSeconds.dispose();
-    context.read<WorkoutProProvider>().removeListener(_syncElapsedFromProvider);
+    if (_providerListenerAttached) {
+      _provider.removeListener(_syncElapsedFromProvider);
+    }
     super.dispose();
   }
 
@@ -1866,4 +1873,3 @@ class _IntensityRow extends StatelessWidget {
     );
   }
 }
-
