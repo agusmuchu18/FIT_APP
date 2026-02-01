@@ -8,7 +8,7 @@ class AnimatedPlusXButton extends StatefulWidget {
     super.key,
     required this.isOpen,
     required this.onTap,
-    this.size = 54,
+    this.size = 60,
     this.color = const Color(0xFFF59E0B),
     this.iconColor = Colors.black,
   });
@@ -103,7 +103,7 @@ class _AnimatedPlusXButtonState extends State<AnimatedPlusXButton>
               ),
             ],
           ),
-          child: Icon(Icons.add_rounded, color: widget.iconColor, size: 30),
+          child: Icon(Icons.add_rounded, color: widget.iconColor, size: 36),
         ),
       ),
     );
