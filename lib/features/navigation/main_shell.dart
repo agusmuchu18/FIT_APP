@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 
 import '../common/theme/app_colors.dart';
@@ -75,24 +77,25 @@ class _MainShellState extends State<MainShell> {
             onMeal: () => _navigateTo('/nutrition'),
             onSleep: () => _navigateTo('/sleep'),
           ),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: SafeArea(
-              top: false,
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: _BottomBar(
-                  currentIndex: _currentIndex,
-                  onSelect: _selectTab,
-                  onCenterTap: _toggleMenu,
-                  isMenuOpen: _menuOpen,
-                ),
+        ],
+      ),
+      bottomNavigationBar: Material(
+        type: MaterialType.transparency,
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Align(
+              alignment: Alignment.bottomCenter,
+              child: _BottomBar(
+                currentIndex: _currentIndex,
+                onSelect: _selectTab,
+                onCenterTap: _toggleMenu,
+                isMenuOpen: _menuOpen,
               ),
             ),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -126,15 +129,14 @@ class _BottomBar extends StatelessWidget {
           ),
         ],
       ),
-      child: Material(
-        color: Colors.transparent,
-        clipBehavior: Clip.antiAlias,
-        child: ClipRRect(
-          borderRadius: borderRadius,
+      child: ClipRRect(
+        borderRadius: borderRadius,
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
             decoration: BoxDecoration(
-              color: AppColors.card,
+              color: AppColors.card.withOpacity(0.88),
               borderRadius: borderRadius,
               border: Border.all(color: Colors.white.withOpacity(0.08)),
             ),
