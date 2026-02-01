@@ -1,284 +1,11 @@
 import 'package:flutter/material.dart';
+
 import '../../core/domain/entities.dart';
 import '../../main.dart';
 import '../../shared/template_selector.dart';
 import '../common/theme/app_colors.dart';
-import '../common/widgets/primary_button.dart';
 import '../common/widgets/summary_card.dart';
 import 'data/food_repository.dart';
-
-class NutritionLiteScreen extends StatefulWidget {
-  const NutritionLiteScreen({super.key});
-
-  @override
-  State<NutritionLiteScreen> createState() => _NutritionLiteScreenState();
-}
-
-class _NutritionLiteScreenState extends State<NutritionLiteScreen> {
-  final TextEditingController _titleController = TextEditingController();
-  final TextEditingController _caloriesController =
-      TextEditingController(text: '500');
-  final TextEditingController _templateEditorController =
-      TextEditingController();
-  final List<String> _templates = ['Desayuno rápido', 'Snack proteico', 'Smoothie verde'];
-
-  InputDecoration _inputDecoration(String label, IconData icon) {
-    return InputDecoration(
-      labelText: label,
-      labelStyle: const TextStyle(color: AppColors.textMuted),
-      prefixIcon: Icon(icon, color: AppColors.textMuted),
-      filled: true,
-      fillColor: AppColors.surface,
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: BorderSide.none,
-      ),
-    );
-  }
-
-  @override
-  void dispose() {
-    _titleController.dispose();
-    _caloriesController.dispose();
-    _templateEditorController.dispose();
-    super.dispose();
-  }
-
-  void _applyTemplate(String template) {
-    setState(() {
-      _titleController.text = template;
-    });
-  }
-
-  void _addTemplate() {
-    final value = _templateEditorController.text.trim();
-    if (value.isEmpty) return;
-    setState(() {
-      _templates.add(value);
-      _templateEditorController.clear();
-    });
-  }
-
-  void _editTemplate(int index) async {
-    final current = _templates[index];
-    final controller = TextEditingController(text: current);
-    final newValue = await showDialog<String>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Editar plantilla'),
-          content: TextField(
-            controller: controller,
-            decoration: const InputDecoration(labelText: 'Nombre'),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancelar'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(controller.text.trim()),
-              child: const Text('Guardar'),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (newValue != null && newValue.isNotEmpty) {
-      setState(() {
-        _templates[index] = newValue;
-      });
-    }
-  }
-
-  Widget _buildEditableTemplates() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const _SectionTitle('Plantillas editables'),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 4,
-          children: [
-            for (int i = 0; i < _templates.length; i++)
-              GestureDetector(
-                onLongPress: () => _editTemplate(i),
-                child: InputChip(
-                  label: Text(
-                    _templates[i],
-                    style: const TextStyle(
-                      color: AppColors.textSecondary,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  onPressed: () => _applyTemplate(_templates[i]),
-                  onDeleted: () => setState(() => _templates.removeAt(i)),
-                  backgroundColor: AppColors.surface,
-                  selectedColor: AppColors.card,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(18),
-                    side: const BorderSide(color: Colors.transparent),
-                  ),
-                ),
-              ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: _templateEditorController,
-                decoration: _inputDecoration(
-                  'Agregar nueva plantilla',
-                  Icons.add_rounded,
-                ),
-                onSubmitted: (_) => _addTemplate(),
-              ),
-            ),
-            const SizedBox(width: 8),
-            FilledButton(
-              style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF1E6EEB),
-                foregroundColor: Colors.white,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-              ),
-              onPressed: _addTemplate,
-              child: const Text('Añadir'),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.background,
-        elevation: 0,
-        title: const Text(
-          'Nutrición Lite',
-          style: TextStyle(
-            color: AppColors.textPrimary,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        iconTheme: const IconThemeData(color: AppColors.textPrimary),
-      ),
-      body: SafeArea(
-        child: Container(
-          color: AppColors.background,
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const _NutritionHeader(
-                  icon: Icons.local_dining_rounded,
-                  title: 'Registro express',
-                  description: 'Comidas rápidas en menos de 1 minuto, con estilo limpio.',
-                ),
-                const SizedBox(height: 18),
-                SummaryCard(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const _SectionTitle('Datos esenciales'),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: _titleController,
-                        decoration: _inputDecoration(
-                          'Título de la comida',
-                          Icons.restaurant_menu_rounded,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: _caloriesController,
-                        keyboardType: TextInputType.number,
-                        decoration: _inputDecoration(
-                          'Calorías estimadas',
-                          Icons.local_fire_department_rounded,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 18),
-                SummaryCard(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      _SectionTitle('Plantillas rápidas'),
-                      SizedBox(height: 8),
-                      Text(
-                        'Usa chips para seleccionar o mantén presionado para editar.',
-                        style: TextStyle(
-                          color: AppColors.textMuted,
-                          height: 1.4,
-                        ),
-                      ),
-                      SizedBox(height: 12),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
-                SummaryCard(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      TemplateSelector(
-                        templates: _templates,
-                        onSelected: _applyTemplate,
-                      ),
-                      const SizedBox(height: 12),
-                      _buildEditableTemplates(),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 24),
-                PrimaryButton(
-                  onPressed: () => _saveQuickMeal(context),
-                  icon: Icons.check_circle_rounded,
-                  label: 'Guardar en menos de 1 minuto',
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Future<void> _saveQuickMeal(BuildContext context) async {
-    final entry = MealEntry(
-      id: DateTime.now().toIso8601String(),
-      title: _titleController.text,
-      calories: int.tryParse(_caloriesController.text) ?? 0,
-      macros: Macros(carbs: 0, protein: 0, fat: 0),
-    );
-
-    final repository = RepositoryScope.of(context);
-    await repository.saveMeal(entry, sync: true);
-
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Guardado: ${entry.title}')),
-    );
-  }
-}
 
 class NutritionProScreen extends StatefulWidget {
   const NutritionProScreen({super.key});
@@ -563,7 +290,7 @@ class _NutritionProScreenState extends State<NutritionProScreen> {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     return Scaffold(
-      appBar: AppBar(title: const Text('Nutrición Pro')),
+      appBar: AppBar(title: const Text('Nutrición')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -571,8 +298,8 @@ class _NutritionProScreenState extends State<NutritionProScreen> {
           children: [
             const _NutritionHeader(
               icon: Icons.auto_awesome_rounded,
-              title: 'Modo profesional',
-              description: 'Control completo para atletas: porciones, macros y notas.',
+              title: 'Registro completo',
+              description: 'Control total: porciones, macros y notas.',
             ),
             const SizedBox(height: 16),
             Card(
@@ -843,7 +570,7 @@ class _NutritionProScreenState extends State<NutritionProScreen> {
                     ),
                     const SizedBox(height: 12),
                     TemplateSelector(
-                      title: 'Plantillas detalladas',
+                      title: 'Plantillas',
                       templates: _mealTemplates.keys.toList(),
                       onSelected: _applyTemplate,
                       onDeleted: (template) {
@@ -869,7 +596,7 @@ class _NutritionProScreenState extends State<NutritionProScreen> {
                   id: DateTime.now().toIso8601String(),
                   title: _titleController.text.isNotEmpty
                       ? _titleController.text
-                      : 'Comida profesional',
+                      : 'Comida',
                   calories:
                       totals?.$2 ?? int.tryParse(_caloriesController.text) ?? 0,
                   macros: totals?.$1 ??
@@ -892,13 +619,13 @@ class _NutritionProScreenState extends State<NutritionProScreen> {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(
-                      'Plantilla avanzada creada: ${entry.title} (${_portionSize}g)',
+                      'Comida guardada: ${entry.title} (${_portionSize}g)',
                     ),
                   ),
                 );
               },
               icon: const Icon(Icons.save_alt),
-              label: const Text('Guardar plantilla'),
+              label: const Text('Guardar comida'),
             ),
           ],
         ),
@@ -986,25 +713,6 @@ class _NutritionHeader extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      text,
-      style: const TextStyle(
-        color: AppColors.textSecondary,
-        fontSize: 16,
-        fontWeight: FontWeight.w700,
-        fontFamily: 'Inter',
       ),
     );
   }

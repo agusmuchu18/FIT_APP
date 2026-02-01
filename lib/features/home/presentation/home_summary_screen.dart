@@ -333,7 +333,7 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
                                   onTap: () async {
                                     await Navigator.pushNamed(
                                       context,
-                                      '/workout/lite',
+                                      '/workout',
                                     );
                                     _refreshSummary();
                                   },
@@ -347,7 +347,7 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
                                   onTap: () async {
                                     await Navigator.pushNamed(
                                       context,
-                                      '/nutrition/lite',
+                                      '/nutrition',
                                     );
                                     _refreshSummary();
                                   },
@@ -532,7 +532,7 @@ class _QuickActionsFabState extends State<_QuickActionsFab> {
                     label: 'Registrar actividad',
                     onTap: () async {
                       Navigator.pop(context);
-                      await Navigator.pushNamed(rootContext, '/workout/lite');
+                      await Navigator.pushNamed(rootContext, '/workout');
                       widget.onRefresh();
                     },
                   ),

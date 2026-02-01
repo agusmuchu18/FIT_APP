@@ -48,8 +48,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     'Fecha específica (calendario)',
   ];
   final List<String> _trainingLogOptions = const [
-    'Lite',
-    'Profesional / Atleta',
+    'Completo',
   ];
   final List<String> _trainingSupervisionOptions = const [
     'Solo',
@@ -57,10 +56,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     'Entrenador + equipo',
   ];
   final List<String> _nutritionLogOptions = const [
-    'Lite',
-    'Plantillas de comidas',
-    'Etiquetas (equilibrada, alta proteína, etc.)',
-    'Profesional',
+    'Completo',
   ];
   final List<String> _dietStructureOptions = const [
     'No',
@@ -116,9 +112,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   String _contextStatus = 'Quiero mejorar mis hábitos generales';
   String _timeGoal = 'No';
-  String _trainingLog = 'Lite';
+  String _trainingLog = 'Completo';
   String _trainingSupervision = 'Solo';
-  String _nutritionLog = 'Lite';
+  String _nutritionLog = 'Completo';
   String _dietStructure = 'No';
   String _sleepTracking = 'Manual básico (horas + calidad)';
   String _dailyTime = '< 1 minuto';
@@ -219,17 +215,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _DeveloperAccessCard(
-                    onOpenLite: () {
-                      setState(() => _trainingLog = 'Lite');
-                      Navigator.of(context).pushNamed('/workout/lite');
-                    },
-                    onOpenPro: () {
-                      setState(() => _trainingLog = 'Profesional / Atleta');
-                      Navigator.of(context).pushNamed('/workout/pro');
-                    },
-                  ),
-                  const SizedBox(height: 18),
                   _Header(hasData: _existing != null),
                   const SizedBox(height: 16),
                   const _SectionTitle(title: 'Principios del onboarding'),
@@ -308,7 +293,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   _QuestionCard(
                     title: '🏋️ ¿Cómo querés registrar tu entrenamiento?',
                     description:
-                        'Define si el módulo usa sesión rápida o detalle por ejercicio.',
+                        'Usamos un registro completo con detalle por ejercicio.',
                     child: Wrap(
                       spacing: 10,
                       runSpacing: 10,
@@ -348,7 +333,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   _QuestionCard(
                     title: '🍽️ ¿Cómo querés registrar tu alimentación?',
                     description:
-                        'Activa el motor nutricional completo si elegís Profesional.',
+                        'Usamos un registro nutricional completo con macros.',
                     child: Wrap(
                       spacing: 10,
                       runSpacing: 10,
@@ -805,62 +790,6 @@ class _SectionTitle extends StatelessWidget {
         fontWeight: FontWeight.w700,
         color: AppColors.textPrimary,
         fontFamily: 'Inter',
-      ),
-    );
-  }
-}
-
-class _DeveloperAccessCard extends StatelessWidget {
-  const _DeveloperAccessCard({
-    required this.onOpenLite,
-    required this.onOpenPro,
-  });
-
-  final VoidCallback onOpenLite;
-  final VoidCallback onOpenPro;
-
-  @override
-  Widget build(BuildContext context) {
-    return SummaryCard(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Acceso desarrollador',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textSecondary,
-              fontFamily: 'Inter',
-            ),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Salta directo a la versión que quieres probar mientras seguimos afinando el onboarding.',
-            style: TextStyle(
-              color: AppColors.textMuted,
-              height: 1.4,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: [
-              FilledButton.icon(
-                onPressed: onOpenPro,
-                icon: const Icon(Icons.auto_graph_rounded),
-                label: const Text('Entrar versión Pro'),
-              ),
-              OutlinedButton.icon(
-                onPressed: onOpenLite,
-                icon: const Icon(Icons.flash_on_rounded),
-                label: const Text('Entrar versión Lite'),
-              ),
-            ],
-          ),
-        ],
       ),
     );
   }

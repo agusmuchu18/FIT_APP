@@ -93,9 +93,9 @@ class _SleepHistoryScreenState extends State<SleepHistoryScreen> {
                         const SizedBox(height: 14),
                         FilledButton.icon(
                           onPressed: () =>
-                              Navigator.pushNamed(context, '/sleep/lite'),
+                              Navigator.pushNamed(context, '/sleep'),
                           icon: const Icon(Icons.add_rounded),
-                          label: const Text('Registrar (Lite)'),
+                          label: const Text('Registrar'),
                         ),
                       ],
                     ),
