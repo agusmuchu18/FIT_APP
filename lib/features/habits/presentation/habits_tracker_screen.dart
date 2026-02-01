@@ -7,6 +7,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../common/theme/app_colors.dart';
 import '../../common/widgets/primary_button.dart';
+import '../../../ui/motion/widgets/habit_check_overlay.dart';
 
 class HabitsTrackerScreen extends StatefulWidget {
   const HabitsTrackerScreen({super.key});
@@ -647,7 +648,7 @@ class _HeaderPillButton extends StatelessWidget {
   }
 }
 
-class _HabitRow extends StatelessWidget {
+class _HabitRow extends StatefulWidget {
   const _HabitRow({
     required this.habit,
     required this.icon,
@@ -661,68 +662,105 @@ class _HabitRow extends StatelessWidget {
   final bool completed;
 
   @override
+  State<_HabitRow> createState() => _HabitRowState();
+}
+
+class _HabitRowState extends State<_HabitRow> {
+  final GlobalKey<HabitCheckOverlayState> _checkKey =
+      GlobalKey<HabitCheckOverlayState>();
+  late bool _wasCompleted;
+
+  @override
+  void initState() {
+    super.initState();
+    _wasCompleted = widget.completed;
+  }
+
+  @override
+  void didUpdateWidget(covariant _HabitRow oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!_wasCompleted && widget.completed) {
+      _checkKey.currentState?.play();
+    }
+    _wasCompleted = widget.completed;
+  }
+
+  @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    final muted = completed ? AppColors.textMuted : AppColors.textSecondary;
-    final countLabel = habit.targetCount == null
+    final muted = widget.completed ? AppColors.textMuted : AppColors.textSecondary;
+    final countLabel = widget.habit.targetCount == null
         ? null
-        : '0/${habit.targetCount} Contar';
+        : '0/${widget.habit.targetCount} Contar';
 
-    return Row(
+    return Stack(
       children: [
-        Container(
-          width: 44,
-          height: 44,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: iconColor.withOpacity(0.2),
-          ),
-          child: Icon(icon, color: iconColor, size: 22),
-        ),
-        const SizedBox(width: 14),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                habit.name,
-                style: textTheme.titleMedium?.copyWith(
-                  color: AppColors.textPrimary,
-                  fontWeight: FontWeight.w600,
-                ),
+        Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: widget.iconColor.withOpacity(0.2),
               ),
-              if (countLabel != null) ...[
-                const SizedBox(height: 4),
+              child: Icon(widget.icon, color: widget.iconColor, size: 22),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.habit.name,
+                    style: textTheme.titleMedium?.copyWith(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  if (countLabel != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      countLabel,
+                      style: textTheme.labelMedium?.copyWith(
+                        color: AppColors.textMuted,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
                 Text(
-                  countLabel,
-                  style: textTheme.labelMedium?.copyWith(
-                    color: AppColors.textMuted,
+                  widget.completed ? '1' : '0',
+                  style: textTheme.titleLarge?.copyWith(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Racha Actual',
+                  style: textTheme.labelSmall?.copyWith(
+                    color: muted,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
               ],
-            ],
-          ),
-        ),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text(
-              completed ? '1' : '0',
-              style: textTheme.titleLarge?.copyWith(
-                color: AppColors.textPrimary,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              'Racha Actual',
-              style: textTheme.labelSmall?.copyWith(
-                color: muted,
-                fontWeight: FontWeight.w500,
-              ),
             ),
           ],
+        ),
+        Positioned.fill(
+          child: Align(
+            alignment: Alignment.centerRight,
+            child: Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: HabitCheckOverlay(key: _checkKey),
+            ),
+          ),
         ),
       ],
     );
