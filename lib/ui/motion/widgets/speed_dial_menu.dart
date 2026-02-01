@@ -29,8 +29,6 @@ class SpeedDialMenu extends StatefulWidget {
 
 class _SpeedDialMenuState extends State<SpeedDialMenu>
     with SingleTickerProviderStateMixin {
-  OverlayEntry? _entry;
-
   late final AnimationController _controller = AnimationController(
     vsync: this,
     duration: MotionDurations.menu,
@@ -40,7 +38,7 @@ class _SpeedDialMenuState extends State<SpeedDialMenu>
   void initState() {
     super.initState();
     if (widget.isOpen) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _showOverlay());
+      _controller.value = 1;
     }
   }
 
@@ -49,83 +47,17 @@ class _SpeedDialMenuState extends State<SpeedDialMenu>
     super.didUpdateWidget(oldWidget);
     if (widget.isOpen != oldWidget.isOpen) {
       if (widget.isOpen) {
-        _showOverlay();
+        _controller.forward();
       } else {
-        _hideOverlay();
+        _controller.reverse();
       }
     }
   }
 
-  void _showOverlay() {
-    if (_entry != null) {
-      _controller.forward();
-      return;
-    }
-    _entry = OverlayEntry(builder: _buildOverlay);
-    Overlay.of(context, rootOverlay: true).insert(_entry!);
-    _controller.forward(from: 0);
-  }
-
-  Future<void> _hideOverlay() async {
-    if (_entry == null) return;
-    await _controller.reverse();
-    _entry?.remove();
-    _entry = null;
-  }
-
   @override
   void dispose() {
-    _entry?.remove();
-    _entry = null;
     _controller.dispose();
     super.dispose();
-  }
-
-  Widget _buildOverlay(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: Stack(
-        children: [
-          Positioned.fill(
-            child: GestureDetector(
-              onTap: widget.onClose,
-              behavior: HitTestBehavior.opaque,
-              child: const SizedBox.expand(),
-            ),
-          ),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: widget.bottomOffset,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _buildMenuItem(
-                  index: 0,
-                  label: 'Registrar Entrenamiento',
-                  icon: Icons.fitness_center_rounded,
-                  onTap: widget.onWorkout,
-                ),
-                const SizedBox(height: 10),
-                _buildMenuItem(
-                  index: 1,
-                  label: 'Registrar Comida',
-                  icon: Icons.restaurant_rounded,
-                  onTap: widget.onMeal,
-                ),
-                const SizedBox(height: 10),
-                _buildMenuItem(
-                  index: 2,
-                  label: 'Registrar Sueño',
-                  icon: Icons.nightlight_round,
-                  onTap: widget.onSleep,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   Widget _buildMenuItem({
@@ -199,6 +131,59 @@ class _SpeedDialMenuState extends State<SpeedDialMenu>
 
   @override
   Widget build(BuildContext context) {
-    return const SizedBox.shrink();
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        if (_controller.value == 0) {
+          return const SizedBox.shrink();
+        }
+        return Positioned.fill(
+          child: Material(
+            color: Colors.transparent,
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: GestureDetector(
+                    onTap: widget.onClose,
+                    behavior: HitTestBehavior.opaque,
+                    child: const SizedBox.expand(),
+                  ),
+                ),
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: widget.bottomOffset,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _buildMenuItem(
+                        index: 0,
+                        label: 'Registrar Entrenamiento',
+                        icon: Icons.fitness_center_rounded,
+                        onTap: widget.onWorkout,
+                      ),
+                      const SizedBox(height: 10),
+                      _buildMenuItem(
+                        index: 1,
+                        label: 'Registrar Comida',
+                        icon: Icons.restaurant_rounded,
+                        onTap: widget.onMeal,
+                      ),
+                      const SizedBox(height: 10),
+                      _buildMenuItem(
+                        index: 2,
+                        label: 'Registrar Sueño',
+                        icon: Icons.nightlight_round,
+                        onTap: widget.onSleep,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 }
