@@ -322,32 +322,39 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
                           Row(
                             children: [
                               Expanded(
-                                child: _MetricCard.training(
-                                  primaryValue: '${data.trainingToday} min',
-                                  secondaryValue:
-                                      'Promedio semanal: ${data.trainingWeeklyAvg} min',
-                                  distribution: data.trainingWeeklyDistribution,
-                                  onTap: () async {
-                                    await Navigator.pushNamed(
-                                      context,
-                                      '/workout',
-                                    );
-                                    _refreshSummary();
-                                  },
+                                child: SizedBox(
+                                  height: 184,
+                                  child: _MetricCard.training(
+                                    primaryValue: '${data.trainingToday} min',
+                                    secondaryValue:
+                                        'Promedio semanal: ${data.trainingWeeklyAvg} min',
+                                    distribution:
+                                        data.trainingWeeklyDistribution,
+                                    onTap: () async {
+                                      await Navigator.pushNamed(
+                                        context,
+                                        '/workout',
+                                      );
+                                      _refreshSummary();
+                                    },
+                                  ),
                                 ),
                               ),
                               const SizedBox(width: 16),
                               Expanded(
-                                child: _MetricCard.nutrition(
-                                  calories: data.caloriesToday,
-                                  macros: data.macrosToday,
-                                  onTap: () async {
-                                    await Navigator.pushNamed(
-                                      context,
-                                      '/nutrition',
-                                    );
-                                    _refreshSummary();
-                                  },
+                                child: SizedBox(
+                                  height: 184,
+                                  child: _MetricCard.nutrition(
+                                    calories: data.caloriesToday,
+                                    macros: data.macrosToday,
+                                    onTap: () async {
+                                      await Navigator.pushNamed(
+                                        context,
+                                        '/nutrition',
+                                      );
+                                      _refreshSummary();
+                                    },
+                                  ),
                                 ),
                               ),
                             ],

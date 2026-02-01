@@ -134,13 +134,11 @@ class _BottomBar extends StatelessWidget {
         children: [
           _NavItem(
             icon: Icons.home_rounded,
-            label: 'Inicio',
             isActive: currentIndex == 0,
             onTap: () => onSelect(0),
           ),
           _NavItem(
             icon: Icons.check_circle_outline_rounded,
-            label: 'Hábitos',
             isActive: currentIndex == 1,
             onTap: () => onSelect(1),
           ),
@@ -150,13 +148,11 @@ class _BottomBar extends StatelessWidget {
           ),
           _NavItem(
             icon: Icons.groups_rounded,
-            label: 'Grupos',
             isActive: currentIndex == 2,
             onTap: () => onSelect(2),
           ),
           _NavItem(
             icon: Icons.person_rounded,
-            label: 'Perfil',
             isActive: currentIndex == 3,
             onTap: () => onSelect(3),
           ),
@@ -169,13 +165,11 @@ class _BottomBar extends StatelessWidget {
 class _NavItem extends StatelessWidget {
   const _NavItem({
     required this.icon,
-    required this.label,
     required this.isActive,
     required this.onTap,
   });
 
   final IconData icon;
-  final String label;
   final bool isActive;
   final VoidCallback onTap;
 
@@ -186,21 +180,9 @@ class _NavItem extends StatelessWidget {
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: SizedBox(
-        width: 58,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: color, size: 22),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                color: color,
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
+        width: 48,
+        child: Center(
+          child: Icon(icon, color: color, size: 22),
         ),
       ),
     );
