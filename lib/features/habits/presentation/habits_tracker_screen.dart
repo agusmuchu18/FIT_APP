@@ -97,6 +97,7 @@ class _HabitsTrackerScreenState extends State<HabitsTrackerScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       floatingActionButton: FloatingActionButton(
+        heroTag: 'habits_add_fab',
         backgroundColor: AppColors.warning,
         onPressed: () {},
         child: const Icon(Icons.add_rounded, color: Colors.black),
