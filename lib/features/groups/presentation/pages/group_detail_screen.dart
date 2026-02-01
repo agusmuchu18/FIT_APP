@@ -87,6 +87,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'group_add_member_fab',
         onPressed: _addMember,
         icon: const Icon(Icons.person_add_rounded),
         label: const Text('Agregar atleta'),

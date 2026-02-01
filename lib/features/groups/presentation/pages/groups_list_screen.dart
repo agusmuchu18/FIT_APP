@@ -118,6 +118,7 @@ class _GroupsListScreenState extends State<GroupsListScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'groups_create_fab',
         onPressed: () => _createGroup(context),
         icon: const Icon(Icons.add_rounded),
         label: const Text('Crear grupo'),
