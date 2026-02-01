@@ -8,265 +8,6 @@ import '../common/widgets/primary_button.dart';
 import '../common/widgets/summary_card.dart';
 import 'domain/sleep_time_utils.dart';
 
-class SleepLiteScreen extends StatefulWidget {
-  const SleepLiteScreen({super.key});
-
-  @override
-  State<SleepLiteScreen> createState() => _SleepLiteScreenState();
-}
-
-class _SleepLiteScreenState extends State<SleepLiteScreen> {
-  DateTime _selectedDate = DateTime.now();
-  TimeOfDay _bedTime = const TimeOfDay(hour: 23, minute: 0);
-  TimeOfDay _wakeTime = const TimeOfDay(hour: 7, minute: 0);
-  String _quality = 'Buena';
-
-  int? get _bedMinutes => _bedTime.hour * 60 + _bedTime.minute;
-  int? get _wakeMinutes => _wakeTime.hour * 60 + _wakeTime.minute;
-
-  int? get _durationMinutes => _bedMinutes != null && _wakeMinutes != null
-      ? computeDurationMinutes(bedMin: _bedMinutes!, wakeMin: _wakeMinutes!)
-      : null;
-
-  @override
-  Widget build(BuildContext context) {
-    final durationMinutes = _durationMinutes;
-    final durationError = durationMinutes == null;
-
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.background,
-        elevation: 0,
-        title: const Text('Sueño Lite'),
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const _SleepHeader(
-                icon: Icons.nightlight_round,
-                title: 'Registro express',
-                description:
-                    'Captura tu noche en segundos: hora de dormir, despertar y calidad.',
-              ),
-              const SizedBox(height: 18),
-              SummaryCard(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _SectionTitle('Fecha'),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _ElevatedField(
-                            label: _formatDate(_selectedDate),
-                            icon: Icons.event,
-                            onTap: _pickDate,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _ElevatedField(
-                            label:
-                                'Día ${['L', 'M', 'X', 'J', 'V', 'S', 'D'][_selectedDate.weekday - 1]}',
-                            icon: Icons.today_outlined,
-                            onTap: _pickDate,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              SummaryCard(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _SectionTitle('Horario'),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _ElevatedField(
-                            label: 'A dormir ${_bedTime.format(context)}',
-                            icon: Icons.bedtime_outlined,
-                            onTap: () => _pickTime(isBed: true),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _ElevatedField(
-                            label: 'Despertar ${_wakeTime.format(context)}',
-                            icon: Icons.wb_sunny_outlined,
-                            onTap: () => _pickTime(isBed: false),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            durationError
-                                ? Icons.error_outline
-                                : Icons.timer_outlined,
-                            color: durationError
-                                ? Colors.redAccent
-                                : AppColors.accentSecondary,
-                          ),
-                          const SizedBox(width: 12),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Duración estimada',
-                                style: TextStyle(
-                                  color: AppColors.textSecondary,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                durationError
-                                    ? 'Revisa las horas (mín 2h, máx 16h)'
-                                    : '${(durationMinutes! / 60).toStringAsFixed(1)} h',
-                                style: TextStyle(
-                                  color:
-                                      durationError ? Colors.redAccent : Colors.white,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              SummaryCard(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _SectionTitle('Calidad rápida'),
-                    const SizedBox(height: 10),
-                    Wrap(
-                      spacing: 8,
-                      children: ['Excelente', 'Buena', 'Ligera']
-                          .map(
-                            (q) => ChoiceChip(
-                              label: Text(q),
-                              selected: _quality == q,
-                              onSelected: (_) => setState(() => _quality = q),
-                            ),
-                          )
-                          .toList(),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
-              PrimaryButton(
-                onPressed: durationError ? null : () => _saveLite(context),
-                icon: Icons.check_circle,
-                label: 'Guardar',
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Future<void> _pickDate() async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _selectedDate,
-      firstDate: DateTime.now().subtract(const Duration(days: 365)),
-      lastDate: DateTime.now().add(const Duration(days: 30)),
-      builder: (context, child) {
-        return MediaQuery(
-          data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
-          child: child!,
-        );
-      },
-    );
-    if (picked != null) {
-      setState(() => _selectedDate = picked);
-    }
-  }
-
-  Future<void> _pickTime({required bool isBed}) async {
-    final initial = isBed ? _bedTime : _wakeTime;
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: initial,
-      builder: (context, child) {
-        return MediaQuery(
-          data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
-          child: child!,
-        );
-      },
-    );
-    if (picked != null) {
-      setState(() {
-        if (isBed) {
-          _bedTime = picked;
-        } else {
-          _wakeTime = picked;
-        }
-      });
-    }
-  }
-
-  Future<void> _saveLite(BuildContext context) async {
-    final durationMinutes = _durationMinutes;
-    if (durationMinutes == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Duración inválida. Ajusta los horarios.')),
-      );
-      return;
-    }
-
-    final entry = SleepEntry(
-      id: const Uuid().v4(),
-      hours: durationMinutes / 60,
-      quality: _quality,
-      qualityScore: _qualityScore(_quality),
-      bedtime: formatMinutesToHHmm(_bedMinutes!),
-      wakeTime: formatMinutesToHHmm(_wakeMinutes!),
-      sleepDate: _formatDateIso(_selectedDate),
-      source: 'manual_lite',
-      tags: const [],
-    );
-
-    final repository = RepositoryScope.of(context);
-    await repository.saveSleep(entry, sync: true);
-
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Guardado: ${entry.hours.toStringAsFixed(1)} h')),
-    );
-    Navigator.pop(context);
-  }
-}
-
 class SleepProScreen extends StatefulWidget {
   const SleepProScreen({super.key});
 
@@ -339,7 +80,7 @@ class _SleepProScreenState extends State<SleepProScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.background,
         elevation: 0,
-        title: const Text('Sueño Pro'),
+        title: const Text('Sueño'),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -349,7 +90,7 @@ class _SleepProScreenState extends State<SleepProScreen> {
             children: [
               const _SleepHeader(
                 icon: Icons.self_improvement_rounded,
-                title: 'Modo profesional',
+                title: 'Registro completo',
                 description:
                     'Detalle completo: hábitos, calidad, estrés y energía al despertar.',
               ),
@@ -581,7 +322,7 @@ class _SleepProScreenState extends State<SleepProScreen> {
               PrimaryButton(
                 onPressed: durationError ? null : () => _savePro(context),
                 icon: Icons.save_alt,
-                label: 'Guardar Pro',
+                label: 'Guardar',
               ),
             ],
           ),
@@ -652,7 +393,7 @@ class _SleepProScreenState extends State<SleepProScreen> {
       screenUsageBeforeSleep: _usedScreensBeforeSleep,
       stressLevel: _stressLevel,
       wakeEnergy: _energyLevel,
-      source: 'manual_pro',
+      source: 'manual',
     );
 
     final repository = RepositoryScope.of(context);
@@ -660,7 +401,7 @@ class _SleepProScreenState extends State<SleepProScreen> {
 
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Sueño Pro guardado.')),
+      const SnackBar(content: Text('Sueño guardado.')),
     );
     Navigator.pop(context);
   }

@@ -441,14 +441,9 @@ class _QuickActions extends StatelessWidget {
             runSpacing: 12,
             children: [
               _ActionChip(
-                label: 'Registrar Lite',
-                icon: Icons.flash_on,
-                onTap: () => Navigator.pushNamed(context, '/sleep/lite'),
-              ),
-              _ActionChip(
-                label: 'Registrar Pro',
-                icon: Icons.insights,
-                onTap: () => Navigator.pushNamed(context, '/sleep/pro'),
+                label: 'Registrar sueño',
+                icon: Icons.nightlight_round,
+                onTap: () => Navigator.pushNamed(context, '/sleep'),
               ),
               _ActionChip(
                 label: 'Regularidad',

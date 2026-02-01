@@ -26,7 +26,6 @@ import 'features/sleep/presentation/sleep_history_screen.dart';
 import 'features/sleep/sleep_screens.dart';
 import 'features/streak/presentation/streak_screen.dart';
 import 'features/workout/pro/workout_pro_screen.dart';
-import 'features/workout/workout_screens.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -117,12 +116,9 @@ class FitApp extends StatelessWidget {
           '/home': (_) => const HomeSummaryScreen(),
           '/auth/login': (_) => const LoginScreen(),
           '/auth/signup': (_) => const SignupScreen(),
-          '/workout/lite': (_) => const WorkoutLiteScreen(),
-          '/workout/pro': (_) => const WorkoutProScreen(),
-          '/nutrition/lite': (_) => const NutritionLiteScreen(),
-          '/nutrition/pro': (_) => const NutritionProScreen(),
-          '/sleep/lite': (_) => const SleepLiteScreen(),
-          '/sleep/pro': (_) => const SleepProScreen(),
+          '/workout': (_) => const WorkoutProScreen(),
+          '/nutrition': (_) => const NutritionProScreen(),
+          '/sleep': (_) => const SleepProScreen(),
           '/sleep/overview': (_) => const SleepOverviewScreen(),
           '/sleep/history': (_) => const SleepHistoryScreen(),
           '/sleep/regularity': (_) => const SleepRegularityScreen(),

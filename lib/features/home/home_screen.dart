@@ -42,31 +42,23 @@ class HomeScreen extends StatelessWidget {
                 const SizedBox(height: 12),
                 _ModuleCard(
                   title: 'Entrenamiento',
-                  description:
-                      'Abre tu modo ${preferences.modePreference} para registrar sesiones.',
+                  description: 'Registra tus sesiones y revisa el progreso.',
                   icon: Icons.fitness_center_rounded,
-                  preferences: preferences,
-                  liteRoute: '/workout/lite',
-                  proRoute: '/workout/pro',
+                  route: '/workout',
                 ),
                 const SizedBox(height: 12),
                 _ModuleCard(
                   title: 'Nutrición',
-                  description:
-                      'Captura tus comidas con el modo que prefieras (rápido o detallado).',
+                  description: 'Captura tus comidas y controla tus macros.',
                   icon: Icons.restaurant_rounded,
-                  preferences: preferences,
-                  liteRoute: '/nutrition/lite',
-                  proRoute: '/nutrition/pro',
+                  route: '/nutrition',
                 ),
                 const SizedBox(height: 12),
                 _ModuleCard(
                   title: 'Sueño y recuperación',
                   description: 'Registra tu descanso y controla el estrés.',
                   icon: Icons.bedtime_rounded,
-                  preferences: preferences,
-                  liteRoute: '/sleep/lite',
-                  proRoute: '/sleep/pro',
+                  route: '/sleep',
                 ),
                 const SizedBox(height: 12),
                 _SecondaryActions(theme: theme),
@@ -128,27 +120,17 @@ class _ModuleCard extends StatelessWidget {
     required this.title,
     required this.description,
     required this.icon,
-    required this.preferences,
-    required this.liteRoute,
-    required this.proRoute,
+    required this.route,
   });
 
   final String title;
   final String description;
   final IconData icon;
-  final UserPreferences preferences;
-  final String liteRoute;
-  final String proRoute;
+  final String route;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final mode = preferences.modePreference.toLowerCase();
-    final isMixto = mode == 'mixto';
-    final prefersPro = mode == 'pro';
-    final primaryRoute = prefersPro ? proRoute : liteRoute;
-    final secondaryRoute = prefersPro ? liteRoute : proRoute;
-
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
@@ -166,43 +148,10 @@ class _ModuleCard extends StatelessWidget {
             const SizedBox(height: 8),
             Text(description, style: theme.textTheme.bodyMedium),
             const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                if (!isMixto)
-                  FilledButton.icon(
-                    onPressed: () => Navigator.of(context).pushNamed(primaryRoute),
-                    icon: Icon(prefersPro
-                        ? Icons.auto_graph_rounded
-                        : Icons.flash_on_rounded),
-                    label: Text(
-                      prefersPro ? 'Abrir modo Pro' : 'Abrir modo Lite',
-                    ),
-                  ),
-                if (!isMixto)
-                  TextButton.icon(
-                    onPressed: () => Navigator.of(context).pushNamed(secondaryRoute),
-                    icon: const Icon(Icons.swap_horiz_rounded),
-                    label: Text(
-                      prefersPro
-                          ? 'Usar versión Lite hoy'
-                          : 'Probar modo Pro',
-                    ),
-                  ),
-                if (isMixto) ...[
-                  FilledButton.icon(
-                    onPressed: () => Navigator.of(context).pushNamed(liteRoute),
-                    icon: const Icon(Icons.flash_on_rounded),
-                    label: const Text('Modo Lite'),
-                  ),
-                  FilledButton.tonalIcon(
-                    onPressed: () => Navigator.of(context).pushNamed(proRoute),
-                    icon: const Icon(Icons.auto_graph_rounded),
-                    label: const Text('Modo Pro'),
-                  ),
-                ],
-              ],
+            FilledButton.icon(
+              onPressed: () => Navigator.of(context).pushNamed(route),
+              icon: const Icon(Icons.arrow_forward_rounded),
+              label: const Text('Abrir módulo'),
             ),
           ],
         ),
