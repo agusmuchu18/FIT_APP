@@ -1,3 +1,6 @@
+import 'dart:math' as math;
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 
 import '../../../features/common/theme/app_colors.dart';
@@ -65,6 +68,8 @@ class _SpeedDialMenuState extends State<SpeedDialMenu>
     required String label,
     required IconData icon,
     required VoidCallback onTap,
+    required double width,
+    required double height,
   }) {
     final interval = staggerInterval(index, start: 0.0, end: 0.6, step: 0.1);
     final curved = CurvedAnimation(
@@ -79,7 +84,7 @@ class _SpeedDialMenuState extends State<SpeedDialMenu>
     );
 
     final opacity = Tween<double>(begin: 0, end: 1).animate(entrance);
-    final offset = Tween<Offset>(begin: const Offset(0, 0.1), end: Offset.zero)
+    final offset = Tween<Offset>(begin: const Offset(0, 0.08), end: Offset.zero)
         .animate(entrance);
     final scale = Tween<double>(begin: 0.98, end: 1.0).animate(entrance);
 
@@ -89,38 +94,46 @@ class _SpeedDialMenuState extends State<SpeedDialMenu>
         position: offset,
         child: ScaleTransition(
           scale: scale,
-          child: GestureDetector(
-            onTap: () {
-              widget.onClose();
-              onTap();
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-              decoration: BoxDecoration(
-                color: AppColors.card,
-                borderRadius: BorderRadius.circular(18),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.35),
-                    blurRadius: 14,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
-                border: Border.all(color: Colors.white.withOpacity(0.06)),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(icon, color: AppColors.accentSecondary, size: 18),
-                  const SizedBox(width: 10),
-                  Text(
-                    label,
-                    style: const TextStyle(
-                      color: AppColors.textPrimary,
-                      fontWeight: FontWeight.w600,
+          child: SizedBox(
+            width: width,
+            height: height,
+            child: GestureDetector(
+              onTap: () {
+                widget.onClose();
+                onTap();
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 18),
+                decoration: BoxDecoration(
+                  color: AppColors.card,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.35),
+                      blurRadius: 16,
+                      offset: const Offset(0, 8),
                     ),
-                  ),
-                ],
+                  ],
+                  border: Border.all(color: Colors.white.withOpacity(0.08)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(icon, color: AppColors.accentSecondary, size: 20),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -131,6 +144,14 @@ class _SpeedDialMenuState extends State<SpeedDialMenu>
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final menuWidth = math.min(screenWidth * 0.78, 420.0);
+    const menuHeight = 56.0;
+    final overlayOpacity = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeInOut,
+    );
+
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, child) {
@@ -143,10 +164,18 @@ class _SpeedDialMenuState extends State<SpeedDialMenu>
             child: Stack(
               children: [
                 Positioned.fill(
-                  child: GestureDetector(
-                    onTap: widget.onClose,
-                    behavior: HitTestBehavior.opaque,
-                    child: const SizedBox.expand(),
+                  child: FadeTransition(
+                    opacity: overlayOpacity,
+                    child: GestureDetector(
+                      onTap: widget.onClose,
+                      behavior: HitTestBehavior.opaque,
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+                        child: Container(
+                          color: Colors.black.withOpacity(0.3),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
                 Positioned(
@@ -161,20 +190,26 @@ class _SpeedDialMenuState extends State<SpeedDialMenu>
                         label: 'Registrar Entrenamiento',
                         icon: Icons.fitness_center_rounded,
                         onTap: widget.onWorkout,
+                        width: menuWidth,
+                        height: menuHeight,
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 14),
                       _buildMenuItem(
                         index: 1,
                         label: 'Registrar Comida',
                         icon: Icons.restaurant_rounded,
                         onTap: widget.onMeal,
+                        width: menuWidth,
+                        height: menuHeight,
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 14),
                       _buildMenuItem(
                         index: 2,
                         label: 'Registrar Sueño',
                         icon: Icons.nightlight_round,
                         onTap: widget.onSleep,
+                        width: menuWidth,
+                        height: menuHeight,
                       ),
                     ],
                   ),
