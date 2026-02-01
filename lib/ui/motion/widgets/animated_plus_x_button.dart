@@ -43,20 +43,18 @@ class _AnimatedPlusXButtonState extends State<AnimatedPlusXButton>
 
   late final Animation<double> _scale = TweenSequence<double>([
     TweenSequenceItem(
-      tween: Tween<double>(begin: 1.0, end: 1.06),
+      tween: Tween<double>(begin: 1.0, end: 1.06).chain(
+        CurveTween(curve: MotionConfig.pop),
+      ),
       weight: 55,
     ),
     TweenSequenceItem(
-      tween: Tween<double>(begin: 1.06, end: 1.0),
+      tween: Tween<double>(begin: 1.06, end: 1.0).chain(
+        CurveTween(curve: MotionConfig.exit),
+      ),
       weight: 45,
     ),
-  ]).animate(
-    CurvedAnimation(
-      parent: _controller,
-      curve: MotionConfig.pop,
-      reverseCurve: MotionConfig.exit,
-    ),
-  );
+  ]).animate(_controller);
 
   @override
   void didUpdateWidget(covariant AnimatedPlusXButton oldWidget) {
