@@ -1054,6 +1054,7 @@ class _MetricCard extends StatelessWidget {
     required this.value,
     required this.valueColor,
     required this.content,
+    required this.footerText,
     required this.trend,
     required this.onTap,
   });
@@ -1076,9 +1077,9 @@ class _MetricCard extends StatelessWidget {
       value: primaryValue,
       valueColor: const Color(0xFF2AF5D2),
       content: _TrainingChart(
-        secondaryValue: secondaryValue,
         distribution: distribution,
       ),
+      footerText: secondaryValue,
       trend: TrendChipData.fromDelta(difference.round()),
       onTap: onTap,
     );
@@ -1094,7 +1095,12 @@ class _MetricCard extends StatelessWidget {
       title: 'Alimentación',
       value: '${calories.toString()} kcal',
       valueColor: Colors.white,
-      content: _NutritionCharts(macros: macros),
+      content: _NutritionCharts(
+        macros: macros,
+        showLegend: false,
+      ),
+      footerText:
+          'Macros: C${macros.carbs}g · P${macros.protein}g · G${macros.fat}g',
       trend: TrendChipData(
         label: calories == 0
             ? 'Sin registros hoy'
@@ -1117,6 +1123,7 @@ class _MetricCard extends StatelessWidget {
   final String value;
   final Color valueColor;
   final Widget content;
+  final String footerText;
   final TrendChipData trend;
   final VoidCallback onTap;
 
@@ -1124,7 +1131,7 @@ class _MetricCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     return SummaryCard(
-      minHeight: 170,
+      minHeight: 184,
       padding: const EdgeInsets.all(18),
       onTap: onTap,
       glass: true,
@@ -1141,29 +1148,39 @@ class _MetricCard extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
           Text(
             value,
             style: textTheme.headlineSmall?.copyWith(
-              fontSize: 26,
+              fontSize: 24,
               fontWeight: FontWeight.w700,
               color: valueColor,
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
           SizedBox(
-            height: 26,
+            height: 24,
             child: Align(
               alignment: Alignment.centerLeft,
               child: _TrendChip(data: trend),
             ),
           ),
-          const SizedBox(height: 8),
+          const Spacer(),
           SizedBox(
-            height: 64,
+            height: 44,
             child: content,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            footerText,
+            style: textTheme.labelSmall?.copyWith(
+              color: const Color(0xFF9BA7B4),
+              fontWeight: FontWeight.w500,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
@@ -1173,11 +1190,9 @@ class _MetricCard extends StatelessWidget {
 
 class _TrainingChart extends StatelessWidget {
   const _TrainingChart({
-    required this.secondaryValue,
     required this.distribution,
   });
 
-  final String secondaryValue;
   final List<int> distribution;
 
   @override
@@ -1190,54 +1205,15 @@ class _TrainingChart extends StatelessWidget {
     );
     const maxHeight = 40.0;
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        const labelHeight = 14.0;
-        const spacing = 6.0;
-        final availableHeight = constraints.maxHeight;
-        final shouldShowLabel = availableHeight >= (labelHeight + spacing + 24.0);
-        final chartHeight = math.max(
-          24.0,
-          availableHeight -
-              (shouldShowLabel ? labelHeight + spacing : 0.0),
-        );
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.end,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(
-              height: chartHeight,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: List.generate(effectiveDistribution.length, (index) {
-                  final value = effectiveDistribution[index];
-                  final normalized =
-                      maxMinutes == 0 ? 0.2 : (value / maxMinutes).clamp(0.2, 1.0);
-                  final barHeight = math.min(maxHeight, chartHeight) * normalized;
-                  return _MiniBar(height: barHeight);
-                }),
-              ),
-            ),
-            if (shouldShowLabel) ...[
-              const SizedBox(height: spacing),
-              SizedBox(
-                height: labelHeight,
-                child: Text(
-                  secondaryValue,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF9BA7B4),
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
-              ),
-            ],
-          ],
-        );
-      },
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: List.generate(effectiveDistribution.length, (index) {
+        final value = effectiveDistribution[index];
+        final normalized =
+            maxMinutes == 0 ? 0.2 : (value / maxMinutes).clamp(0.2, 1.0);
+        final barHeight = maxHeight * normalized;
+        return _MiniBar(height: barHeight);
+      }),
     );
   }
 }
@@ -1334,9 +1310,13 @@ class _MiniBar extends StatelessWidget {
 }
 
 class _NutritionCharts extends StatelessWidget {
-  const _NutritionCharts({required this.macros});
+  const _NutritionCharts({
+    required this.macros,
+    this.showLegend = true,
+  });
 
   final Macros macros;
+  final bool showLegend;
 
   @override
   Widget build(BuildContext context) {
@@ -1351,9 +1331,49 @@ class _NutritionCharts extends StatelessWidget {
     final proteinPct = (proteinRatio * 100).round();
     final fatPct = (fatRatio * 100).round();
 
+    const barHeight = 11.0;
+    if (!showLegend) {
+      return SizedBox(
+        height: barHeight,
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(999),
+            color: Colors.white.withOpacity(0.04),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                flex: carbsFlex,
+                child: Container(
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFFFD438),
+                    borderRadius:
+                        BorderRadius.horizontal(left: Radius.circular(999)),
+                  ),
+                ),
+              ),
+              Expanded(
+                flex: proteinFlex,
+                child: Container(color: const Color(0xFF6D7B44)),
+              ),
+              Expanded(
+                flex: fatFlex,
+                child: Container(
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF3FA7FF),
+                    borderRadius:
+                        BorderRadius.horizontal(right: Radius.circular(999)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return LayoutBuilder(
       builder: (context, constraints) {
-        const barHeight = 11.0;
         const spacing = 8.0;
         final legendHeight =
             math.max(0.0, constraints.maxHeight - barHeight - spacing);
