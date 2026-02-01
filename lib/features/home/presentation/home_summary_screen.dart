@@ -1,8 +1,6 @@
 import 'dart:math' as math;
 import 'dart:ui';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/domain/entities.dart';
@@ -271,7 +269,6 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
     const verticalSectionSpacing = 20.0;
 
     return Scaffold(
-      floatingActionButton: _QuickActionsFab(onRefresh: _refreshSummary),
       body: Stack(
         children: [
           const _HomeBackground(),
@@ -375,12 +372,6 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
                               _refreshSummary();
                             },
                           ),
-                          const SizedBox(height: verticalSectionSpacing),
-                          _GroupsCard(
-                            onTap: () {
-                              Navigator.pushNamed(context, '/groups/list');
-                            },
-                          ),
                           const SizedBox(height: 80),
                         ],
                       ),
@@ -449,127 +440,6 @@ class _HomeSummaryData {
   final double regularityWeekDelta;
   final GoalInsightData goalInsight;
   final bool hasUserGoal;
-}
-
-class _QuickActionsFab extends StatefulWidget {
-  const _QuickActionsFab({required this.onRefresh});
-
-  final VoidCallback onRefresh;
-
-  @override
-  State<_QuickActionsFab> createState() => _QuickActionsFabState();
-}
-
-class _QuickActionsFabState extends State<_QuickActionsFab> {
-  Future<void> _testFirebaseWrite(BuildContext context) async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-
-    if (uid == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Tenés que iniciar sesión para guardar en Firebase.'),
-        ),
-      );
-      return;
-    }
-
-    try {
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(uid)
-          .collection('debug')
-          .add({
-        'createdAt': FieldValue.serverTimestamp(),
-        'from': 'home_summary',
-        'note': 'test write',
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('✅ Guardado OK en Firestore (users/{uid}/debug)'),
-        ),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('❌ Error guardando en Firestore: $e')),
-      );
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // Guardamos el context de la pantalla (no el del bottom sheet),
-    // porque el del bottom sheet se destruye cuando hacemos pop().
-    final rootContext = context;
-
-    return FloatingActionButton(
-      backgroundColor: const Color(0xFF1D6C6F),
-      onPressed: () {
-        showModalBottomSheet(
-          context: context,
-          backgroundColor: AppColors.card,
-          shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          builder: (context) {
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: 40,
-                    height: 4,
-                    margin: const EdgeInsets.only(bottom: 16),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                  ),
-                  _FabAction(
-                    icon: Icons.fitness_center_rounded,
-                    label: 'Registrar actividad',
-                    onTap: () async {
-                      Navigator.pop(context);
-                      await Navigator.pushNamed(rootContext, '/workout');
-                      widget.onRefresh();
-                    },
-                  ),
-                  _FabAction(
-                    icon: Icons.auto_graph_rounded,
-                    label: 'Ver estadísticas',
-                    onTap: () async {
-                      Navigator.pop(context);
-                      await Navigator.pushNamed(rootContext, '/analytics/overview');
-                      widget.onRefresh();
-                    },
-                  ),
-                  _FabAction(
-                    icon: Icons.cloud_done_rounded,
-                    label: 'Probar guardado en Firebase',
-                    onTap: () async {
-                      Navigator.pop(context);
-                      await _testFirebaseWrite(rootContext);
-                    },
-                  ),
-                  _FabAction(
-                    icon: Icons.group_rounded,
-                    label: 'Ir a grupos',
-                    onTap: () async {
-                      Navigator.pop(context);
-                      await Navigator.pushNamed(rootContext, '/groups/list');
-                    },
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-      child: const Icon(Icons.add_rounded),
-    );
-  }
 }
 
 class _HomeBackground extends StatelessWidget {
@@ -697,41 +567,6 @@ class _HeaderSection extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 14),
-          _HeaderChipsRow(data: data),
-        ],
-      ),
-    );
-  }
-}
-
-class _HeaderChipsRow extends StatelessWidget {
-  const _HeaderChipsRow({required this.data});
-
-  final _HomeSummaryData data;
-
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          _StatPill(
-            label: 'Racha',
-            value: '${data.activeStreak} d',
-            icon: Icons.local_fire_department_rounded,
-          ),
-          const SizedBox(width: 10),
-          _StatPill(
-            label: 'Entreno',
-            value: '${data.trainingToday} min',
-            icon: Icons.timer_rounded,
-          ),
-          const SizedBox(width: 10),
-          _StatPill(
-            label: 'Calorías',
-            value: '${data.caloriesToday} kcal',
-            icon: Icons.bolt_rounded,
-          ),
         ],
       ),
     );
@@ -776,63 +611,6 @@ class _GlassDateChip extends StatelessWidget {
   }
 }
 
-class _StatPill extends StatelessWidget {
-  const _StatPill({
-    required this.label,
-    required this.value,
-    required this.icon,
-  });
-
-  final String label;
-  final String value;
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(14),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.06),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: Colors.white.withOpacity(0.12)),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, color: Colors.white, size: 18),
-              const SizedBox(width: 8),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label,
-                    style: const TextStyle(
-                      color: AppColors.textMuted,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  Text(
-                    value,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 class _GoalInsightCard extends StatelessWidget {
   const _GoalInsightCard({required this.data});
@@ -1237,45 +1015,6 @@ class _BreathingIconState extends State<_BreathingIcon>
         );
       },
       child: widget.child,
-    );
-  }
-}
-
-class _FabAction extends StatelessWidget {
-  const _FabAction({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: Container(
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.06),
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: Icon(
-          icon,
-          color: Colors.white,
-        ),
-      ),
-      title: Text(
-        label,
-        style: textTheme.titleMedium?.copyWith(
-          color: Colors.white,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-      onTap: onTap,
     );
   }
 }
@@ -2036,70 +1775,6 @@ class _SleepMetricsCard extends StatelessWidget {
                 ),
               ),
             ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _GroupsCard extends StatelessWidget {
-  const _GroupsCard({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return SummaryCard(
-      minHeight: 150,
-      padding: const EdgeInsets.all(18),
-      onTap: onTap,
-      glass: true,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: const Color(0x1A7CF4FF),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: const Icon(
-              Icons.group_rounded,
-              color: Color(0xFF7CF4FF),
-              size: 30,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Grupos',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
-                      ) ??
-                      const TextStyle(fontSize: 18, color: Colors.white),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'Gestiona y analiza tus grupos de usuarios',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: const Color(0xFF9BA7B4),
-                        fontWeight: FontWeight.w500,
-                      ) ??
-                      const TextStyle(fontSize: 14, color: Color(0xFF9BA7B4)),
-                ),
-              ],
-            ),
-          ),
-          const Icon(
-            Icons.arrow_forward_ios_rounded,
-            color: Color(0xFF6F7C93),
-            size: 18,
           ),
         ],
       ),
