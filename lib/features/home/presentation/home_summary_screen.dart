@@ -1138,8 +1138,10 @@ class _MetricCard extends StatelessWidget {
               color: Colors.white,
               fontWeight: FontWeight.w700,
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Text(
             value,
             style: textTheme.headlineSmall?.copyWith(
@@ -1147,17 +1149,19 @@ class _MetricCard extends StatelessWidget {
               fontWeight: FontWeight.w700,
               color: valueColor,
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _TrendChip(data: trend),
-            ],
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 26,
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: _TrendChip(data: trend),
+            ),
           ),
-          const SizedBox(height: 12),
-          content,
+          const SizedBox(height: 8),
+          Expanded(child: content),
         ],
       ),
     );
@@ -1183,32 +1187,49 @@ class _TrainingChart extends StatelessWidget {
     );
     const maxHeight = 40.0;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          height: 44,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: List.generate(effectiveDistribution.length, (index) {
-              final value = effectiveDistribution[index];
-              final normalized =
-                  maxMinutes == 0 ? 0.2 : (value / maxMinutes).clamp(0.2, 1.0);
-              final barHeight = maxHeight * normalized;
-              return _MiniBar(height: barHeight);
-            }),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          secondaryValue,
-          style: const TextStyle(
-            fontSize: 12,
-            color: Color(0xFF9BA7B4),
-            fontWeight: FontWeight.w400,
-          ),
-        ),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const labelHeight = 14.0;
+        const spacing = 6.0;
+        final availableHeight = constraints.maxHeight;
+        final chartHeight = math.max(
+          24.0,
+          availableHeight - labelHeight - spacing,
+        );
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            SizedBox(
+              height: chartHeight,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: List.generate(effectiveDistribution.length, (index) {
+                  final value = effectiveDistribution[index];
+                  final normalized =
+                      maxMinutes == 0 ? 0.2 : (value / maxMinutes).clamp(0.2, 1.0);
+                  final barHeight = math.min(maxHeight, chartHeight) * normalized;
+                  return _MiniBar(height: barHeight);
+                }),
+              ),
+            ),
+            const SizedBox(height: spacing),
+            SizedBox(
+              height: labelHeight,
+              child: Text(
+                secondaryValue,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: Color(0xFF9BA7B4),
+                  fontWeight: FontWeight.w400,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -1274,7 +1295,12 @@ class _TrendChip extends StatelessWidget {
         color: _background(context),
         borderRadius: BorderRadius.circular(999),
       ),
-      child: Text(data.label, style: textStyle),
+      child: Text(
+        data.label,
+        style: textStyle,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
     );
   }
 }
@@ -1317,70 +1343,90 @@ class _NutritionCharts extends StatelessWidget {
     final proteinPct = (proteinRatio * 100).round();
     final fatPct = (fatRatio * 100).round();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          height: 11,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(999),
-            color: Colors.white.withOpacity(0.04),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                flex: carbsFlex,
-                child: Container(
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFFFD438),
-                    borderRadius:
-                        BorderRadius.horizontal(left: Radius.circular(999)),
-                  ),
-                ),
-              ),
-              Expanded(
-                flex: proteinFlex,
-                child: Container(color: const Color(0xFF6D7B44)),
-              ),
-              Expanded(
-                flex: fatFlex,
-                child: Container(
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF3FA7FF),
-                    borderRadius:
-                        BorderRadius.horizontal(right: Radius.circular(999)),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
-        Wrap(
-          spacing: 10,
-          runSpacing: 6,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const barHeight = 11.0;
+        const spacing = 8.0;
+        final legendHeight =
+            math.max(0.0, constraints.maxHeight - barHeight - spacing);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _MacroLegend(
-              label: 'Carbohidratos',
-              grams: macros.carbs,
-              percent: carbsPct,
-              color: const Color(0xFFFFD438),
+            SizedBox(
+              height: barHeight,
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(999),
+                  color: Colors.white.withOpacity(0.04),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      flex: carbsFlex,
+                      child: Container(
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFFFD438),
+                          borderRadius:
+                              BorderRadius.horizontal(left: Radius.circular(999)),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      flex: proteinFlex,
+                      child: Container(color: const Color(0xFF6D7B44)),
+                    ),
+                    Expanded(
+                      flex: fatFlex,
+                      child: Container(
+                        decoration: const BoxDecoration(
+                          color: Color(0xFF3FA7FF),
+                          borderRadius:
+                              BorderRadius.horizontal(right: Radius.circular(999)),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
-            _MacroLegend(
-              label: 'Proteína',
-              grams: macros.protein,
-              percent: proteinPct,
-              color: const Color(0xFF6D7B44),
-            ),
-            _MacroLegend(
-              label: 'Grasas',
-              grams: macros.fat,
-              percent: fatPct,
-              color: const Color(0xFF3FA7FF),
+            const SizedBox(height: spacing),
+            SizedBox(
+              height: legendHeight,
+              child: Align(
+                alignment: Alignment.topLeft,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.topLeft,
+                  child: Wrap(
+                    spacing: 10,
+                    runSpacing: 6,
+                    children: [
+                      _MacroLegend(
+                        label: 'Carbohidratos',
+                        grams: macros.carbs,
+                        percent: carbsPct,
+                        color: const Color(0xFFFFD438),
+                      ),
+                      _MacroLegend(
+                        label: 'Proteína',
+                        grams: macros.protein,
+                        percent: proteinPct,
+                        color: const Color(0xFF6D7B44),
+                      ),
+                      _MacroLegend(
+                        label: 'Grasas',
+                        grams: macros.fat,
+                        percent: fatPct,
+                        color: const Color(0xFF3FA7FF),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
           ],
-        ),
-      ],
+        );
+      },
     );
   }
 }
@@ -1419,6 +1465,8 @@ class _MacroLegend extends StatelessWidget {
             color: Color(0xFF9BA7B4),
             fontWeight: FontWeight.w500,
           ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
       ],
     );
