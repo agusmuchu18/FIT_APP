@@ -1139,51 +1139,61 @@ class _MetricCard extends StatelessWidget {
       padding: kHomeMiniCardPadding,
       onTap: onTap,
       glass: true,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: textTheme.titleMedium?.copyWith(
-              fontSize: 17,
-              color: Colors.white,
-              fontWeight: FontWeight.w700,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: textTheme.headlineSmall?.copyWith(
-              fontSize: 24,
-              fontWeight: FontWeight.w700,
-              color: valueColor,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 4),
-          SizedBox(
-            height: 24,
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: _TrendChip(data: trend),
-            ),
-          ),
-          const Spacer(),
-          SizedBox(height: kHomeMiniCardChartHeight, child: content),
-          const SizedBox(height: 4),
-          Text(
-            footerText,
-            style: textTheme.labelSmall?.copyWith(
-              color: const Color(0xFF9BA7B4),
-              fontWeight: FontWeight.w500,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final verticalSpacing = math.min(4.0, constraints.maxHeight * 0.02);
+          final chartHeight = math.min(
+            kHomeMiniCardChartHeight,
+            constraints.maxHeight * 0.18,
+          );
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: textTheme.titleMedium?.copyWith(
+                  fontSize: 17,
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              SizedBox(height: verticalSpacing),
+              Text(
+                value,
+                style: textTheme.headlineSmall?.copyWith(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w700,
+                  color: valueColor,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              SizedBox(height: verticalSpacing),
+              SizedBox(
+                height: 24,
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: _TrendChip(data: trend),
+                ),
+              ),
+              const Spacer(),
+              SizedBox(height: chartHeight, child: content),
+              SizedBox(height: verticalSpacing),
+              Text(
+                footerText,
+                style: textTheme.labelSmall?.copyWith(
+                  color: const Color(0xFF9BA7B4),
+                  fontWeight: FontWeight.w500,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          );
+        },
       ),
     );
   }
