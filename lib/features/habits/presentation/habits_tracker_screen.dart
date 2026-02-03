@@ -36,7 +36,7 @@ class _HabitsTrackerScreenState extends State<HabitsTrackerScreen> {
   ];
 
   final Map<String, bool> _completionState = {};
-  late final Future<Box<String>> _habitsBoxFuture;
+  late Future<Box<String>> _habitsBoxFuture;
 
   int _selectedDayIndex = 6;
 
@@ -339,6 +339,13 @@ class _HabitsTrackerScreenState extends State<HabitsTrackerScreen> {
           future: _habitsBoxFuture,
           builder: (context, snapshot) {
             if (!snapshot.hasData) {
+              if (snapshot.hasError) {
+                return _HabitsErrorState(onRetry: () {
+                  setState(() {
+                    _habitsBoxFuture = Hive.openBox<String>(_habitsBoxName);
+                  });
+                });
+              }
               return const Center(child: CircularProgressIndicator());
             }
             final box = snapshot.data!;
@@ -442,60 +449,70 @@ class _HabitsTrackerScreenState extends State<HabitsTrackerScreen> {
                               borderRadius: BorderRadius.circular(22),
                               border: Border.all(color: Colors.white.withOpacity(0.04)),
                             ),
-                            child: ListView.separated(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 18,
-                                vertical: 16,
-                              ),
-                              itemBuilder: (context, index) {
-                                final habit = habits[index];
-                                final accent = _accentFor(habit.id);
-                                final completed = _completionState[habit.id] ?? false;
-                                return Dismissible(
-                                  key: ValueKey(habit.id),
-                                  direction: DismissDirection.horizontal,
-                                  confirmDismiss: (direction) async {
-                                    if (direction == DismissDirection.startToEnd) {
-                                      setState(
-                                        () => _completionState[habit.id] = !completed,
-                                      );
-                                      HapticFeedback.lightImpact();
-                                      return false;
-                                    }
-                                    if (direction == DismissDirection.endToStart) {
-                                      _showHabitActions(box, habit);
-                                      return false;
-                                    }
-                                    return false;
-                                  },
-                                  background: _SwipeBackground(
-                                    color: const Color(0xFF19C37D),
-                                    icon: Icons.check_rounded,
-                                    alignment: Alignment.centerLeft,
-                                  ),
-                                  secondaryBackground: _SwipeBackground(
-                                    color: const Color(0xFF4420B5),
-                                    icon: Icons.close_rounded,
-                                    alignment: Alignment.centerRight,
-                                  ),
-                                  child: GestureDetector(
-                                    onTap: () => _showHabitEditor(box: box, habit: habit),
-                                    onLongPress: () => _showHabitActions(box, habit),
-                                    child: _HabitRow(
-                                      habit: habit,
-                                      icon: accent.icon,
-                                      iconColor: accent.color,
-                                      completed: completed,
+                            child: habits.isEmpty
+                                ? const _HabitsEmptyState()
+                                : ListView.separated(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 18,
+                                      vertical: 16,
                                     ),
+                                    itemBuilder: (context, index) {
+                                      final habit = habits[index];
+                                      final accent = _accentFor(habit.id);
+                                      final completed =
+                                          _completionState[habit.id] ?? false;
+                                      return Dismissible(
+                                        key: ValueKey(habit.id),
+                                        direction: DismissDirection.horizontal,
+                                        confirmDismiss: (direction) async {
+                                          if (direction ==
+                                              DismissDirection.startToEnd) {
+                                            setState(
+                                              () => _completionState[habit.id] =
+                                                  !completed,
+                                            );
+                                            HapticFeedback.lightImpact();
+                                            return false;
+                                          }
+                                          if (direction ==
+                                              DismissDirection.endToStart) {
+                                            _showHabitActions(box, habit);
+                                            return false;
+                                          }
+                                          return false;
+                                        },
+                                        background: _SwipeBackground(
+                                          color: const Color(0xFF19C37D),
+                                          icon: Icons.check_rounded,
+                                          alignment: Alignment.centerLeft,
+                                        ),
+                                        secondaryBackground: _SwipeBackground(
+                                          color: const Color(0xFF4420B5),
+                                          icon: Icons.close_rounded,
+                                          alignment: Alignment.centerRight,
+                                        ),
+                                        child: GestureDetector(
+                                          onTap: () => _showHabitEditor(
+                                            box: box,
+                                            habit: habit,
+                                          ),
+                                          onLongPress: () =>
+                                              _showHabitActions(box, habit),
+                                          child: _HabitRow(
+                                            habit: habit,
+                                            icon: accent.icon,
+                                            iconColor: accent.color,
+                                            completed: completed,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    separatorBuilder: (_, __) => Divider(
+                                      height: 22,
+                                      color: Colors.white.withOpacity(0.06),
+                                    ),
+                                    itemCount: habits.length,
                                   ),
-                                );
-                              },
-                              separatorBuilder: (_, __) => Divider(
-                                height: 22,
-                                color: Colors.white.withOpacity(0.06),
-                              ),
-                              itemCount: habits.length,
-                            ),
                           ),
                         ),
                       ),
@@ -814,6 +831,86 @@ class _ActionSheetItem extends StatelessWidget {
         ),
       ),
       onTap: onTap,
+    );
+  }
+}
+
+class _HabitsEmptyState extends StatelessWidget {
+  const _HabitsEmptyState();
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.auto_awesome_rounded,
+                color: AppColors.textMuted, size: 44),
+            const SizedBox(height: 16),
+            Text(
+              'Aún no tienes hábitos',
+              textAlign: TextAlign.center,
+              style: textTheme.titleMedium?.copyWith(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Crea tu primer hábito para empezar a hacer seguimiento.',
+              textAlign: TextAlign.center,
+              style: textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HabitsErrorState extends StatelessWidget {
+  const _HabitsErrorState({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.cloud_off_rounded,
+                color: AppColors.textMuted, size: 44),
+            const SizedBox(height: 16),
+            Text(
+              'No pudimos cargar tus hábitos',
+              textAlign: TextAlign.center,
+              style: textTheme.titleMedium?.copyWith(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Inténtalo de nuevo para continuar.',
+              textAlign: TextAlign.center,
+              style: textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
+            ),
+            const SizedBox(height: 18),
+            OutlinedButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('Reintentar'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
