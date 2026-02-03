@@ -61,21 +61,29 @@ class _MainShellState extends State<MainShell> {
       backgroundColor: AppColors.background,
       extendBody: true,
       body: Stack(
+        fit: StackFit.expand,
         children: [
-          Padding(
-            padding: EdgeInsets.only(bottom: contentBottomPadding),
-            child: IndexedStack(
-              index: _currentIndex,
-              children: _pages,
+          Positioned.fill(
+            child: Padding(
+              padding: EdgeInsets.only(bottom: contentBottomPadding),
+              child: IndexedStack(
+                index: _currentIndex,
+                children: _pages,
+              ),
             ),
           ),
-          SpeedDialMenu(
-            isOpen: _menuOpen,
-            bottomOffset: _barHeight + bottomInset + 12,
-            onClose: () => setState(() => _menuOpen = false),
-            onWorkout: () => _navigateTo('/workout'),
-            onMeal: () => _navigateTo('/nutrition'),
-            onSleep: () => _navigateTo('/sleep'),
+          Positioned.fill(
+            child: IgnorePointer(
+              ignoring: !_menuOpen,
+              child: SpeedDialMenu(
+                isOpen: _menuOpen,
+                bottomOffset: _barHeight + bottomInset + 12,
+                onClose: () => setState(() => _menuOpen = false),
+                onWorkout: () => _navigateTo('/workout'),
+                onMeal: () => _navigateTo('/nutrition'),
+                onSleep: () => _navigateTo('/sleep'),
+              ),
+            ),
           ),
         ],
       ),
