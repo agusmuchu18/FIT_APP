@@ -159,6 +159,7 @@ class _SpeedDialMenuState extends State<SpeedDialMenu>
         return Material(
           color: Colors.transparent,
           child: Stack(
+            fit: StackFit.expand,
             children: [
               FadeTransition(
                 opacity: overlayOpacity,
