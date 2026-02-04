@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
+import '../../core/debug/debug_flags.dart';
 import '../common/theme/app_colors.dart';
 import '../groups/presentation/pages/groups_list_screen.dart';
 import '../habits/presentation/habits_tracker_screen.dart';
@@ -30,6 +31,20 @@ class _MainShellState extends State<MainShell> {
     ProfileScreen(),
   ];
 
+  static const List<String> _tabLabels = [
+    'home',
+    'habits',
+    'groups',
+    'profile',
+  ];
+
+  static const List<Color> _debugColors = [
+    Color(0xFF1E3A8A),
+    Color(0xFF5B21B6),
+    Color(0xFF15803D),
+    Color(0xFFFACC15),
+  ];
+
   void _selectTab(int index) {
     setState(() {
       _currentIndex = index;
@@ -52,10 +67,49 @@ class _MainShellState extends State<MainShell> {
     await Navigator.of(context).pushNamed(route);
   }
 
+  Widget _wrapDebugLayer({
+    required Widget child,
+    required String label,
+    required Color color,
+  }) {
+    if (!DEBUG_UI) return child;
+    return Stack(
+      children: [
+        ColoredBox(color: color),
+        Positioned.fill(
+          child: Opacity(
+            opacity: 0.15,
+            child: child,
+          ),
+        ),
+        Center(
+          child: Text(
+            '$label LAYER OK',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.w800,
+              color: Colors.white,
+              letterSpacing: 1.2,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).padding.bottom;
     final contentBottomPadding = _barHeight + bottomInset + 12;
+    final pages = List<Widget>.generate(
+      _pages.length,
+      (index) => _wrapDebugLayer(
+        child: _pages[index],
+        label: _tabLabels[index].toUpperCase(),
+        color: _debugColors[index],
+      ),
+    );
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -68,7 +122,7 @@ class _MainShellState extends State<MainShell> {
               padding: EdgeInsets.only(bottom: contentBottomPadding),
               child: IndexedStack(
                 index: _currentIndex,
-                children: _pages,
+                children: pages,
               ),
             ),
           ),
@@ -85,6 +139,27 @@ class _MainShellState extends State<MainShell> {
               ),
             ),
           ),
+          if (DEBUG_UI)
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: SafeArea(
+                bottom: false,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  color: Colors.black.withOpacity(0.75),
+                  child: Text(
+                    'DEBUG_UI ON | tab=${_tabLabels[_currentIndex]} | menuOpen=$_menuOpen',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
       bottomNavigationBar: Material(

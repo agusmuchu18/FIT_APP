@@ -160,55 +160,54 @@ class _SpeedDialMenuState extends State<SpeedDialMenu>
           color: Colors.transparent,
           child: Stack(
             children: [
-              Positioned.fill(
-                child: FadeTransition(
-                  opacity: overlayOpacity,
-                  child: GestureDetector(
-                    onTap: widget.onClose,
-                    behavior: HitTestBehavior.opaque,
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
-                      child: Container(
-                        color: Colors.black.withOpacity(0.3),
-                      ),
+              FadeTransition(
+                opacity: overlayOpacity,
+                child: GestureDetector(
+                  onTap: widget.onClose,
+                  behavior: HitTestBehavior.opaque,
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+                    child: Container(
+                      color: Colors.black.withOpacity(0.3),
                     ),
                   ),
                 ),
               ),
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: widget.bottomOffset,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _buildMenuItem(
-                      index: 0,
-                      label: 'Registrar Entrenamiento',
-                      icon: Icons.fitness_center_rounded,
-                      onTap: widget.onWorkout,
-                      width: menuWidth,
-                      height: menuHeight,
-                    ),
-                    const SizedBox(height: 14),
-                    _buildMenuItem(
-                      index: 1,
-                      label: 'Registrar Comida',
-                      icon: Icons.restaurant_rounded,
-                      onTap: widget.onMeal,
-                      width: menuWidth,
-                      height: menuHeight,
-                    ),
-                    const SizedBox(height: 14),
-                    _buildMenuItem(
-                      index: 2,
-                      label: 'Registrar Sueño',
-                      icon: Icons.nightlight_round,
-                      onTap: widget.onSleep,
-                      width: menuWidth,
-                      height: menuHeight,
-                    ),
-                  ],
+              Align(
+                alignment: Alignment.bottomCenter,
+                child: Padding(
+                  padding: EdgeInsets.only(bottom: widget.bottomOffset),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _buildMenuItem(
+                        index: 0,
+                        label: 'Registrar Entrenamiento',
+                        icon: Icons.fitness_center_rounded,
+                        onTap: widget.onWorkout,
+                        width: menuWidth,
+                        height: menuHeight,
+                      ),
+                      const SizedBox(height: 14),
+                      _buildMenuItem(
+                        index: 1,
+                        label: 'Registrar Comida',
+                        icon: Icons.restaurant_rounded,
+                        onTap: widget.onMeal,
+                        width: menuWidth,
+                        height: menuHeight,
+                      ),
+                      const SizedBox(height: 14),
+                      _buildMenuItem(
+                        index: 2,
+                        label: 'Registrar Sueño',
+                        icon: Icons.nightlight_round,
+                        onTap: widget.onSleep,
+                        width: menuWidth,
+                        height: menuHeight,
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
