@@ -7,52 +7,6 @@ class ProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    void showComingSoon(String title) {
-      showDialog<void>(
-        context: context,
-        builder: (dialogContext) {
-          return AlertDialog(
-            title: Text(title),
-            content: const Text('Esta opción estará disponible pronto.'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(dialogContext).pop(),
-                child: const Text('Entendido'),
-              ),
-            ],
-          );
-        },
-      );
-    }
-
-    Future<void> confirmLogout() async {
-      final shouldLogout = await showDialog<bool>(
-        context: context,
-        builder: (dialogContext) {
-          return AlertDialog(
-            title: const Text('Cerrar sesión'),
-            content: const Text('¿Seguro que quieres salir de tu cuenta?'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(dialogContext).pop(false),
-                child: const Text('Cancelar'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(dialogContext).pop(true),
-                child: const Text('Salir'),
-              ),
-            ],
-          );
-        },
-      );
-
-      if (shouldLogout ?? false) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Sesión cerrada correctamente.')),
-        );
-      }
-    }
-
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -118,23 +72,19 @@ class ProfileScreen extends StatelessWidget {
             _ProfileOption(
               icon: Icons.settings_rounded,
               label: 'Ajustes',
-              onTap: () => showComingSoon('Ajustes'),
             ),
             _ProfileOption(
               icon: Icons.flag_rounded,
               label: 'Objetivos',
-              onTap: () => showComingSoon('Objetivos'),
             ),
             _ProfileOption(
               icon: Icons.straighten_rounded,
               label: 'Unidades',
-              onTap: () => showComingSoon('Unidades'),
             ),
             _ProfileOption(
               icon: Icons.logout_rounded,
               label: 'Cerrar sesión',
               danger: true,
-              onTap: confirmLogout,
             ),
           ],
         ),
@@ -147,50 +97,39 @@ class _ProfileOption extends StatelessWidget {
   const _ProfileOption({
     required this.icon,
     required this.label,
-    required this.onTap,
     this.danger = false,
   });
 
   final IconData icon;
   final String label;
   final bool danger;
-  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final color = danger ? AppColors.danger : AppColors.textSecondary;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Material(
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
         color: AppColors.card,
         borderRadius: BorderRadius.circular(16),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(16),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.white.withOpacity(0.06)),
-            ),
-            child: Row(
-              children: [
-                Icon(icon, color: color),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    label,
-                    style: TextStyle(
-                      color: danger ? AppColors.danger : AppColors.textPrimary,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                Icon(Icons.chevron_right_rounded, color: color),
-              ],
+        border: Border.all(color: Colors.white.withOpacity(0.06)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: color),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                color: danger ? AppColors.danger : AppColors.textPrimary,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
-        ),
+          Icon(Icons.chevron_right_rounded, color: color),
+        ],
       ),
     );
   }

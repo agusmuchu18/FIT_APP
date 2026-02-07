@@ -40,7 +40,9 @@ class _SpeedDialMenuState extends State<SpeedDialMenu>
   @override
   void initState() {
     super.initState();
-    _controller.value = widget.isOpen ? 1.0 : 0.0;
+    if (widget.isOpen) {
+      _controller.value = 1;
+    }
   }
 
   @override
@@ -153,31 +155,33 @@ class _SpeedDialMenuState extends State<SpeedDialMenu>
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, child) {
-        if (!widget.isOpen && _controller.isDismissed) {
+        if (_controller.value == 0) {
           return const SizedBox.shrink();
         }
-        return Material(
-          color: Colors.transparent,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              FadeTransition(
-                opacity: overlayOpacity,
-                child: GestureDetector(
-                  onTap: widget.onClose,
-                  behavior: HitTestBehavior.opaque,
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
-                    child: Container(
-                      color: Colors.black.withOpacity(0.3),
+        return Positioned.fill(
+          child: Material(
+            color: Colors.transparent,
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: FadeTransition(
+                    opacity: overlayOpacity,
+                    child: GestureDetector(
+                      onTap: widget.onClose,
+                      behavior: HitTestBehavior.opaque,
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+                        child: Container(
+                          color: Colors.black.withOpacity(0.3),
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              ),
-              Align(
-                alignment: Alignment.bottomCenter,
-                child: Padding(
-                  padding: EdgeInsets.only(bottom: widget.bottomOffset),
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: widget.bottomOffset,
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -210,8 +214,8 @@ class _SpeedDialMenuState extends State<SpeedDialMenu>
                     ],
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },

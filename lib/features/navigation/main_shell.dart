@@ -1,8 +1,5 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 
-import '../../core/debug/debug_flags.dart';
 import '../common/theme/app_colors.dart';
 import '../groups/presentation/pages/groups_list_screen.dart';
 import '../habits/presentation/habits_tracker_screen.dart';
@@ -24,25 +21,11 @@ class _MainShellState extends State<MainShell> {
   int _currentIndex = 0;
   bool _menuOpen = false;
 
-  final List<Widget> _basePages = const [
+  final List<Widget> _pages = const [
     HomeSummaryScreen(),
     HabitsTrackerScreen(),
     GroupsListScreen(),
     ProfileScreen(),
-  ];
-
-  static const List<String> _tabLabels = [
-    'home',
-    'habits',
-    'groups',
-    'profile',
-  ];
-
-  static const List<Color> _debugColors = [
-    Color(0xFF1E3A8A),
-    Color(0xFF5B21B6),
-    Color(0xFF15803D),
-    Color(0xFFFACC15),
   ];
 
   void _selectTab(int index) {
@@ -67,49 +50,6 @@ class _MainShellState extends State<MainShell> {
     await Navigator.of(context).pushNamed(route);
   }
 
-  Widget _wrapDebugLayer({
-    required Widget child,
-    required String label,
-    required Color color,
-  }) {
-    if (!DEBUG_UI) return child;
-    return Stack(
-      children: [
-        ColoredBox(color: color),
-        Positioned.fill(
-          child: Opacity(
-            opacity: 0.15,
-            child: child,
-          ),
-        ),
-        Center(
-          child: Text(
-            '$label LAYER OK',
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.w800,
-              color: Colors.white,
-              letterSpacing: 1.2,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  List<Widget> get _pages {
-    if (!DEBUG_UI) return _basePages;
-    return List<Widget>.generate(
-      _basePages.length,
-      (index) => _wrapDebugLayer(
-        child: _basePages[index],
-        label: _tabLabels[index].toUpperCase(),
-        color: _debugColors[index],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).padding.bottom;
@@ -117,72 +57,43 @@ class _MainShellState extends State<MainShell> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      extendBody: true,
       body: Stack(
-        fit: StackFit.expand,
         children: [
-          Positioned.fill(
-            child: Padding(
-              padding: EdgeInsets.only(bottom: contentBottomPadding),
-              child: IndexedStack(
-                index: _currentIndex,
-                children: _pages,
-              ),
+          Padding(
+            padding: EdgeInsets.only(bottom: contentBottomPadding),
+            child: IndexedStack(
+              index: _currentIndex,
+              children: _pages,
             ),
           ),
-          Positioned.fill(
-            child: IgnorePointer(
-              ignoring: !_menuOpen,
-              child: SpeedDialMenu(
-                isOpen: _menuOpen,
-                bottomOffset: _barHeight + bottomInset + 12,
-                onClose: () => setState(() => _menuOpen = false),
-                onWorkout: () => _navigateTo('/workout'),
-                onMeal: () => _navigateTo('/nutrition'),
-                onSleep: () => _navigateTo('/sleep'),
-              ),
-            ),
+          SpeedDialMenu(
+            isOpen: _menuOpen,
+            bottomOffset: _barHeight + bottomInset + 12,
+            onClose: () => setState(() => _menuOpen = false),
+            onWorkout: () => _navigateTo('/workout'),
+            onMeal: () => _navigateTo('/nutrition'),
+            onSleep: () => _navigateTo('/sleep'),
           ),
-          if (DEBUG_UI)
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              child: SafeArea(
-                bottom: false,
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                  color: Colors.black.withOpacity(0.75),
-                  child: Text(
-                    'DEBUG_UI ON | tab=${_tabLabels[_currentIndex]} | menuOpen=$_menuOpen',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                    ),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: SafeArea(
+              top: false,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _BottomBar(
+                    currentIndex: _currentIndex,
+                    onSelect: _selectTab,
+                    onCenterTap: _toggleMenu,
+                    isMenuOpen: _menuOpen,
                   ),
-                ),
-              ),
-            ),
-        ],
-      ),
-      bottomNavigationBar: Material(
-        type: MaterialType.transparency,
-        child: SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Align(
-              alignment: Alignment.bottomCenter,
-              child: _BottomBar(
-                currentIndex: _currentIndex,
-                onSelect: _selectTab,
-                onCenterTap: _toggleMenu,
-                isMenuOpen: _menuOpen,
+                ],
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -203,61 +114,49 @@ class _BottomBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const borderRadius = BorderRadius.all(Radius.circular(30));
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
       decoration: BoxDecoration(
-        borderRadius: borderRadius,
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.25),
-            blurRadius: 26,
-            offset: const Offset(0, 12),
+            color: Colors.black.withOpacity(0.35),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
           ),
         ],
+        border: Border.all(color: Colors.white.withOpacity(0.06)),
       ),
-      child: ClipRRect(
-        borderRadius: borderRadius,
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-            decoration: BoxDecoration(
-              color: AppColors.card.withOpacity(0.88),
-              borderRadius: borderRadius,
-              border: Border.all(color: Colors.white.withOpacity(0.08)),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _NavItem(
-                  icon: Icons.home_rounded,
-                  isActive: currentIndex == 0,
-                  onTap: () => onSelect(0),
-                ),
-                _NavItem(
-                  icon: Icons.check_circle_outline_rounded,
-                  isActive: currentIndex == 1,
-                  onTap: () => onSelect(1),
-                ),
-                _CenterActionButton(
-                  onTap: onCenterTap,
-                  isMenuOpen: isMenuOpen,
-                ),
-                _NavItem(
-                  icon: Icons.groups_rounded,
-                  isActive: currentIndex == 2,
-                  onTap: () => onSelect(2),
-                ),
-                _NavItem(
-                  icon: Icons.person_rounded,
-                  isActive: currentIndex == 3,
-                  onTap: () => onSelect(3),
-                ),
-              ],
-            ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          _NavItem(
+            icon: Icons.home_rounded,
+            isActive: currentIndex == 0,
+            onTap: () => onSelect(0),
           ),
-        ),
+          _NavItem(
+            icon: Icons.check_circle_outline_rounded,
+            isActive: currentIndex == 1,
+            onTap: () => onSelect(1),
+          ),
+          _CenterActionButton(
+            onTap: onCenterTap,
+            isMenuOpen: isMenuOpen,
+          ),
+          _NavItem(
+            icon: Icons.groups_rounded,
+            isActive: currentIndex == 2,
+            onTap: () => onSelect(2),
+          ),
+          _NavItem(
+            icon: Icons.person_rounded,
+            isActive: currentIndex == 3,
+            onTap: () => onSelect(3),
+          ),
+        ],
       ),
     );
   }
@@ -281,10 +180,9 @@ class _NavItem extends StatelessWidget {
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: SizedBox(
-        width: 64,
-        height: 52,
+        width: 48,
         child: Center(
-          child: Icon(icon, color: color, size: 28),
+          child: Icon(icon, color: color, size: 22),
         ),
       ),
     );
@@ -302,7 +200,7 @@ class _CenterActionButton extends StatelessWidget {
     return AnimatedPlusXButton(
       isOpen: isMenuOpen,
       onTap: onTap,
-      size: 60,
+      size: 54,
       color: const Color(0xFFF59E0B),
       iconColor: Colors.black,
     );

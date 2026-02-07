@@ -11,10 +11,6 @@ import '../../home/domain/goal_insight_service.dart';
 import '../../nutrition/data/food_repository.dart';
 import '../../sleep/domain/sleep_time_utils.dart';
 
-const double kHomeMiniCardHeight = 168;
-const double kHomeMiniCardChartHeight = 32;
-const EdgeInsets kHomeMiniCardPadding = EdgeInsets.all(16);
-
 class HomeSummaryScreen extends StatefulWidget {
   const HomeSummaryScreen({super.key});
 
@@ -25,15 +21,11 @@ class HomeSummaryScreen extends StatefulWidget {
 class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
   final FoodRepository _foodRepository = FoodRepository();
   late Future<_HomeSummaryData> _summaryFuture;
-  bool _didLoad = false;
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (!_didLoad) {
-      _summaryFuture = _loadSummaryData();
-      _didLoad = true;
-    }
+  void initState() {
+    super.initState();
+    _summaryFuture = _loadSummaryData();
   }
 
   Future<_HomeSummaryData> _loadSummaryData() async {
@@ -290,10 +282,6 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
                   );
                 }
 
-                if (snapshot.hasError) {
-                  return _HomeErrorState(onRetry: _refreshSummary);
-                }
-
                 final data = snapshot.data ?? _HomeSummaryData.empty();
 
                 return SingleChildScrollView(
@@ -335,7 +323,7 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
                             children: [
                               Expanded(
                                 child: SizedBox(
-                                  height: kHomeMiniCardHeight,
+                                  height: 184,
                                   child: _MetricCard.training(
                                     primaryValue: '${data.trainingToday} min',
                                     secondaryValue:
@@ -355,7 +343,7 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
                               const SizedBox(width: 16),
                               Expanded(
                                 child: SizedBox(
-                                  height: kHomeMiniCardHeight,
+                                  height: 184,
                                   child: _MetricCard.nutrition(
                                     calories: data.caloriesToday,
                                     macros: data.macrosToday,
@@ -491,49 +479,6 @@ class _HomeBackground extends StatelessWidget {
             child: _GlowBlob(color: Color(0x668AA6FF), size: 300),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _HomeErrorState extends StatelessWidget {
-  const _HomeErrorState({required this.onRetry});
-
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.cloud_off_rounded, color: AppColors.textMuted, size: 44),
-            const SizedBox(height: 16),
-            Text(
-              'No pudimos cargar tu resumen',
-              textAlign: TextAlign.center,
-              style: textTheme.titleMedium?.copyWith(
-                color: AppColors.textPrimary,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Revisa tu conexión e inténtalo de nuevo.',
-              textAlign: TextAlign.center,
-              style: textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
-            ),
-            const SizedBox(height: 18),
-            OutlinedButton.icon(
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh_rounded),
-              label: const Text('Reintentar'),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -1109,7 +1054,6 @@ class _MetricCard extends StatelessWidget {
     required this.value,
     required this.valueColor,
     required this.content,
-    required this.footerText,
     required this.trend,
     required this.onTap,
   });
@@ -1132,9 +1076,9 @@ class _MetricCard extends StatelessWidget {
       value: primaryValue,
       valueColor: const Color(0xFF2AF5D2),
       content: _TrainingChart(
+        secondaryValue: secondaryValue,
         distribution: distribution,
       ),
-      footerText: secondaryValue,
       trend: TrendChipData.fromDelta(difference.round()),
       onTap: onTap,
     );
@@ -1150,12 +1094,7 @@ class _MetricCard extends StatelessWidget {
       title: 'Alimentación',
       value: '${calories.toString()} kcal',
       valueColor: Colors.white,
-      content: _NutritionCharts(
-        macros: macros,
-        showLegend: false,
-      ),
-      footerText:
-          'Macros: C${macros.carbs}g · P${macros.protein}g · G${macros.fat}g',
+      content: _NutritionCharts(macros: macros),
       trend: TrendChipData(
         label: calories == 0
             ? 'Sin registros hoy'
@@ -1178,7 +1117,6 @@ class _MetricCard extends StatelessWidget {
   final String value;
   final Color valueColor;
   final Widget content;
-  final String footerText;
   final TrendChipData trend;
   final VoidCallback onTap;
 
@@ -1186,65 +1124,45 @@ class _MetricCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     return SummaryCard(
-      minHeight: kHomeMiniCardHeight,
-      padding: kHomeMiniCardPadding,
+      minHeight: 170,
+      padding: const EdgeInsets.all(18),
       onTap: onTap,
       glass: true,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final verticalSpacing = math.min(4.0, constraints.maxHeight * 0.02);
-          final chartHeight = math.min(
-            kHomeMiniCardChartHeight,
-            constraints.maxHeight * 0.18,
-          );
-
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: textTheme.titleMedium?.copyWith(
-                  fontSize: 17,
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              SizedBox(height: verticalSpacing),
-              Text(
-                value,
-                style: textTheme.headlineSmall?.copyWith(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w700,
-                  color: valueColor,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              SizedBox(height: verticalSpacing),
-              SizedBox(
-                height: 24,
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: _TrendChip(data: trend),
-                ),
-              ),
-              const Spacer(),
-              SizedBox(height: chartHeight, child: content),
-              SizedBox(height: verticalSpacing),
-              Text(
-                footerText,
-                style: textTheme.labelSmall?.copyWith(
-                  color: const Color(0xFF9BA7B4),
-                  fontWeight: FontWeight.w500,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          );
-        },
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: textTheme.titleMedium?.copyWith(
+              fontSize: 17,
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            style: textTheme.headlineSmall?.copyWith(
+              fontSize: 26,
+              fontWeight: FontWeight.w700,
+              color: valueColor,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 26,
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: _TrendChip(data: trend),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Expanded(child: content),
+        ],
       ),
     );
   }
@@ -1252,9 +1170,11 @@ class _MetricCard extends StatelessWidget {
 
 class _TrainingChart extends StatelessWidget {
   const _TrainingChart({
+    required this.secondaryValue,
     required this.distribution,
   });
 
+  final String secondaryValue;
   final List<int> distribution;
 
   @override
@@ -1265,17 +1185,51 @@ class _TrainingChart extends StatelessWidget {
       0,
       (max, value) => value > max ? value : max,
     );
-    const maxHeight = kHomeMiniCardChartHeight;
+    const maxHeight = 40.0;
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: List.generate(effectiveDistribution.length, (index) {
-        final value = effectiveDistribution[index];
-        final normalized =
-            maxMinutes == 0 ? 0.2 : (value / maxMinutes).clamp(0.2, 1.0);
-        final barHeight = maxHeight * normalized;
-        return _MiniBar(height: barHeight);
-      }),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const labelHeight = 14.0;
+        const spacing = 6.0;
+        final availableHeight = constraints.maxHeight;
+        final chartHeight = math.max(
+          24.0,
+          availableHeight - labelHeight - spacing,
+        );
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            SizedBox(
+              height: chartHeight,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: List.generate(effectiveDistribution.length, (index) {
+                  final value = effectiveDistribution[index];
+                  final normalized =
+                      maxMinutes == 0 ? 0.2 : (value / maxMinutes).clamp(0.2, 1.0);
+                  final barHeight = math.min(maxHeight, chartHeight) * normalized;
+                  return _MiniBar(height: barHeight);
+                }),
+              ),
+            ),
+            const SizedBox(height: spacing),
+            SizedBox(
+              height: labelHeight,
+              child: Text(
+                secondaryValue,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: Color(0xFF9BA7B4),
+                  fontWeight: FontWeight.w400,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -1372,13 +1326,9 @@ class _MiniBar extends StatelessWidget {
 }
 
 class _NutritionCharts extends StatelessWidget {
-  const _NutritionCharts({
-    required this.macros,
-    this.showLegend = true,
-  });
+  const _NutritionCharts({required this.macros});
 
   final Macros macros;
-  final bool showLegend;
 
   @override
   Widget build(BuildContext context) {
@@ -1393,49 +1343,9 @@ class _NutritionCharts extends StatelessWidget {
     final proteinPct = (proteinRatio * 100).round();
     final fatPct = (fatRatio * 100).round();
 
-    const barHeight = 11.0;
-    if (!showLegend) {
-      return SizedBox(
-        height: barHeight,
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(999),
-            color: Colors.white.withOpacity(0.04),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                flex: carbsFlex,
-                child: Container(
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFFFD438),
-                    borderRadius:
-                        BorderRadius.horizontal(left: Radius.circular(999)),
-                  ),
-                ),
-              ),
-              Expanded(
-                flex: proteinFlex,
-                child: Container(color: const Color(0xFF6D7B44)),
-              ),
-              Expanded(
-                flex: fatFlex,
-                child: Container(
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF3FA7FF),
-                    borderRadius:
-                        BorderRadius.horizontal(right: Radius.circular(999)),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
     return LayoutBuilder(
       builder: (context, constraints) {
+        const barHeight = 11.0;
         const spacing = 8.0;
         final legendHeight =
             math.max(0.0, constraints.maxHeight - barHeight - spacing);
