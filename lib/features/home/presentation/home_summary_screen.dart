@@ -1185,37 +1185,37 @@ class _TrainingChart extends StatelessWidget {
       0,
       (max, value) => value > max ? value : max,
     );
-    const maxHeight = 40.0;
+    const spacing = 6.0;
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        const labelHeight = 14.0;
-        const spacing = 6.0;
-        final availableHeight = constraints.maxHeight;
-        final chartHeight = math.max(
-          24.0,
-          availableHeight - labelHeight - spacing,
-        );
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.end,
           children: [
-            SizedBox(
-              height: chartHeight,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: List.generate(effectiveDistribution.length, (index) {
-                  final value = effectiveDistribution[index];
-                  final normalized =
-                      maxMinutes == 0 ? 0.2 : (value / maxMinutes).clamp(0.2, 1.0);
-                  final barHeight = math.min(maxHeight, chartHeight) * normalized;
-                  return _MiniBar(height: barHeight);
-                }),
+            Expanded(
+              child: Align(
+                alignment: Alignment.bottomLeft,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: List.generate(effectiveDistribution.length, (index) {
+                    final value = effectiveDistribution[index];
+                    final normalized =
+                        maxMinutes == 0 ? 0.2 : (value / maxMinutes).clamp(0.2, 1.0);
+                    final safeChartHeight = math.max(
+                      0.0,
+                      constraints.maxHeight - spacing - 14.0,
+                    );
+                    final base = math.min(40.0, safeChartHeight);
+                    final barHeight = base * normalized;
+                    return _MiniBar(height: barHeight);
+                  }),
+                ),
               ),
             ),
             const SizedBox(height: spacing),
-            SizedBox(
-              height: labelHeight,
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
               child: Text(
                 secondaryValue,
                 maxLines: 1,
