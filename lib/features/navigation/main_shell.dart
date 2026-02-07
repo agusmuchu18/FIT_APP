@@ -57,7 +57,6 @@ class _MainShellState extends State<MainShell> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      extendBody: true,
       body: Stack(
         children: [
           Padding(
@@ -81,14 +80,16 @@ class _MainShellState extends State<MainShell> {
             bottom: 0,
             child: SafeArea(
               top: false,
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: _BottomBar(
-                  currentIndex: _currentIndex,
-                  onSelect: _selectTab,
-                  onCenterTap: _toggleMenu,
-                  isMenuOpen: _menuOpen,
-                ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _BottomBar(
+                    currentIndex: _currentIndex,
+                    onSelect: _selectTab,
+                    onCenterTap: _toggleMenu,
+                    isMenuOpen: _menuOpen,
+                  ),
+                ],
               ),
             ),
           ),
@@ -113,62 +114,49 @@ class _BottomBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const borderRadius = BorderRadius.all(Radius.circular(30));
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
       decoration: BoxDecoration(
-        borderRadius: borderRadius,
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.25),
-            blurRadius: 26,
-            offset: const Offset(0, 12),
+            color: Colors.black.withOpacity(0.35),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
           ),
         ],
+        border: Border.all(color: Colors.white.withOpacity(0.06)),
       ),
-      child: Material(
-        color: Colors.transparent,
-        clipBehavior: Clip.antiAlias,
-        child: ClipRRect(
-          borderRadius: borderRadius,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-            decoration: BoxDecoration(
-              color: AppColors.card,
-              borderRadius: borderRadius,
-              border: Border.all(color: Colors.white.withOpacity(0.08)),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _NavItem(
-                  icon: Icons.home_rounded,
-                  isActive: currentIndex == 0,
-                  onTap: () => onSelect(0),
-                ),
-                _NavItem(
-                  icon: Icons.check_circle_outline_rounded,
-                  isActive: currentIndex == 1,
-                  onTap: () => onSelect(1),
-                ),
-                _CenterActionButton(
-                  onTap: onCenterTap,
-                  isMenuOpen: isMenuOpen,
-                ),
-                _NavItem(
-                  icon: Icons.groups_rounded,
-                  isActive: currentIndex == 2,
-                  onTap: () => onSelect(2),
-                ),
-                _NavItem(
-                  icon: Icons.person_rounded,
-                  isActive: currentIndex == 3,
-                  onTap: () => onSelect(3),
-                ),
-              ],
-            ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          _NavItem(
+            icon: Icons.home_rounded,
+            isActive: currentIndex == 0,
+            onTap: () => onSelect(0),
           ),
-        ),
+          _NavItem(
+            icon: Icons.check_circle_outline_rounded,
+            isActive: currentIndex == 1,
+            onTap: () => onSelect(1),
+          ),
+          _CenterActionButton(
+            onTap: onCenterTap,
+            isMenuOpen: isMenuOpen,
+          ),
+          _NavItem(
+            icon: Icons.groups_rounded,
+            isActive: currentIndex == 2,
+            onTap: () => onSelect(2),
+          ),
+          _NavItem(
+            icon: Icons.person_rounded,
+            isActive: currentIndex == 3,
+            onTap: () => onSelect(3),
+          ),
+        ],
       ),
     );
   }
@@ -192,10 +180,9 @@ class _NavItem extends StatelessWidget {
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: SizedBox(
-        width: 64,
-        height: 52,
+        width: 48,
         child: Center(
-          child: Icon(icon, color: color, size: 28),
+          child: Icon(icon, color: color, size: 22),
         ),
       ),
     );
@@ -213,7 +200,7 @@ class _CenterActionButton extends StatelessWidget {
     return AnimatedPlusXButton(
       isOpen: isMenuOpen,
       onTap: onTap,
-      size: 60,
+      size: 54,
       color: const Color(0xFFF59E0B),
       iconColor: Colors.black,
     );
