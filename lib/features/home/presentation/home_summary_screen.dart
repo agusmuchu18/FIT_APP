@@ -25,15 +25,11 @@ class HomeSummaryScreen extends StatefulWidget {
 class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
   final FoodRepository _foodRepository = FoodRepository();
   late Future<_HomeSummaryData> _summaryFuture;
-  bool _didLoad = false;
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (!_didLoad) {
-      _summaryFuture = _loadSummaryData();
-      _didLoad = true;
-    }
+  void initState() {
+    super.initState();
+    _summaryFuture = _loadSummaryData();
   }
 
   Future<_HomeSummaryData> _loadSummaryData() async {
@@ -290,10 +286,6 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
                   );
                 }
 
-                if (snapshot.hasError) {
-                  return _HomeErrorState(onRetry: _refreshSummary);
-                }
-
                 final data = snapshot.data ?? _HomeSummaryData.empty();
 
                 return SingleChildScrollView(
@@ -491,49 +483,6 @@ class _HomeBackground extends StatelessWidget {
             child: _GlowBlob(color: Color(0x668AA6FF), size: 300),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _HomeErrorState extends StatelessWidget {
-  const _HomeErrorState({required this.onRetry});
-
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.cloud_off_rounded, color: AppColors.textMuted, size: 44),
-            const SizedBox(height: 16),
-            Text(
-              'No pudimos cargar tu resumen',
-              textAlign: TextAlign.center,
-              style: textTheme.titleMedium?.copyWith(
-                color: AppColors.textPrimary,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Revisa tu conexión e inténtalo de nuevo.',
-              textAlign: TextAlign.center,
-              style: textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
-            ),
-            const SizedBox(height: 18),
-            OutlinedButton.icon(
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh_rounded),
-              label: const Text('Reintentar'),
-            ),
-          ],
-        ),
       ),
     );
   }
