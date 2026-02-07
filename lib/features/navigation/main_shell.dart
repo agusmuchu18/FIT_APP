@@ -189,7 +189,7 @@ class _NavItem extends StatelessWidget {
       child: SizedBox(
         width: 48,
         child: Center(
-          child: Icon(icon, color: color, size: 22),
+          child: Icon(icon, color: color, size: 24),
         ),
       ),
     );
