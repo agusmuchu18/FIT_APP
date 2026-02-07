@@ -57,6 +57,7 @@ class _MainShellState extends State<MainShell> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
+      extendBody: true,
       body: Stack(
         children: [
           Padding(
@@ -74,26 +75,28 @@ class _MainShellState extends State<MainShell> {
             onMeal: () => _navigateTo('/nutrition'),
             onSleep: () => _navigateTo('/sleep'),
           ),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: SafeArea(
-              top: false,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _BottomBar(
-                    currentIndex: _currentIndex,
-                    onSelect: _selectTab,
-                    onCenterTap: _toggleMenu,
-                    isMenuOpen: _menuOpen,
-                  ),
-                ],
+        ],
+      ),
+      bottomNavigationBar: Material(
+        type: MaterialType.transparency,
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Align(
+              alignment: Alignment.bottomCenter,
+              child: SizedBox(
+                height: _barHeight,
+                child: _BottomBar(
+                  currentIndex: _currentIndex,
+                  onSelect: _selectTab,
+                  onCenterTap: _toggleMenu,
+                  isMenuOpen: _menuOpen,
+                ),
               ),
             ),
           ),
-        ],
+        ),
       ),
     );
   }
