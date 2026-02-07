@@ -346,8 +346,9 @@ class _HabitsTrackerScreenState extends State<HabitsTrackerScreen> {
               valueListenable: box.listenable(),
               builder: (context, _, __) {
                 final habits = _loadHabits(box);
+                final bottomPad = MediaQuery.of(context).padding.bottom + 110;
                 return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  padding: EdgeInsets.fromLTRB(20, 12, 20, 12 + bottomPad),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [

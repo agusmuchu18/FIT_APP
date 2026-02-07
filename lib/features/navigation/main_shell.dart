@@ -53,51 +53,54 @@ class _MainShellState extends State<MainShell> {
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).padding.bottom;
-    final contentBottomPadding = _barHeight + bottomInset + 12;
+    final speedDialOffset = _barHeight + bottomInset + 12 + 8;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
       extendBody: true,
       body: Stack(
         children: [
-          const _ShellBackground(),
-          Padding(
-            padding: EdgeInsets.only(bottom: contentBottomPadding),
-            child: IndexedStack(
-              index: _currentIndex,
-              children: _pages,
+          const Positioned.fill(
+            child: IgnorePointer(
+              child: _ShellBackground(),
             ),
+          ),
+          IndexedStack(
+            index: _currentIndex,
+            children: _pages,
           ),
           SpeedDialMenu(
             isOpen: _menuOpen,
-            bottomOffset: _barHeight + bottomInset + 12,
+            bottomOffset: speedDialOffset,
             onClose: () => setState(() => _menuOpen = false),
             onWorkout: () => _navigateTo('/workout'),
             onMeal: () => _navigateTo('/nutrition'),
             onSleep: () => _navigateTo('/sleep'),
           ),
-        ],
-      ),
-      bottomNavigationBar: Material(
-        type: MaterialType.transparency,
-        child: SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Align(
-              alignment: Alignment.bottomCenter,
-              child: SizedBox(
-                height: _barHeight,
-                child: _BottomBar(
-                  currentIndex: _currentIndex,
-                  onSelect: _selectTab,
-                  onCenterTap: _toggleMenu,
-                  isMenuOpen: _menuOpen,
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Align(
+                  alignment: Alignment.bottomCenter,
+                  child: SizedBox(
+                    height: _barHeight,
+                    child: _BottomBar(
+                      currentIndex: _currentIndex,
+                      onSelect: _selectTab,
+                      onCenterTap: _toggleMenu,
+                      isMenuOpen: _menuOpen,
+                    ),
+                  ),
                 ),
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
