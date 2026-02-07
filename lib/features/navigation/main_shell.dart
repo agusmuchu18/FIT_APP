@@ -24,7 +24,7 @@ class _MainShellState extends State<MainShell> {
   int _currentIndex = 0;
   bool _menuOpen = false;
 
-  final List<Widget> _basePages = const [
+  final List<Widget> _pages = const [
     HomeSummaryScreen(),
     HabitsTrackerScreen(),
     GroupsListScreen(),
@@ -98,22 +98,18 @@ class _MainShellState extends State<MainShell> {
     );
   }
 
-  List<Widget> get _pages {
-    if (!DEBUG_UI) return _basePages;
-    return List<Widget>.generate(
-      _basePages.length,
-      (index) => _wrapDebugLayer(
-        child: _basePages[index],
-        label: _tabLabels[index].toUpperCase(),
-        color: _debugColors[index],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).padding.bottom;
     final contentBottomPadding = _barHeight + bottomInset + 12;
+    final pages = List<Widget>.generate(
+      _pages.length,
+      (index) => _wrapDebugLayer(
+        child: _pages[index],
+        label: _tabLabels[index].toUpperCase(),
+        color: _debugColors[index],
+      ),
+    );
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -126,7 +122,7 @@ class _MainShellState extends State<MainShell> {
               padding: EdgeInsets.only(bottom: contentBottomPadding),
               child: IndexedStack(
                 index: _currentIndex,
-                children: _pages,
+                children: pages,
               ),
             ),
           ),
