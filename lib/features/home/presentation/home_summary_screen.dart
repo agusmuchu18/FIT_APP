@@ -11,10 +11,6 @@ import '../../home/domain/goal_insight_service.dart';
 import '../../nutrition/data/food_repository.dart';
 import '../../sleep/domain/sleep_time_utils.dart';
 
-const double kHomeMiniCardHeight = 168;
-const double kHomeMiniCardChartHeight = 32;
-const EdgeInsets kHomeMiniCardPadding = EdgeInsets.all(16);
-
 class HomeSummaryScreen extends StatefulWidget {
   const HomeSummaryScreen({super.key});
 
@@ -327,7 +323,7 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
                             children: [
                               Expanded(
                                 child: SizedBox(
-                                  height: kHomeMiniCardHeight,
+                                  height: 184,
                                   child: _MetricCard.training(
                                     primaryValue: '${data.trainingToday} min',
                                     secondaryValue:
@@ -347,7 +343,7 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
                               const SizedBox(width: 16),
                               Expanded(
                                 child: SizedBox(
-                                  height: kHomeMiniCardHeight,
+                                  height: 184,
                                   child: _MetricCard.nutrition(
                                     calories: data.caloriesToday,
                                     macros: data.macrosToday,
@@ -1135,8 +1131,8 @@ class _MetricCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     return SummaryCard(
-      minHeight: kHomeMiniCardHeight,
-      padding: kHomeMiniCardPadding,
+      minHeight: 184,
+      padding: const EdgeInsets.all(18),
       onTap: onTap,
       glass: true,
       child: Column(
@@ -1172,7 +1168,10 @@ class _MetricCard extends StatelessWidget {
             ),
           ),
           const Spacer(),
-          SizedBox(height: kHomeMiniCardChartHeight, child: content),
+          SizedBox(
+            height: 44,
+            child: content,
+          ),
           const SizedBox(height: 4),
           Text(
             footerText,
@@ -1204,7 +1203,7 @@ class _TrainingChart extends StatelessWidget {
       0,
       (max, value) => value > max ? value : max,
     );
-    const maxHeight = kHomeMiniCardChartHeight;
+    const maxHeight = 40.0;
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.end,
