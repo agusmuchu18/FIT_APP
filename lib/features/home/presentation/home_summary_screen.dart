@@ -1161,10 +1161,7 @@ class _MetricCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          SizedBox(
-            height: 64,
-            child: content,
-          ),
+          Expanded(child: content),
         ],
       ),
     );
@@ -1195,16 +1192,13 @@ class _TrainingChart extends StatelessWidget {
         const labelHeight = 14.0;
         const spacing = 6.0;
         final availableHeight = constraints.maxHeight;
-        final shouldShowLabel = availableHeight >= (labelHeight + spacing + 24.0);
         final chartHeight = math.max(
           24.0,
-          availableHeight -
-              (shouldShowLabel ? labelHeight + spacing : 0.0),
+          availableHeight - labelHeight - spacing,
         );
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.end,
-          mainAxisSize: MainAxisSize.min,
           children: [
             SizedBox(
               height: chartHeight,
@@ -1219,22 +1213,20 @@ class _TrainingChart extends StatelessWidget {
                 }),
               ),
             ),
-            if (shouldShowLabel) ...[
-              const SizedBox(height: spacing),
-              SizedBox(
-                height: labelHeight,
-                child: Text(
-                  secondaryValue,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF9BA7B4),
-                    fontWeight: FontWeight.w400,
-                  ),
+            const SizedBox(height: spacing),
+            SizedBox(
+              height: labelHeight,
+              child: Text(
+                secondaryValue,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: Color(0xFF9BA7B4),
+                  fontWeight: FontWeight.w400,
                 ),
               ),
-            ],
+            ),
           ],
         );
       },
