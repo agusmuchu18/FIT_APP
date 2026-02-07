@@ -379,7 +379,7 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
                               _refreshSummary();
                             },
                           ),
-                          const SizedBox(height: 80),
+                          const SizedBox(height: 160),
                         ],
                       ),
                     ),
