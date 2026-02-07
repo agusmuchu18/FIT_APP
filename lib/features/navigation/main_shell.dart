@@ -56,10 +56,11 @@ class _MainShellState extends State<MainShell> {
     final contentBottomPadding = _barHeight + bottomInset + 12;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Colors.transparent,
       extendBody: true,
       body: Stack(
         children: [
+          const _ShellBackground(),
           Padding(
             padding: EdgeInsets.only(bottom: contentBottomPadding),
             child: IndexedStack(
@@ -206,6 +207,67 @@ class _CenterActionButton extends StatelessWidget {
       size: 54,
       color: const Color(0xFFF59E0B),
       iconColor: Colors.black,
+    );
+  }
+}
+
+class _ShellBackground extends StatelessWidget {
+  const _ShellBackground();
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: const [
+        DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Color(0xFF0B1220),
+                Color(0xFF0E1624),
+                Color(0xFF070B12),
+              ],
+            ),
+          ),
+          child: SizedBox.expand(),
+        ),
+        Positioned(
+          top: -80,
+          left: -60,
+          child: _GlowBlob(
+            color: Color(0x662AF5D2),
+            size: 260,
+          ),
+        ),
+        Positioned(
+          bottom: -110,
+          right: -80,
+          child: _GlowBlob(
+            color: Color(0x668AA6FF),
+            size: 300,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _GlowBlob extends StatelessWidget {
+  const _GlowBlob({required this.color, required this.size});
+
+  final Color color;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: color,
+        shape: BoxShape.circle,
+      ),
     );
   }
 }
