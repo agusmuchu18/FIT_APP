@@ -2,25 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../common/theme/app_colors.dart';
 import 'profile_controller.dart';
+import 'profile_avatar_widget.dart';
 import 'profile_settings_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
-
-  String _initialsFromName(String name) {
-    final trimmed = name.trim();
-    if (trimmed.isEmpty) return 'US';
-    final parts = trimmed.split(RegExp(r'\\s+'));
-    if (parts.length == 1) {
-      final word = parts.first;
-      return word.length > 1
-          ? word.substring(0, 2).toUpperCase()
-          : word.substring(0, 1).toUpperCase();
-    }
-    return ((parts[0].isNotEmpty ? parts[0][0] : '') +
-            (parts[1].isNotEmpty ? parts[1][0] : ''))
-        .toUpperCase();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -56,21 +42,11 @@ class ProfileScreen extends StatelessWidget {
                       return ValueListenableBuilder(
                         valueListenable: ProfileController.instance.displayName,
                         builder: (context, name, __) {
-                          return CircleAvatar(
-                            radius: 28,
-                            backgroundColor:
-                                AppColors.accentSecondary.withOpacity(0.2),
-                            backgroundImage:
-                                bytes == null ? null : MemoryImage(bytes),
-                            child: bytes == null
-                                ? Text(
-                                    _initialsFromName(name),
-                                    style: const TextStyle(
-                                      color: AppColors.accentSecondary,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  )
-                                : null,
+                          return ProfileAvatarWidget(
+                            displayName: name,
+                            avatarBytes: bytes,
+                            onAvatarChanged:
+                                ProfileController.instance.updateAvatar,
                           );
                         },
                       );
