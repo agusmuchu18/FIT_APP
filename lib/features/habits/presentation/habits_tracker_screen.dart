@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -38,12 +39,66 @@ class _HabitsTrackerScreenState extends State<HabitsTrackerScreen> {
   final Map<String, bool> _completionState = {};
   late final Future<Box<String>> _habitsBoxFuture;
 
-  int _selectedDayIndex = 6;
+  late DateTime _today;
+  late DateTime _selectedDay;
+  bool _hasManualSelection = false;
+  Timer? _midnightTimer;
+
+  DateTime normalizeDay(DateTime dt) => DateTime(dt.year, dt.month, dt.day);
 
   @override
   void initState() {
     super.initState();
+    _today = normalizeDay(DateTime.now());
+    _selectedDay = _today;
     _habitsBoxFuture = Hive.openBox<String>(_habitsBoxName);
+    _scheduleTimerUntilNextMidnight();
+  }
+
+  @override
+  void dispose() {
+    _midnightTimer?.cancel();
+    super.dispose();
+  }
+
+  void _scheduleTimerUntilNextMidnight() {
+    _midnightTimer?.cancel();
+    final now = DateTime.now();
+    final nextMidnight = DateTime(now.year, now.month, now.day + 1);
+    _midnightTimer = Timer(nextMidnight.difference(now), _handleDayChanged);
+  }
+
+  void _handleDayChanged() {
+    if (!mounted) {
+      return;
+    }
+
+    final currentDay = normalizeDay(DateTime.now());
+    if (currentDay != _today) {
+      setState(() {
+        _today = currentDay;
+        if (!_hasManualSelection) {
+          _selectedDay = _today;
+        }
+      });
+    }
+    _scheduleTimerUntilNextMidnight();
+  }
+
+  DateTime _weekStartFor(DateTime day) {
+    return day.subtract(Duration(days: day.weekday - DateTime.monday));
+  }
+
+  List<DateTime> _daysOfWeek(DateTime day) {
+    final weekStart = _weekStartFor(day);
+    return List<DateTime>.generate(
+      7,
+      (index) => normalizeDay(weekStart.add(Duration(days: index))),
+    );
+  }
+
+  bool _isSameDay(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
   }
 
   void _showHabitActions(Box<String> box, _HabitEntry habit) {
@@ -330,7 +385,7 @@ class _HabitsTrackerScreenState extends State<HabitsTrackerScreen> {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final days = const ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
-    final dates = const ['26', '27', '28', '29', '30', '31', '1'];
+    final weekDays = _daysOfWeek(_hasManualSelection ? _selectedDay : _today);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -380,9 +435,17 @@ class _HabitsTrackerScreenState extends State<HabitsTrackerScreen> {
                         child: ListView.separated(
                           scrollDirection: Axis.horizontal,
                           itemBuilder: (context, index) {
-                            final selected = index == _selectedDayIndex;
+                            final day = weekDays[index];
+                            final selected = _isSameDay(day, _selectedDay);
+                            final isToday = _isSameDay(day, _today);
+                            final highlightColor = AppColors.warning;
                             return GestureDetector(
-                              onTap: () => setState(() => _selectedDayIndex = index),
+                              onTap: () {
+                                setState(() {
+                                  _hasManualSelection = true;
+                                  _selectedDay = day;
+                                });
+                              },
                               child: Column(
                                 children: [
                                   Text(
@@ -399,17 +462,18 @@ class _HabitsTrackerScreenState extends State<HabitsTrackerScreen> {
                                     alignment: Alignment.center,
                                     decoration: BoxDecoration(
                                       shape: BoxShape.circle,
-                                      color: selected
-                                          ? AppColors.warning
-                                          : Colors.transparent,
+                                      color: selected ? highlightColor : Colors.transparent,
                                       border: Border.all(
                                         color: selected
                                             ? Colors.transparent
-                                            : Colors.white.withOpacity(0.08),
+                                            : isToday
+                                                ? highlightColor.withOpacity(0.7)
+                                                : Colors.white.withOpacity(0.08),
+                                        width: isToday && !selected ? 1.5 : 1,
                                       ),
                                     ),
                                     child: Text(
-                                      dates[index],
+                                      '${day.day}',
                                       style: textTheme.labelLarge?.copyWith(
                                         color: selected
                                             ? Colors.black
