@@ -85,16 +85,33 @@ class _HabitsTrackerScreenState extends State<HabitsTrackerScreen> {
     _scheduleTimerUntilNextMidnight();
   }
 
-  DateTime _weekStartFor(DateTime day) {
-    return day.subtract(Duration(days: day.weekday - DateTime.monday));
-  }
-
-  List<DateTime> _daysOfWeek(DateTime day) {
-    final weekStart = _weekStartFor(day);
+  List<DateTime> _daysOfWeek() {
+    final endDay = _today;
+    final startDay = endDay.subtract(const Duration(days: 6));
     return List<DateTime>.generate(
       7,
-      (index) => normalizeDay(weekStart.add(Duration(days: index))),
+      (index) => normalizeDay(startDay.add(Duration(days: index))),
     );
+  }
+
+  String _weekdayLetter(DateTime day) {
+    switch (day.weekday) {
+      case DateTime.monday:
+        return 'L';
+      case DateTime.tuesday:
+        return 'M';
+      case DateTime.wednesday:
+        return 'M';
+      case DateTime.thursday:
+        return 'J';
+      case DateTime.friday:
+        return 'V';
+      case DateTime.saturday:
+        return 'S';
+      case DateTime.sunday:
+        return 'D';
+    }
+    return '';
   }
 
   bool _isSameDay(DateTime a, DateTime b) {
@@ -384,8 +401,8 @@ class _HabitsTrackerScreenState extends State<HabitsTrackerScreen> {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    final days = const ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
-    final weekDays = _daysOfWeek(_hasManualSelection ? _selectedDay : _today);
+    final weekDays = _daysOfWeek();
+    final dayLabels = weekDays.map(_weekdayLetter).toList();
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -449,7 +466,7 @@ class _HabitsTrackerScreenState extends State<HabitsTrackerScreen> {
                               child: Column(
                                 children: [
                                   Text(
-                                    days[index],
+                                    dayLabels[index],
                                     style: textTheme.labelLarge?.copyWith(
                                       color: AppColors.textMuted,
                                       fontWeight: FontWeight.w600,
@@ -487,7 +504,7 @@ class _HabitsTrackerScreenState extends State<HabitsTrackerScreen> {
                             );
                           },
                           separatorBuilder: (_, __) => const SizedBox(width: 18),
-                          itemCount: days.length,
+                          itemCount: weekDays.length,
                         ),
                       ),
                       const SizedBox(height: 18),
