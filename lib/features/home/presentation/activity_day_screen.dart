@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../../../main.dart';
 import '../../common/theme/app_colors.dart';
-import '../../common/widgets/summary_card.dart';
 import '../domain/home_activity_utils.dart';
+import 'activity_module_day_detail_screens.dart';
 import 'widgets/activity_calendar_sheet.dart';
+import 'widgets/activity_day_components.dart';
 import 'widgets/home_date_selector_chip.dart';
 
 class ActivityDayScreen extends StatefulWidget {
@@ -114,7 +115,7 @@ class _ActivityDayScreenState extends State<ActivityDayScreen> {
                           ),
                         ),
                         HomeDateSelectorChip(
-                          text: _formatDateShort(_selectedDay),
+                          text: formatDateChipText(_selectedDay),
                           onTap: () => _openCalendar(data.activeDays),
                         ),
                       ],
@@ -128,31 +129,49 @@ class _ActivityDayScreenState extends State<ActivityDayScreen> {
                           ),
                     ),
                     const SizedBox(height: 18),
-                    if (!summary.hasActivity)
-                      const _PremiumEmptyState()
-                    else ...[
-                      _ActivityMetricCard(
-                        icon: Icons.fitness_center_rounded,
-                        title: 'Entrenamiento',
-                        subtitle:
-                            '${summary.workouts.length} sesión(es) · ${summary.totalTrainingMinutes} min',
+                    ActivityModuleTile(
+                      module: ActivityModuleType.workout,
+                      subtitle: summary.workouts.isEmpty
+                          ? 'Sin entrenamientos cargados'
+                          : '${summary.workouts.length} sesión(es) · ${summary.totalTrainingMinutes} min',
+                      count: summary.workouts.length,
+                      hasActivity: summary.workouts.isNotEmpty,
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => WorkoutDayDetailScreen(date: _selectedDay),
+                        ),
                       ),
-                      const SizedBox(height: 12),
-                      _ActivityMetricCard(
-                        icon: Icons.restaurant_menu_rounded,
-                        title: 'Alimentación',
-                        subtitle: summary.meals.isEmpty
-                            ? '${summary.meals.length} comida(s)'
-                            : '${summary.meals.length} comida(s) · ${summary.totalCalories} kcal',
+                    ),
+                    const SizedBox(height: 12),
+                    ActivityModuleTile(
+                      module: ActivityModuleType.meal,
+                      subtitle: summary.meals.isEmpty
+                          ? 'Sin comidas cargadas'
+                          : '${summary.meals.length} comida(s) · ${summary.totalCalories} kcal',
+                      count: summary.meals.length,
+                      hasActivity: summary.meals.isNotEmpty,
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => MealsDayDetailScreen(date: _selectedDay),
+                        ),
                       ),
-                      const SizedBox(height: 12),
-                      _ActivityMetricCard(
-                        icon: Icons.nightlight_round,
-                        title: 'Sueño',
-                        subtitle:
-                            '${summary.sleepEntries.length} registro(s) · ${_sleepHours(summary)} h',
+                    ),
+                    const SizedBox(height: 12),
+                    ActivityModuleTile(
+                      module: ActivityModuleType.sleep,
+                      subtitle: summary.sleepEntries.isEmpty
+                          ? 'Sin sueño cargado'
+                          : '${summary.sleepEntries.length} registro(s) · ${_sleepHours(summary)} h',
+                      count: summary.sleepEntries.length,
+                      hasActivity: summary.sleepEntries.isNotEmpty,
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => SleepDayDetailScreen(date: _selectedDay),
+                        ),
                       ),
-                    ],
+                    ),
+                    const SizedBox(height: 22),
+                    ActivityTimelineSection(events: _buildTimeline(summary)),
                   ],
                 ),
               );
@@ -163,22 +182,61 @@ class _ActivityDayScreenState extends State<ActivityDayScreen> {
     );
   }
 
+  List<TimelineEvent> _buildTimeline(HomeDayActivitySummary summary) {
+    final events = <TimelineEvent>[];
+
+    for (final workout in summary.workouts) {
+      final date = parseEntryDate(workout.id);
+      final time = formatTimeLabel(date);
+      events.add(
+        TimelineEvent(
+          module: ActivityModuleType.workout,
+          description: '${workout.name} · ${workout.durationMinutes} min',
+          timeLabel: time.isNotEmpty ? time : fallbackTimeLabelForModule(ActivityModuleType.workout),
+          orderDate: date,
+        ),
+      );
+    }
+
+    for (final meal in summary.meals) {
+      final date = parseEntryDate(meal.id);
+      final time = formatTimeLabel(date);
+      events.add(
+        TimelineEvent(
+          module: ActivityModuleType.meal,
+          description: '${meal.title} · ${meal.calories} kcal',
+          timeLabel: time.isNotEmpty ? time : fallbackTimeLabelForModule(ActivityModuleType.meal),
+          orderDate: date,
+        ),
+      );
+    }
+
+    for (final sleep in summary.sleepEntries) {
+      final date = parseEntryDate(sleep.id);
+      final time = sleep.wakeTime?.isNotEmpty == true
+          ? sleep.wakeTime!
+          : (formatTimeLabel(date).isNotEmpty
+              ? formatTimeLabel(date)
+              : fallbackTimeLabelForModule(ActivityModuleType.sleep));
+      events.add(
+        TimelineEvent(
+          module: ActivityModuleType.sleep,
+          description: 'Sueño ${sleep.quality.toLowerCase()} · ${compactNumber(sleep.hours)} h',
+          timeLabel: time,
+          orderDate: date,
+        ),
+      );
+    }
+
+    return sortTimeline(events);
+  }
+
   String _sleepHours(HomeDayActivitySummary summary) {
     final total = summary.sleepEntries.fold<double>(
       0,
       (sum, entry) => sum + entry.hours,
     );
-    return total.toStringAsFixed(1);
-  }
-
-  String _formatDateShort(DateTime date) {
-    const weekdays = ['lun', 'mar', 'mié', 'jue', 'vie', 'sáb', 'dom'];
-    const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
-    final weekday = weekdays[date.weekday - 1];
-    final month = months[date.month - 1];
-    final capWeekday = '${weekday[0].toUpperCase()}${weekday.substring(1)}';
-    final capMonth = '${month[0].toUpperCase()}${month.substring(1)}';
-    return '$capWeekday, ${date.day} $capMonth';
+    return compactNumber(total);
   }
 }
 
@@ -205,116 +263,4 @@ class _ActivityDayData {
 
   final HomeDayActivitySummary summary;
   final Set<DateTime> activeDays;
-}
-
-class _ActivityMetricCard extends StatelessWidget {
-  const _ActivityMetricCard({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-  });
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
-
-  @override
-  Widget build(BuildContext context) {
-    return SummaryCard(
-      glass: true,
-      minHeight: 96,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(11),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xFF8AE9D2).withOpacity(0.16),
-                border: Border.all(color: Colors.white.withOpacity(0.12)),
-              ),
-              child: Icon(icon, color: const Color(0xFF8AE9D2), size: 20),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700,
-                        ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: AppColors.textMuted,
-                          fontWeight: FontWeight.w600,
-                        ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _PremiumEmptyState extends StatelessWidget {
-  const _PremiumEmptyState();
-
-  @override
-  Widget build(BuildContext context) {
-    return SummaryCard(
-      glass: true,
-      minHeight: 132,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.white.withOpacity(0.08),
-                    border: Border.all(color: Colors.white.withOpacity(0.12)),
-                  ),
-                  child: const Icon(
-                    Icons.event_busy_rounded,
-                    color: AppColors.textMuted,
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  'Sin registros para este día.',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w700,
-                      ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Text(
-              'Cuando cargues entrenamientos, comidas o sueño, los vas a ver acá automáticamente.',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.textMuted,
-                    fontWeight: FontWeight.w500,
-                  ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
