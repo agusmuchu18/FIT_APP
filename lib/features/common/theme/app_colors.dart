@@ -14,6 +14,10 @@ class AppColors {
   static const Color accent = Color(0xFF2AF5D2);
   static const Color accentSecondary = Color(0xFF7CF4FF);
 
+  static const Color accentTraining = Color(0xFF2AD5C1);
+  static const Color accentFood = Color(0xFFF6C85F);
+  static const Color accentSleep = Color(0xFF8B7CFF);
+
   // Text (off-white premium para evitar blanco puro “quemado”)
   static const Color textPrimary = Color(0xFFEAF1FF);
   static const Color textSecondary = Color(0xFFC7D2E1);
