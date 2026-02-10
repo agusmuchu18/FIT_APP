@@ -76,7 +76,15 @@ class _ActivityCalendarSheetState extends State<ActivityCalendarSheet> {
                         borderRadius: BorderRadius.circular(99),
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 10),
+                    Text(
+                      'Seleccioná un día',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
                     TableCalendar<void>(
                       firstDay: DateTime(2020),
                       lastDay: DateTime(2100),
@@ -85,10 +93,6 @@ class _ActivityCalendarSheetState extends State<ActivityCalendarSheet> {
                       availableGestures: AvailableGestures.horizontalSwipe,
                       calendarFormat: CalendarFormat.month,
                       startingDayOfWeek: StartingDayOfWeek.monday,
-                      eventLoader: (day) {
-                        final hasEvents = hasActivity(day: day, activeDays: widget.activeDays);
-                        return hasEvents ? const [Object()] : const [];
-                      },
                       onDaySelected: (selectedDay, focusedDay) {
                         final normalized = normalizeDay(selectedDay);
                         setState(() {
@@ -112,11 +116,6 @@ class _ActivityCalendarSheetState extends State<ActivityCalendarSheet> {
                         todayDecoration: BoxDecoration(
                           shape: BoxShape.circle,
                           color: theme.colorScheme.secondary.withOpacity(0.32),
-                        ),
-                        markersMaxCount: 1,
-                        markerDecoration: BoxDecoration(
-                          color: theme.colorScheme.secondary,
-                          shape: BoxShape.circle,
                         ),
                       ),
                       headerStyle: const HeaderStyle(
