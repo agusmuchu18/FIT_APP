@@ -1,15 +1,16 @@
 import 'dart:math' as math;
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 
 import '../../../core/domain/entities.dart';
 import '../../../main.dart';
 import '../../common/theme/app_colors.dart';
 import '../../common/widgets/summary_card.dart';
+import '../../home/domain/home_activity_utils.dart';
 import '../../home/domain/goal_insight_service.dart';
 import '../../nutrition/data/food_repository.dart';
 import '../../sleep/domain/sleep_time_utils.dart';
+import 'widgets/activity_calendar_sheet.dart';
+import 'widgets/home_date_selector_chip.dart';
 
 class HomeSummaryScreen extends StatefulWidget {
   const HomeSummaryScreen({super.key});
@@ -20,30 +21,31 @@ class HomeSummaryScreen extends StatefulWidget {
 
 class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
   final FoodRepository _foodRepository = FoodRepository();
+  late DateTime _selectedDate;
   late Future<_HomeSummaryData> _summaryFuture;
 
   @override
   void initState() {
     super.initState();
+    final now = DateTime.now();
+    _selectedDate = DateTime(now.year, now.month, now.day);
     _summaryFuture = _loadSummaryData();
   }
 
   Future<_HomeSummaryData> _loadSummaryData() async {
     final repository = RepositoryScope.of(context);
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final lastWeekStart = today.subtract(const Duration(days: 6));
-    final previousWeekStart = today.subtract(const Duration(days: 13));
-    final previousWeekEnd = today.subtract(const Duration(days: 7));
+    final selectedDay = normalizeDay(_selectedDate);
+    final lastWeekStart = selectedDay.subtract(const Duration(days: 6));
+    final previousWeekStart = selectedDay.subtract(const Duration(days: 13));
+    final previousWeekEnd = selectedDay.subtract(const Duration(days: 7));
 
     final workoutsFuture = repository.getWorkouts();
     final mealsFuture = repository.getMeals();
     final sleepFuture = repository.getSleep();
     final preferencesFuture = repository.getPreferences();
-    final nutritionTodayFuture = repository.getDailyNutritionStats(today);
+    final nutritionTodayFuture = repository.getDailyNutritionStats(selectedDay);
     final weeklyNutritionFuture = repository.getWeeklyNutritionStats(days: 7);
     final macroDistributionFuture = repository.getMacroDistribution(days: 7);
-    final workoutDurationsFuture = repository.getWorkoutDurationByDay(days: 14);
 
     final meals = await mealsFuture;
     final workouts = await workoutsFuture;
@@ -52,29 +54,27 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
     final nutritionToday = await nutritionTodayFuture;
     final weeklyNutrition = await weeklyNutritionFuture;
     final macroDistribution = await macroDistributionFuture;
-    final workoutDurations = await workoutDurationsFuture;
-
-    // Active streak calculation based on any logged activity.
-    final activityDays = <DateTime>{};
-    for (final workout in workouts) {
-      activityDays.add(_dateOnly(_safeParseDate(workout.id)));
-    }
-    for (final meal in meals) {
-      activityDays.add(_dateOnly(_safeParseDate(meal.id)));
-    }
-    for (final sleep in sleepEntries) {
-      activityDays.add(dateOnly(sleepEntryDate(sleep)));
-    }
+    final activityDays = buildActiveDaysSet(
+      workouts: workouts,
+      meals: meals,
+      sleepEntries: sleepEntries,
+    );
+    final selectedActivity = getActivityForDay(
+      day: selectedDay,
+      workouts: workouts,
+      meals: meals,
+      sleepEntries: sleepEntries,
+    );
 
     var streak = 0;
     final streakDots = <bool>[];
     for (var i = 11; i >= 0; i--) {
-      final day = today.subtract(Duration(days: i));
+      final day = selectedDay.subtract(Duration(days: i));
       final isActive = activityDays.contains(day);
       streakDots.add(isActive);
     }
     for (var i = 0;; i++) {
-      final day = today.subtract(Duration(days: i));
+      final day = selectedDay.subtract(Duration(days: i));
       if (activityDays.contains(day)) {
         streak++;
       } else {
@@ -83,10 +83,17 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
     }
 
     // Training stats.
-    final trainingToday = workoutDurations[today] ?? 0;
+    final workoutDurations = <DateTime, int>{};
+    for (final workout in workouts) {
+      final workoutDay = normalizeDay(_safeParseDate(workout.id));
+      workoutDurations[workoutDay] =
+          (workoutDurations[workoutDay] ?? 0) + workout.durationMinutes;
+    }
+
+    final trainingToday = workoutDurations[selectedDay] ?? 0;
     final recentTrainingMinutes = <int>[];
     for (var i = 0; i < 7; i++) {
-      final day = today.subtract(Duration(days: 6 - i));
+      final day = selectedDay.subtract(Duration(days: 6 - i));
       recentTrainingMinutes.add(workoutDurations[day] ?? 0);
     }
     final trainingWeekTotal =
@@ -101,7 +108,7 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
     var macrosToday = Macros(carbs: 0, protein: 0, fat: 0);
     for (final meal in meals) {
       final entryDate = _dateOnly(_safeParseDate(meal.id));
-      if (entryDate != today) continue;
+      if (entryDate != selectedDay) continue;
 
       final matchingFood = catalog.firstWhere(
         (item) =>
@@ -129,7 +136,7 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
       );
     }
 
-    if (caloriesToday == 0 && nutritionToday != null) {
+    if (caloriesToday == 0 && selectedDay == normalizeDay(DateTime.now()) && nutritionToday != null) {
       caloriesToday = nutritionToday.totalCalories;
       macrosToday = nutritionToday.macros;
     }
@@ -167,20 +174,20 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
     }
 
     final avgSleepDuration =
-        _averageHoursForRange(lastWeekStart, today, sleepEntries);
+        _averageHoursForRange(lastWeekStart, selectedDay, sleepEntries);
     final previousSleepAvg =
         _averageHoursForRange(previousWeekStart, previousWeekEnd, sleepEntries);
     final avgSleepDelta = avgSleepDuration - previousSleepAvg;
 
     final bedStd = _circularStdDev(
       lastWeekStart,
-      today,
+      selectedDay,
       sleepEntries,
       (e) => parseHHmmToMinutes(e.bedtime),
     );
     final wakeStd = _circularStdDev(
       lastWeekStart,
-      today,
+      selectedDay,
       sleepEntries,
       (e) => parseHHmmToMinutes(e.wakeTime),
     );
@@ -248,7 +255,23 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
       regularityWeekDelta: regularityWeekDelta,
       goalInsight: goalInsight,
       hasUserGoal: hasUserGoal,
+      selectedDay: selectedDay,
+      activeDays: activityDays,
+      selectedDayActivity: selectedActivity,
     );
+  }
+
+  Future<void> _openCalendar(Set<DateTime> activeDays) async {
+    final selected = await ActivityCalendarSheet.show(
+      context,
+      activeDays: activeDays,
+      initialSelectedDay: _selectedDate,
+    );
+    if (selected == null) return;
+    setState(() {
+      _selectedDate = normalizeDay(selected);
+      _summaryFuture = _loadSummaryData();
+    });
   }
 
   void _refreshSummary() {
@@ -308,7 +331,12 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _HeaderSection(data: data),
+                          _HeaderSection(
+                            data: data,
+                            onSelectDate: () => _openCalendar(data.activeDays),
+                          ),
+                          const SizedBox(height: 12),
+                          _SelectedDayActivityCard(activity: data.selectedDayActivity),
                           const SizedBox(height: 24),
                           _StreakCard(
                             activeDays: data.activeStreak,
@@ -409,6 +437,9 @@ class _HomeSummaryData {
     required this.regularityWeekDelta,
     required this.goalInsight,
     required this.hasUserGoal,
+    required this.selectedDay,
+    required this.activeDays,
+    required this.selectedDayActivity,
   });
 
   factory _HomeSummaryData.empty() {
@@ -431,6 +462,17 @@ class _HomeSummaryData {
         insightText: 'Configura tu objetivo para ver recomendaciones.',
       ),
       hasUserGoal: false,
+      selectedDay: normalizeDay(DateTime.now()),
+      activeDays: const <DateTime>{},
+      selectedDayActivity: HomeDayActivitySummary(
+        day: DateTime(1970, 1, 1),
+        workouts: <WorkoutEntry>[],
+        meals: <MealEntry>[],
+        sleepEntries: <SleepEntry>[],
+        totalTrainingMinutes: 0,
+        totalCalories: 0,
+        hasActivity: false,
+      ),
     );
   }
 
@@ -447,6 +489,9 @@ class _HomeSummaryData {
   final double regularityWeekDelta;
   final GoalInsightData goalInsight;
   final bool hasUserGoal;
+  final DateTime selectedDay;
+  final Set<DateTime> activeDays;
+  final HomeDayActivitySummary selectedDayActivity;
 }
 
 class _HomeBackground extends StatelessWidget {
@@ -508,14 +553,19 @@ class _GlowBlob extends StatelessWidget {
 }
 
 class _HeaderSection extends StatelessWidget {
-  const _HeaderSection({required this.data});
+  const _HeaderSection({
+    required this.data,
+    required this.onSelectDate,
+  });
 
   final _HomeSummaryData data;
+  final VoidCallback onSelectDate;
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    final now = DateTime.now();
+    final selectedDay = data.selectedDay;
+    final today = normalizeDay(DateTime.now());
     final weekdayNames = [
       'lunes',
       'martes',
@@ -541,10 +591,11 @@ class _HeaderSection extends StatelessWidget {
     ];
     String capitalize(String text) =>
         text.isEmpty ? text : '${text[0].toUpperCase()}${text.substring(1)}';
-    final shortWeekday = weekdayNames[now.weekday - 1].substring(0, 3);
-    final shortMonth = monthNames[now.month - 1].substring(0, 3);
+    final shortWeekday = weekdayNames[selectedDay.weekday - 1].substring(0, 3);
+    final shortMonth = monthNames[selectedDay.month - 1].substring(0, 3);
     final formattedDateShort =
-        '${capitalize(shortWeekday)}, ${now.day} ${capitalize(shortMonth)}';
+        '${capitalize(shortWeekday)}, ${selectedDay.day} ${capitalize(shortMonth)}';
+    final title = selectedDay == today ? 'Hoy' : 'Actividad del día';
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 8),
       child: Column(
@@ -554,7 +605,7 @@ class _HeaderSection extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  'Hoy',
+                  title,
                   style: textTheme.displaySmall?.copyWith(
                     color: Colors.white,
                     fontWeight: FontWeight.w800,
@@ -562,7 +613,10 @@ class _HeaderSection extends StatelessWidget {
                   ),
                 ),
               ),
-              _GlassDateChip(text: formattedDateShort),
+              HomeDateSelectorChip(
+                text: formattedDateShort,
+                onTap: onSelectDate,
+              ),
             ],
           ),
           const SizedBox(height: 6),
@@ -580,44 +634,107 @@ class _HeaderSection extends StatelessWidget {
   }
 }
 
-class _GlassDateChip extends StatelessWidget {
-  const _GlassDateChip({required this.text});
+class _SelectedDayActivityCard extends StatelessWidget {
+  const _SelectedDayActivityCard({required this.activity});
 
-  final String text;
+  final HomeDayActivitySummary activity;
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(999),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: Colors.white.withOpacity(0.12)),
-            color: Colors.white.withOpacity(0.06),
-          ),
+    final textTheme = Theme.of(context).textTheme;
+    if (!activity.hasActivity) {
+      return SummaryCard(
+        minHeight: 96,
+        glass: true,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           child: Row(
-            mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.calendar_today_rounded, size: 16, color: Colors.white),
-              const SizedBox(width: 6),
+              const Icon(Icons.event_busy_rounded, color: AppColors.textMuted),
+              const SizedBox(width: 10),
               Text(
-                text,
-                style: Theme.of(context)
-                    .textTheme
-                    .labelMedium
-                    ?.copyWith(color: Colors.white, fontWeight: FontWeight.w700),
+                'Sin registros para este día.',
+                style: textTheme.bodyMedium?.copyWith(
+                  color: AppColors.textMuted,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ],
           ),
+        ),
+      );
+    }
+
+    return SummaryCard(
+      minHeight: 96,
+      glass: true,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Wrap(
+          spacing: 12,
+          runSpacing: 10,
+          children: [
+            _ActivityPill(
+              icon: Icons.fitness_center_rounded,
+              label: '${activity.workouts.length} entrenamiento(s)',
+              value: '${activity.totalTrainingMinutes} min',
+            ),
+            _ActivityPill(
+              icon: Icons.restaurant_menu_rounded,
+              label: '${activity.meals.length} comida(s)',
+              value: '${activity.totalCalories} kcal',
+            ),
+            _ActivityPill(
+              icon: Icons.nightlight_round,
+              label: '${activity.sleepEntries.length} sueño',
+              value: activity.sleepEntries.isEmpty
+                  ? '-'
+                  : '${activity.sleepEntries.first.hours.toStringAsFixed(1)} h',
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
+class _ActivityPill extends StatelessWidget {
+  const _ActivityPill({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.06),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white.withOpacity(0.1)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 15, color: const Color(0xFF8AE9D2)),
+          const SizedBox(width: 6),
+          Text(
+            '$label · $value',
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 class _GoalInsightCard extends StatelessWidget {
   const _GoalInsightCard({required this.data});
