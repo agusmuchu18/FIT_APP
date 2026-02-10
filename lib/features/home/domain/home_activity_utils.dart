@@ -11,10 +11,26 @@ Set<DateTime> buildActiveDaysSet({
   final activeDays = <DateTime>{};
 
   for (final workout in workouts) {
-    activeDays.add(normalizeDay(_entryDateFromId(workout.id, workout.meta.updatedAt)));
+    activeDays.add(
+      normalizeDay(
+        _entryDate(
+          rawId: workout.id,
+          createdAt: workout.meta.createdAt,
+          updatedAt: workout.meta.updatedAt,
+        ),
+      ),
+    );
   }
   for (final meal in meals) {
-    activeDays.add(normalizeDay(_entryDateFromId(meal.id, meal.meta.updatedAt)));
+    activeDays.add(
+      normalizeDay(
+        _entryDate(
+          rawId: meal.id,
+          createdAt: meal.meta.createdAt,
+          updatedAt: meal.meta.updatedAt,
+        ),
+      ),
+    );
   }
   for (final sleep in sleepEntries) {
     activeDays.add(normalizeDay(sleepEntryDate(sleep)));
@@ -40,12 +56,27 @@ HomeDayActivitySummary getActivityForDay({
   final dayWorkouts = workouts
       .where(
         (workout) =>
-            normalizeDay(_entryDateFromId(workout.id, workout.meta.updatedAt)) == normalized,
+            normalizeDay(
+              _entryDate(
+                rawId: workout.id,
+                createdAt: workout.meta.createdAt,
+                updatedAt: workout.meta.updatedAt,
+              ),
+            ) ==
+            normalized,
       )
       .toList(growable: false);
   final dayMeals = meals
       .where(
-        (meal) => normalizeDay(_entryDateFromId(meal.id, meal.meta.updatedAt)) == normalized,
+        (meal) =>
+            normalizeDay(
+              _entryDate(
+                rawId: meal.id,
+                createdAt: meal.meta.createdAt,
+                updatedAt: meal.meta.updatedAt,
+              ),
+            ) ==
+            normalized,
       )
       .toList(growable: false);
   final daySleep = sleepEntries
@@ -67,9 +98,21 @@ HomeDayActivitySummary getActivityForDay({
   );
 }
 
-DateTime _entryDateFromId(String raw, DateTime fallback) {
-  final parsed = DateTime.tryParse(raw);
-  return parsed == null ? fallback : parsed;
+DateTime _entryDate({
+  required String rawId,
+  required DateTime createdAt,
+  required DateTime updatedAt,
+  DateTime? performedAt,
+}) {
+  if (performedAt != null) {
+    return performedAt;
+  }
+  final parsedFromId = DateTime.tryParse(rawId);
+  if (parsedFromId != null) {
+    return parsedFromId;
+  }
+  // TODO(activity-entry-date): Prefer entry.performedAt when workout/meal entities add it.
+  return createdAt.isUtc ? createdAt.toLocal() : createdAt;
 }
 
 class HomeDayActivitySummary {

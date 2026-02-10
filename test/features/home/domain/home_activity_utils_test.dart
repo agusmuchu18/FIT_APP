@@ -52,6 +52,33 @@ void main() {
       expect(hasActivity(day: DateTime(2026, 2, 12), activeDays: activeDays), isFalse);
     });
 
+
+    test('uses createdAt fallback when id has no parseable date', () {
+      final createdAt = DateTime.utc(2026, 2, 14, 10);
+      final updatedAt = DateTime.utc(2026, 2, 20, 8);
+      final workout = WorkoutEntry(
+        id: 'workout-without-date',
+        name: 'Bike',
+        durationMinutes: 40,
+        intensity: 'high',
+        meta: EntityMeta(
+          createdAt: createdAt,
+          updatedAt: updatedAt,
+          deleted: false,
+          revision: 1,
+        ),
+      );
+
+      final activeDays = buildActiveDaysSet(
+        workouts: [workout],
+        meals: const [],
+        sleepEntries: const [],
+      );
+
+      expect(hasActivity(day: DateTime(2026, 2, 14), activeDays: activeDays), isTrue);
+      expect(hasActivity(day: DateTime(2026, 2, 20), activeDays: activeDays), isFalse);
+    });
+
     test('getActivityForDay returns day aggregates', () {
       final target = DateTime(2026, 2, 10);
       final workouts = [

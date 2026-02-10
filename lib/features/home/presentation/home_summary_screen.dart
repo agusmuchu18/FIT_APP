@@ -9,6 +9,7 @@ import '../../home/domain/home_activity_utils.dart';
 import '../../home/domain/goal_insight_service.dart';
 import '../../nutrition/data/food_repository.dart';
 import '../../sleep/domain/sleep_time_utils.dart';
+import 'activity_day_screen.dart';
 import 'widgets/activity_calendar_sheet.dart';
 import 'widgets/home_date_selector_chip.dart';
 
@@ -21,20 +22,17 @@ class HomeSummaryScreen extends StatefulWidget {
 
 class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
   final FoodRepository _foodRepository = FoodRepository();
-  late DateTime _selectedDate;
   late Future<_HomeSummaryData> _summaryFuture;
 
   @override
   void initState() {
     super.initState();
-    final now = DateTime.now();
-    _selectedDate = DateTime(now.year, now.month, now.day);
     _summaryFuture = _loadSummaryData();
   }
 
   Future<_HomeSummaryData> _loadSummaryData() async {
     final repository = RepositoryScope.of(context);
-    final selectedDay = normalizeDay(_selectedDate);
+    final selectedDay = normalizeDay(DateTime.now());
     final lastWeekStart = selectedDay.subtract(const Duration(days: 6));
     final previousWeekStart = selectedDay.subtract(const Duration(days: 13));
     final previousWeekEnd = selectedDay.subtract(const Duration(days: 7));
@@ -265,13 +263,16 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
     final selected = await ActivityCalendarSheet.show(
       context,
       activeDays: activeDays,
-      initialSelectedDay: _selectedDate,
+      initialSelectedDay: normalizeDay(DateTime.now()),
     );
-    if (selected == null) return;
-    setState(() {
-      _selectedDate = normalizeDay(selected);
-      _summaryFuture = _loadSummaryData();
-    });
+    if (selected == null || !mounted) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ActivityDayScreen(date: normalizeDay(selected)),
+      ),
+    );
+    if (!mounted) return;
+    _refreshSummary();
   }
 
   void _refreshSummary() {
@@ -332,11 +333,8 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _HeaderSection(
-                            data: data,
                             onSelectDate: () => _openCalendar(data.activeDays),
                           ),
-                          const SizedBox(height: 12),
-                          _SelectedDayActivityCard(activity: data.selectedDayActivity),
                           const SizedBox(height: 24),
                           _StreakCard(
                             activeDays: data.activeStreak,
@@ -554,18 +552,15 @@ class _GlowBlob extends StatelessWidget {
 
 class _HeaderSection extends StatelessWidget {
   const _HeaderSection({
-    required this.data,
     required this.onSelectDate,
   });
 
-  final _HomeSummaryData data;
   final VoidCallback onSelectDate;
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    final selectedDay = data.selectedDay;
-    final today = normalizeDay(DateTime.now());
+    final selectedDay = normalizeDay(DateTime.now());
     final weekdayNames = [
       'lunes',
       'martes',
@@ -595,7 +590,7 @@ class _HeaderSection extends StatelessWidget {
     final shortMonth = monthNames[selectedDay.month - 1].substring(0, 3);
     final formattedDateShort =
         '${capitalize(shortWeekday)}, ${selectedDay.day} ${capitalize(shortMonth)}';
-    final title = selectedDay == today ? 'Hoy' : 'Actividad del día';
+    const title = 'Hoy';
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 8),
       child: Column(
