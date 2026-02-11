@@ -94,6 +94,23 @@ class _HabitsTrackerScreenState extends State<HabitsTrackerScreen> {
     await box.putAll(entries);
   }
 
+
+  Set<String> _loadAddedTemplateIds(Box<String> box) {
+    final ids = <String>{};
+    for (final raw in box.values) {
+      try {
+        final map = (jsonDecode(raw) as Map).cast<String, Object?>();
+        final templateId = map['sourceTemplateId'] as String?;
+        if (templateId != null && templateId.isNotEmpty) {
+          ids.add(templateId);
+        }
+      } catch (_) {
+        // Ignora entradas corruptas.
+      }
+    }
+    return ids;
+  }
+
   void _showHabitActions(Box<String> box, _HabitEntry habit) {
     HapticFeedback.selectionClick();
     showModalBottomSheet<void>(
@@ -229,6 +246,7 @@ class _HabitsTrackerScreenState extends State<HabitsTrackerScreen> {
                                   child: HabitGallerySheet(
                                     onAddHabit: (habit) => _saveHabit(box, habit),
                                     onAddMany: (habits) => _addMany(box, habits),
+                                    alreadyAddedTemplateIds: _loadAddedTemplateIds(box),
                                   ),
                                 ),
                               );
@@ -356,6 +374,7 @@ class _HabitEntry {
     required this.intervalWeeks,
     required this.dayOfMonth,
     required this.adjustToLastDayIfMissing,
+    this.sourceTemplateId,
     this.targetCount,
     this.subtitle,
   });
@@ -378,6 +397,7 @@ class _HabitEntry {
       intervalWeeks: model.intervalWeeks,
       dayOfMonth: model.dayOfMonth,
       adjustToLastDayIfMissing: model.adjustToLastDayIfMissing,
+      sourceTemplateId: model.sourceTemplateId,
       targetCount: model.targetCount,
       subtitle: model.subtitle,
     );
@@ -398,6 +418,7 @@ class _HabitEntry {
   final int intervalWeeks;
   final int dayOfMonth;
   final bool adjustToLastDayIfMissing;
+  final String? sourceTemplateId;
   final int? targetCount;
   final String? subtitle;
 
@@ -417,6 +438,7 @@ class _HabitEntry {
       intervalWeeks: intervalWeeks,
       dayOfMonth: dayOfMonth,
       adjustToLastDayIfMissing: adjustToLastDayIfMissing,
+      sourceTemplateId: sourceTemplateId,
       createdAt: createdAt,
       targetCount: targetCount,
       subtitle: subtitle,
