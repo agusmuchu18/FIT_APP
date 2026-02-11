@@ -126,6 +126,7 @@ class HabitEntry {
     required this.intervalWeeks,
     required this.dayOfMonth,
     required this.adjustToLastDayIfMissing,
+    this.sourceTemplateId,
     this.targetCount,
     this.subtitle,
   });
@@ -146,6 +147,7 @@ class HabitEntry {
     int intervalWeeks = 1,
     int? dayOfMonth,
     bool adjustToLastDayIfMissing = true,
+    String? sourceTemplateId,
   }) {
     final normalizedStartDate = normalizeHabitDay(startDate ?? DateTime.now());
     return HabitEntry(
@@ -166,6 +168,7 @@ class HabitEntry {
       intervalWeeks: intervalWeeks.clamp(1, 8),
       dayOfMonth: (dayOfMonth ?? normalizedStartDate.day).clamp(1, 31),
       adjustToLastDayIfMissing: adjustToLastDayIfMissing,
+      sourceTemplateId: sourceTemplateId,
     );
   }
 
@@ -186,6 +189,7 @@ class HabitEntry {
   final int intervalWeeks;
   final int dayOfMonth;
   final bool adjustToLastDayIfMissing;
+  final String? sourceTemplateId;
 
   HabitEntry copyWith({
     String? name,
@@ -203,6 +207,7 @@ class HabitEntry {
     int? intervalWeeks,
     int? dayOfMonth,
     bool? adjustToLastDayIfMissing,
+    String? sourceTemplateId,
   }) {
     final forever = isForever ?? this.isForever;
     final nextStartDate = normalizeHabitDay(startDate ?? this.startDate);
@@ -224,6 +229,7 @@ class HabitEntry {
       intervalWeeks: (intervalWeeks ?? this.intervalWeeks).clamp(1, 8),
       dayOfMonth: (dayOfMonth ?? this.dayOfMonth).clamp(1, 31),
       adjustToLastDayIfMissing: adjustToLastDayIfMissing ?? this.adjustToLastDayIfMissing,
+      sourceTemplateId: sourceTemplateId ?? this.sourceTemplateId,
     );
   }
 
@@ -245,6 +251,7 @@ class HabitEntry {
         'intervalWeeks': intervalWeeks,
         'dayOfMonth': dayOfMonth,
         'adjustToLastDayIfMissing': adjustToLastDayIfMissing,
+        'sourceTemplateId': sourceTemplateId,
       };
 
   static HabitEntry? tryDecode(Map<String, Object?> map) {
@@ -281,6 +288,7 @@ class HabitEntry {
       intervalWeeks: ((map['intervalWeeks'] is int ? map['intervalWeeks'] as int : 1) ?? 1).clamp(1, 8),
       dayOfMonth: dayOfMonth.clamp(1, 31),
       adjustToLastDayIfMissing: map['adjustToLastDayIfMissing'] as bool? ?? true,
+      sourceTemplateId: map['sourceTemplateId'] as String?,
     );
   }
 }
@@ -331,7 +339,7 @@ bool shouldAppearOn(HabitEntry habit, DateTime day) {
 @immutable
 class HabitTemplate {
   const HabitTemplate({
-    required this.id,
+    required this.templateId,
     required this.name,
     required this.subtitle,
     required this.iconKey,
@@ -344,7 +352,8 @@ class HabitTemplate {
     this.defaultTargetCount,
   });
 
-  final String id;
+  final String templateId;
+  String get id => templateId;
   final String name;
   final String subtitle;
   final String iconKey;
@@ -379,6 +388,7 @@ class HabitTemplate {
       isForever: config.isForever,
       targetCount: config.isCountable ? config.targetCount : null,
       subtitle: subtitle,
+      sourceTemplateId: templateId,
     );
   }
 }
@@ -427,7 +437,7 @@ const List<String> habitCategories = [
 
 const List<HabitTemplate> kHabitTemplates = [
   HabitTemplate(
-    id: 'daily-check',
+    templateId: 'daily_check',
     name: 'Chequeo diario',
     subtitle: 'Reflexión rápida para cerrar el día.',
     iconKey: 'smile',
@@ -438,7 +448,7 @@ const List<HabitTemplate> kHabitTemplates = [
     defaultGoalDays: 21,
   ),
   HabitTemplate(
-    id: 'water',
+    templateId: 'drink_water',
     name: 'Beber agua',
     subtitle: 'Hidratate durante toda la jornada.',
     iconKey: 'water',
@@ -450,7 +460,7 @@ const List<HabitTemplate> kHabitTemplates = [
     defaultTargetCount: 8,
   ),
   HabitTemplate(
-    id: 'breakfast',
+    templateId: 'daily_breakfast',
     name: 'Desayunar',
     subtitle: 'Comenzá con energía todas las mañanas.',
     iconKey: 'breakfast',
@@ -461,7 +471,7 @@ const List<HabitTemplate> kHabitTemplates = [
     defaultGoalDays: 30,
   ),
   HabitTemplate(
-    id: 'fruits',
+    templateId: 'eat_fruits',
     name: 'Comer frutas',
     subtitle: 'Una porción de fruta por día.',
     iconKey: 'nutrition',
@@ -472,7 +482,7 @@ const List<HabitTemplate> kHabitTemplates = [
     defaultGoalDays: 30,
   ),
   HabitTemplate(
-    id: 'read',
+    templateId: 'daily_reading',
     name: 'Leer',
     subtitle: '15 minutos de lectura sin distracciones.',
     iconKey: 'read',
@@ -483,7 +493,7 @@ const List<HabitTemplate> kHabitTemplates = [
     defaultGoalDays: 21,
   ),
   HabitTemplate(
-    id: 'train',
+    templateId: 'train_workout',
     name: 'Entrenar',
     subtitle: 'Sesiones que eleven tu rendimiento.',
     iconKey: 'workout',
@@ -494,7 +504,7 @@ const List<HabitTemplate> kHabitTemplates = [
     defaultGoalDays: 12,
   ),
   HabitTemplate(
-    id: 'meditate',
+    templateId: 'daily_meditation',
     name: 'Meditar',
     subtitle: 'Respiración consciente y foco mental.',
     iconKey: 'meditate',

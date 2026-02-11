@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../common/theme/app_colors.dart';
 import '../../common/widgets/primary_button.dart';
@@ -6,10 +7,16 @@ import '../domain/habit_models.dart';
 import 'habit_create_screen.dart';
 
 class HabitGallerySheet extends StatefulWidget {
-  const HabitGallerySheet({super.key, required this.onAddHabit, required this.onAddMany});
+  const HabitGallerySheet({
+    super.key,
+    required this.onAddHabit,
+    required this.onAddMany,
+    required this.alreadyAddedTemplateIds,
+  });
 
   final Future<void> Function(HabitEntry habit) onAddHabit;
   final Future<void> Function(List<HabitEntry> habits) onAddMany;
+  final Set<String> alreadyAddedTemplateIds;
 
   @override
   State<HabitGallerySheet> createState() => _HabitGallerySheetState();
@@ -18,33 +25,58 @@ class HabitGallerySheet extends StatefulWidget {
 class _HabitGallerySheetState extends State<HabitGallerySheet> with TickerProviderStateMixin {
   late final TabController _tabController = TabController(length: habitCategories.length, vsync: this);
 
+  final Set<String> selectedTemplateIds = <String>{};
+  late final Set<String> alreadyAddedTemplateIds;
+  final Map<String, HabitCreationConfig> _configs = <String, HabitCreationConfig>{};
+
+  @override
+  void initState() {
+    super.initState();
+    alreadyAddedTemplateIds = Set<String>.from(widget.alreadyAddedTemplateIds);
+  }
+
   @override
   void dispose() {
     _tabController.dispose();
     super.dispose();
   }
 
-  final Set<String> _selectedIds = <String>{};
-  final Map<String, HabitCreationConfig> _configs = <String, HabitCreationConfig>{};
+  bool _isAlreadyAdded(HabitTemplate template) => alreadyAddedTemplateIds.contains(template.templateId);
 
-  Future<void> _quickAdd(HabitTemplate template) async {
-    await widget.onAddHabit(template.buildHabit());
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Hábito agregado')));
+  void _showAlreadyAddedSnackBar() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        duration: Duration(milliseconds: 1300),
+        content: Text('Este hábito ya está agregado'),
+      ),
+    );
   }
 
   void _toggleSelect(HabitTemplate template) {
+    if (_isAlreadyAdded(template)) {
+      _showAlreadyAddedSnackBar();
+      return;
+    }
+
+    final didSelect = !selectedTemplateIds.contains(template.templateId);
+    HapticFeedback.selectionClick();
+
     setState(() {
-      if (_selectedIds.contains(template.id)) {
-        _selectedIds.remove(template.id);
+      if (didSelect) {
+        selectedTemplateIds.add(template.templateId);
       } else {
-        _selectedIds.add(template.id);
+        selectedTemplateIds.remove(template.templateId);
       }
     });
   }
 
   Future<void> _configureTemplate(HabitTemplate template) async {
-    HabitCreationConfig current = _configs[template.id] ?? template.defaultConfig();
+    if (_isAlreadyAdded(template)) {
+      _showAlreadyAddedSnackBar();
+      return;
+    }
+
+    HabitCreationConfig current = _configs[template.templateId] ?? template.defaultConfig();
     final config = await showModalBottomSheet<HabitCreationConfig>(
       context: context,
       backgroundColor: Colors.transparent,
@@ -90,7 +122,7 @@ class _HabitGallerySheetState extends State<HabitGallerySheet> with TickerProvid
                       onChanged: (value) => current = current.copyWith(targetCount: int.tryParse(value) ?? 1),
                     ),
                   const SizedBox(height: 12),
-                  PrimaryButton(label: 'Agregar', onPressed: () => Navigator.pop(context, current)),
+                  PrimaryButton(label: 'Guardar configuración', onPressed: () => Navigator.pop(context, current)),
                 ],
               ),
             ),
@@ -100,22 +132,39 @@ class _HabitGallerySheetState extends State<HabitGallerySheet> with TickerProvid
     );
 
     if (config == null) return;
-    _configs[template.id] = config;
-    await widget.onAddHabit(template.buildHabit(overrideConfig: config));
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Hábito agregado')));
+
+    setState(() {
+      _configs[template.templateId] = config;
+      selectedTemplateIds.add(template.templateId);
+    });
+    HapticFeedback.selectionClick();
   }
 
   Future<void> _confirmBatch() async {
-    if (_selectedIds.isEmpty) return;
+    if (selectedTemplateIds.isEmpty) return;
+
     final toAdd = kHabitTemplates
-        .where((template) => _selectedIds.contains(template.id))
-        .map((template) => template.buildHabit(overrideConfig: _configs[template.id]))
+        .where((template) => selectedTemplateIds.contains(template.templateId) && !alreadyAddedTemplateIds.contains(template.templateId))
+        .map((template) => template.buildHabit(overrideConfig: _configs[template.templateId]))
         .toList();
+
+    if (toAdd.isEmpty) {
+      _showAlreadyAddedSnackBar();
+      return;
+    }
+
     final messenger = ScaffoldMessenger.of(context);
+    HapticFeedback.mediumImpact();
     await widget.onAddMany(toAdd);
     if (!mounted) return;
-    messenger.showSnackBar(SnackBar(content: Text('${toAdd.length} hábitos agregados')));
+
+    messenger.showSnackBar(
+      SnackBar(
+        duration: const Duration(milliseconds: 1500),
+        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+        content: Text('Se agregaron ${toAdd.length} hábitos'),
+      ),
+    );
     Navigator.pop(context);
   }
 
@@ -147,7 +196,7 @@ class _HabitGallerySheetState extends State<HabitGallerySheet> with TickerProvid
                   const Text('Galería', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w800, fontSize: 20)),
                   const Spacer(),
                   IconButton.filled(
-                    onPressed: _selectedIds.isEmpty ? null : _confirmBatch,
+                    onPressed: selectedTemplateIds.isEmpty ? null : _confirmBatch,
                     icon: const Icon(Icons.check_rounded),
                   ),
                 ],
@@ -169,7 +218,9 @@ class _HabitGallerySheetState extends State<HabitGallerySheet> with TickerProvid
                       separatorBuilder: (_, __) => Divider(color: Colors.white.withOpacity(0.06)),
                       itemBuilder: (context, index) {
                         final template = templates[index];
-                        final selected = _selectedIds.contains(template.id);
+                        final selected = selectedTemplateIds.contains(template.templateId);
+                        final isAdded = _isAlreadyAdded(template);
+                        final color = Color(template.colorArgb);
                         return InkWell(
                           borderRadius: BorderRadius.circular(16),
                           onTap: () => _toggleSelect(template),
@@ -178,17 +229,17 @@ class _HabitGallerySheetState extends State<HabitGallerySheet> with TickerProvid
                             duration: const Duration(milliseconds: 180),
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                             decoration: BoxDecoration(
-                              color: selected ? Color(template.colorArgb).withOpacity(0.12) : Colors.transparent,
+                              color: selected ? color.withOpacity(0.12) : Colors.transparent,
                               borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: selected ? Color(template.colorArgb).withOpacity(0.8) : Colors.white.withOpacity(0.05)),
+                              border: Border.all(color: selected ? color.withOpacity(0.8) : Colors.white.withOpacity(0.05)),
                             ),
                             child: Row(
                               children: [
                                 Container(
                                   width: 42,
                                   height: 42,
-                                  decoration: BoxDecoration(shape: BoxShape.circle, color: Color(template.colorArgb).withOpacity(0.2)),
-                                  child: Icon(iconForKey(template.iconKey), color: Color(template.colorArgb)),
+                                  decoration: BoxDecoration(shape: BoxShape.circle, color: color.withOpacity(0.2)),
+                                  child: Icon(iconForKey(template.iconKey), color: color),
                                 ),
                                 const SizedBox(width: 12),
                                 Expanded(
@@ -203,23 +254,48 @@ class _HabitGallerySheetState extends State<HabitGallerySheet> with TickerProvid
                                 ),
                                 IconButton(
                                   tooltip: 'Configurar',
-                                  onPressed: () => _configureTemplate(template),
-                                  icon: const Icon(Icons.more_horiz_rounded, color: AppColors.textMuted),
+                                  onPressed: isAdded ? _showAlreadyAddedSnackBar : () => _configureTemplate(template),
+                                  icon: Icon(Icons.more_horiz_rounded, color: isAdded ? AppColors.textMuted.withOpacity(0.45) : AppColors.textMuted),
                                 ),
                                 Container(
+                                  width: 42,
+                                  height: 42,
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
-                                    border: Border.all(color: Color(template.colorArgb).withOpacity(0.8)),
+                                    color: isAdded
+                                        ? Colors.white.withOpacity(0.07)
+                                        : selected
+                                            ? color
+                                            : Colors.transparent,
+                                    border: Border.all(
+                                      color: isAdded
+                                          ? Colors.white.withOpacity(0.24)
+                                          : selected
+                                              ? color
+                                              : color.withOpacity(0.8),
+                                    ),
                                   ),
                                   child: IconButton(
-                                    onPressed: () => _quickAdd(template),
-                                    icon: Icon(Icons.add_rounded, color: Color(template.colorArgb)),
+                                    tooltip: isAdded ? 'Agregado' : 'Seleccionar',
+                                    onPressed: () => _toggleSelect(template),
+                                    icon: AnimatedSwitcher(
+                                      duration: const Duration(milliseconds: 220),
+                                      switchInCurve: Curves.easeOut,
+                                      switchOutCurve: Curves.easeOut,
+                                      transitionBuilder: (child, animation) => ScaleTransition(scale: animation, child: child),
+                                      child: isAdded
+                                          ? Icon(Icons.check_rounded, key: const ValueKey('added'), color: Colors.white.withOpacity(0.45))
+                                          : selected
+                                              ? const Icon(Icons.check_rounded, key: ValueKey('check'), color: Colors.white)
+                                              : Icon(Icons.add_rounded, key: const ValueKey('add'), color: color),
+                                    ),
                                   ),
                                 ),
-                                if (selected) const Padding(
-                                  padding: EdgeInsets.only(left: 6),
-                                  child: Icon(Icons.check_circle_rounded, color: AppColors.accentSecondary, size: 18),
-                                ),
+                                if (isAdded)
+                                  const Padding(
+                                    padding: EdgeInsets.only(left: 8),
+                                    child: Text('Agregado', style: TextStyle(color: AppColors.textMuted, fontSize: 11, fontWeight: FontWeight.w600)),
+                                  ),
                               ],
                             ),
                           ),
