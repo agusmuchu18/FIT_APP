@@ -11,6 +11,10 @@ import '../domain/habit_models.dart';
 import 'habit_create_screen.dart';
 import 'habit_gallery_sheet.dart';
 
+const double kHabitTileRadius = 24;
+const double _kSwipeIconHorizontalPadding = 18;
+const double _kSwipeIconBubbleSize = 46;
+
 class HabitsTrackerScreen extends StatefulWidget {
   const HabitsTrackerScreen({super.key});
 
@@ -292,12 +296,29 @@ class _HabitsTrackerScreenState extends State<HabitsTrackerScreen> {
                                   }
                                   return false;
                                 },
-                                background: const _SwipeBackground(color: Color(0xFF19C37D), icon: Icons.check_rounded, alignment: Alignment.centerLeft),
-                                secondaryBackground: const _SwipeBackground(color: Color(0xFF4420B5), icon: Icons.close_rounded, alignment: Alignment.centerRight),
-                                child: GestureDetector(
-                                  onTap: () => _showHabitEditor(box: box, habit: habit),
-                                  onLongPress: () => _showHabitActions(box, habit),
-                                  child: _HabitRow(habit: habit, completed: completed),
+                                background: const _SwipeBackground(
+                                  icon: Icons.check_rounded,
+                                  alignment: Alignment.centerLeft,
+                                  startColor: AppColors.success,
+                                  endColor: Color(0xFF2FD678),
+                                ),
+                                secondaryBackground: const _SwipeBackground(
+                                  icon: Icons.close_rounded,
+                                  alignment: Alignment.centerRight,
+                                  startColor: Color(0xFF37207A),
+                                  endColor: AppColors.accentSleep,
+                                ),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(kHabitTileRadius),
+                                  child: Material(
+                                    color: Colors.transparent,
+                                    child: InkWell(
+                                      borderRadius: BorderRadius.circular(kHabitTileRadius),
+                                      onTap: () => _showHabitEditor(box: box, habit: habit),
+                                      onLongPress: () => _showHabitActions(box, habit),
+                                      child: _HabitRow(habit: habit, completed: completed),
+                                    ),
+                                  ),
                                 ),
                               );
                             },
@@ -452,40 +473,95 @@ class _HabitRowState extends State<_HabitRow> {
     final textTheme = Theme.of(context).textTheme;
     final countLabel = widget.habit.isCountable ? '0/${widget.habit.targetCount ?? 1} Contar' : null;
     final frequencyLabel = widget.habit.frequency.label;
-    return Stack(children: [
-      Row(children: [
-        Container(
-          width: 44,
-          height: 44,
-          decoration: BoxDecoration(shape: BoxShape.circle, color: Color(widget.habit.colorArgb).withOpacity(0.2)),
-          child: Icon(iconForKey(widget.habit.iconKey), color: Color(widget.habit.colorArgb), size: 22),
-        ),
-        const SizedBox(width: 14),
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(widget.habit.name, style: textTheme.titleMedium?.copyWith(color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
-            const SizedBox(height: 4),
-            Text(widget.habit.subtitle ?? '$frequencyLabel · ${widget.habit.category}', style: textTheme.labelMedium?.copyWith(color: AppColors.textMuted)),
-            if (countLabel != null) Text(countLabel, style: textTheme.labelSmall?.copyWith(color: AppColors.textMuted)),
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppColors.surface.withOpacity(0.54),
+        borderRadius: BorderRadius.circular(kHabitTileRadius),
+        border: Border.all(color: Colors.white.withOpacity(0.06)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: Stack(children: [
+          Row(children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(shape: BoxShape.circle, color: Color(widget.habit.colorArgb).withOpacity(0.2)),
+              child: Icon(iconForKey(widget.habit.iconKey), color: Color(widget.habit.colorArgb), size: 22),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(widget.habit.name, style: textTheme.titleMedium?.copyWith(color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 4),
+                Text(widget.habit.subtitle ?? '$frequencyLabel · ${widget.habit.category}', style: textTheme.labelMedium?.copyWith(color: AppColors.textMuted)),
+                if (countLabel != null) Text(countLabel, style: textTheme.labelSmall?.copyWith(color: AppColors.textMuted)),
+              ]),
+            ),
+            Text(widget.completed ? '1' : '0', style: textTheme.titleLarge?.copyWith(color: AppColors.textPrimary, fontWeight: FontWeight.w700)),
           ]),
-        ),
-        Text(widget.completed ? '1' : '0', style: textTheme.titleLarge?.copyWith(color: AppColors.textPrimary, fontWeight: FontWeight.w700)),
-      ]),
-      Positioned.fill(child: Align(alignment: Alignment.centerRight, child: Padding(padding: const EdgeInsets.only(right: 6), child: HabitCheckOverlay(key: _checkKey)))),
-    ]);
+          Positioned.fill(child: Align(alignment: Alignment.centerRight, child: Padding(padding: const EdgeInsets.only(right: 6), child: HabitCheckOverlay(key: _checkKey)))),
+        ]),
+      ),
+    );
   }
 }
 
 class _SwipeBackground extends StatelessWidget {
-  const _SwipeBackground({required this.color, required this.icon, required this.alignment});
+  const _SwipeBackground({required this.startColor, required this.endColor, required this.icon, required this.alignment});
 
-  final Color color;
+  final Color startColor;
+  final Color endColor;
   final IconData icon;
   final Alignment alignment;
 
   @override
   Widget build(BuildContext context) {
-    return Container(alignment: alignment, padding: const EdgeInsets.symmetric(horizontal: 28), color: color, child: Icon(icon, color: Colors.white, size: 30));
+    final isLeading = alignment == Alignment.centerLeft;
+    final baseOpacity = Theme.of(context).brightness == Brightness.dark ? 0.84 : 0.76;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(kHabitTileRadius),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(kHabitTileRadius),
+          gradient: LinearGradient(
+            begin: isLeading ? Alignment.centerLeft : Alignment.centerRight,
+            end: isLeading ? Alignment.centerRight : Alignment.centerLeft,
+            colors: [
+              startColor.withOpacity(baseOpacity),
+              endColor.withOpacity(baseOpacity + 0.06),
+            ],
+          ),
+        ),
+        child: Align(
+          alignment: alignment,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: _kSwipeIconHorizontalPadding),
+            child: _SwipeIconBubble(icon: icon),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SwipeIconBubble extends StatelessWidget {
+  const _SwipeIconBubble({required this.icon});
+
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: _kSwipeIconBubbleSize,
+      height: _kSwipeIconBubbleSize,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: Colors.white.withOpacity(0.12),
+        border: Border.all(color: Colors.white.withOpacity(0.1)),
+      ),
+      child: Icon(icon, color: Colors.white.withOpacity(0.95), size: 24),
+    );
   }
 }
 
