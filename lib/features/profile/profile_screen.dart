@@ -53,30 +53,39 @@ class ProfileScreen extends StatelessWidget {
                     },
                   ),
                   const SizedBox(width: 14),
-                  ValueListenableBuilder(
-                    valueListenable: ProfileController.instance.displayName,
-                    builder: (context, name, _) {
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            name,
-                            style: const TextStyle(
-                              color: AppColors.textPrimary,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 16,
+
+                  // ✅ FIX: Expanded + ellipsis para evitar overflow en nombres largos
+                  Expanded(
+                    child: ValueListenableBuilder(
+                      valueListenable: ProfileController.instance.displayName,
+                      builder: (context, name, _) {
+                        return Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: AppColors.textPrimary,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 16,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 6),
-                          const Text(
-                            'Plan Premium activo',
-                            style: TextStyle(
-                              color: AppColors.textMuted,
+                            const SizedBox(height: 6),
+                            const Text(
+                              'Plan Premium activo',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: AppColors.textMuted,
+                              ),
                             ),
-                          ),
-                        ],
-                      );
-                    },
+                          ],
+                        );
+                      },
+                    ),
                   ),
                 ],
               ),
