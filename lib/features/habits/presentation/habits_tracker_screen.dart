@@ -201,7 +201,9 @@ class _HabitsTrackerScreenState extends State<HabitsTrackerScreen> {
             return ValueListenableBuilder<Box<String>>(
               valueListenable: box.listenable(),
               builder: (context, _, __) {
-                final habits = _loadHabits(box);
+                final habits = _loadHabits(box)
+                    .where((habit) => shouldAppearOn(habit.toModel(), _selectedDay))
+                    .toList();
                 final bottomPad = MediaQuery.of(context).padding.bottom + 110;
                 return Padding(
                   padding: EdgeInsets.fromLTRB(20, 12, 20, 12 + bottomPad),
@@ -349,6 +351,11 @@ class _HabitEntry {
     required this.isCountable,
     required this.goalDays,
     required this.isForever,
+    required this.startDate,
+    required this.activeWeekdays,
+    required this.intervalWeeks,
+    required this.dayOfMonth,
+    required this.adjustToLastDayIfMissing,
     this.targetCount,
     this.subtitle,
   });
@@ -366,6 +373,11 @@ class _HabitEntry {
       isCountable: model.isCountable,
       goalDays: model.goalDays,
       isForever: model.isForever,
+      startDate: model.startDate,
+      activeWeekdays: model.activeWeekdays,
+      intervalWeeks: model.intervalWeeks,
+      dayOfMonth: model.dayOfMonth,
+      adjustToLastDayIfMissing: model.adjustToLastDayIfMissing,
       targetCount: model.targetCount,
       subtitle: model.subtitle,
     );
@@ -381,6 +393,11 @@ class _HabitEntry {
   final bool isCountable;
   final int? goalDays;
   final bool isForever;
+  final DateTime startDate;
+  final Set<int> activeWeekdays;
+  final int intervalWeeks;
+  final int dayOfMonth;
+  final bool adjustToLastDayIfMissing;
   final int? targetCount;
   final String? subtitle;
 
@@ -395,6 +412,11 @@ class _HabitEntry {
       isCountable: isCountable,
       goalDays: goalDays,
       isForever: isForever,
+      startDate: startDate,
+      activeWeekdays: activeWeekdays,
+      intervalWeeks: intervalWeeks,
+      dayOfMonth: dayOfMonth,
+      adjustToLastDayIfMissing: adjustToLastDayIfMissing,
       createdAt: createdAt,
       targetCount: targetCount,
       subtitle: subtitle,

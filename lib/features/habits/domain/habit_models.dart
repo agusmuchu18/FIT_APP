@@ -30,6 +30,84 @@ extension HabitFrequencyX on HabitFrequency {
   }
 }
 
+DateTime normalizeHabitDay(DateTime dt) => DateTime(dt.year, dt.month, dt.day);
+
+const Set<int> kDefaultActiveWeekdays = {1, 2, 3, 4, 5, 6, 7};
+
+@immutable
+class HabitIconOption {
+  const HabitIconOption({required this.iconKey, required this.iconData});
+
+  final String iconKey;
+  final IconData iconData;
+}
+
+const List<HabitIconOption> kHabitIconOptions = [
+  HabitIconOption(iconKey: 'spark', iconData: Icons.auto_awesome_rounded),
+  HabitIconOption(iconKey: 'water', iconData: Icons.water_drop_rounded),
+  HabitIconOption(iconKey: 'breakfast', iconData: Icons.free_breakfast_rounded),
+  HabitIconOption(iconKey: 'nutrition', iconData: Icons.eco_rounded),
+  HabitIconOption(iconKey: 'read', iconData: Icons.menu_book_rounded),
+  HabitIconOption(iconKey: 'workout', iconData: Icons.fitness_center_rounded),
+  HabitIconOption(iconKey: 'meditate', iconData: Icons.self_improvement_rounded),
+  HabitIconOption(iconKey: 'smile', iconData: Icons.sentiment_satisfied_alt_rounded),
+  HabitIconOption(iconKey: 'moon', iconData: Icons.nightlight_round),
+  HabitIconOption(iconKey: 'heart', iconData: Icons.favorite_rounded),
+  HabitIconOption(iconKey: 'run', iconData: Icons.directions_run_rounded),
+  HabitIconOption(iconKey: 'walk', iconData: Icons.directions_walk_rounded),
+  HabitIconOption(iconKey: 'bike', iconData: Icons.directions_bike_rounded),
+  HabitIconOption(iconKey: 'swim', iconData: Icons.pool_rounded),
+  HabitIconOption(iconKey: 'yoga', iconData: Icons.spa_rounded),
+  HabitIconOption(iconKey: 'sleep', iconData: Icons.bedtime_rounded),
+  HabitIconOption(iconKey: 'alarm', iconData: Icons.alarm_rounded),
+  HabitIconOption(iconKey: 'journal', iconData: Icons.edit_note_rounded),
+  HabitIconOption(iconKey: 'study', iconData: Icons.school_rounded),
+  HabitIconOption(iconKey: 'focus', iconData: Icons.center_focus_strong_rounded),
+  HabitIconOption(iconKey: 'steps', iconData: Icons.directions_walk_rounded),
+  HabitIconOption(iconKey: 'stretch', iconData: Icons.accessibility_new_rounded),
+  HabitIconOption(iconKey: 'meal', iconData: Icons.restaurant_rounded),
+  HabitIconOption(iconKey: 'salad', iconData: Icons.local_florist_rounded),
+  HabitIconOption(iconKey: 'fruit', iconData: Icons.local_pizza_rounded),
+  HabitIconOption(iconKey: 'cook', iconData: Icons.ramen_dining_rounded),
+  HabitIconOption(iconKey: 'supplements', iconData: Icons.medication_rounded),
+  HabitIconOption(iconKey: 'pill', iconData: Icons.vaccines_rounded),
+  HabitIconOption(iconKey: 'mind', iconData: Icons.psychology_rounded),
+  HabitIconOption(iconKey: 'brain', iconData: Icons.psychology_alt_rounded),
+  HabitIconOption(iconKey: 'music', iconData: Icons.music_note_rounded),
+  HabitIconOption(iconKey: 'podcast', iconData: Icons.headset_rounded),
+  HabitIconOption(iconKey: 'clean', iconData: Icons.cleaning_services_rounded),
+  HabitIconOption(iconKey: 'home', iconData: Icons.home_rounded),
+  HabitIconOption(iconKey: 'plan', iconData: Icons.event_note_rounded),
+  HabitIconOption(iconKey: 'calendar', iconData: Icons.calendar_month_rounded),
+  HabitIconOption(iconKey: 'sun', iconData: Icons.wb_sunny_rounded),
+  HabitIconOption(iconKey: 'leaf', iconData: Icons.energy_savings_leaf_rounded),
+  HabitIconOption(iconKey: 'drink', iconData: Icons.local_drink_rounded),
+  HabitIconOption(iconKey: 'tea', iconData: Icons.emoji_food_beverage_rounded),
+  HabitIconOption(iconKey: 'no_sugar', iconData: Icons.no_food_rounded),
+  HabitIconOption(iconKey: 'no_smoke', iconData: Icons.smoke_free_rounded),
+  HabitIconOption(iconKey: 'hydrate', iconData: Icons.opacity_rounded),
+  HabitIconOption(iconKey: 'book', iconData: Icons.auto_stories_rounded),
+  HabitIconOption(iconKey: 'language', iconData: Icons.language_rounded),
+  HabitIconOption(iconKey: 'code', iconData: Icons.code_rounded),
+  HabitIconOption(iconKey: 'laptop', iconData: Icons.laptop_chromebook_rounded),
+  HabitIconOption(iconKey: 'pray', iconData: Icons.volunteer_activism_rounded),
+  HabitIconOption(iconKey: 'gratitude', iconData: Icons.celebration_rounded),
+  HabitIconOption(iconKey: 'target', iconData: Icons.track_changes_rounded),
+  HabitIconOption(iconKey: 'timer', iconData: Icons.timer_rounded),
+  HabitIconOption(iconKey: 'checklist', iconData: Icons.checklist_rounded),
+  HabitIconOption(iconKey: 'brush', iconData: Icons.brush_rounded),
+  HabitIconOption(iconKey: 'camera', iconData: Icons.photo_camera_rounded),
+  HabitIconOption(iconKey: 'family', iconData: Icons.groups_rounded),
+  HabitIconOption(iconKey: 'pet', iconData: Icons.pets_rounded),
+  HabitIconOption(iconKey: 'travel', iconData: Icons.flight_takeoff_rounded),
+  HabitIconOption(iconKey: 'money', iconData: Icons.savings_rounded),
+  HabitIconOption(iconKey: 'work', iconData: Icons.work_rounded),
+];
+
+final Map<String, IconData> _iconDataByKey = {
+  for (final option in kHabitIconOptions) option.iconKey: option.iconData,
+};
+
 @immutable
 class HabitEntry {
   HabitEntry({
@@ -43,6 +121,11 @@ class HabitEntry {
     required this.goalDays,
     required this.isForever,
     required this.createdAt,
+    required this.startDate,
+    required this.activeWeekdays,
+    required this.intervalWeeks,
+    required this.dayOfMonth,
+    required this.adjustToLastDayIfMissing,
     this.targetCount,
     this.subtitle,
   });
@@ -58,7 +141,13 @@ class HabitEntry {
     bool isForever = false,
     int? targetCount,
     String? subtitle,
+    DateTime? startDate,
+    Set<int>? activeWeekdays,
+    int intervalWeeks = 1,
+    int? dayOfMonth,
+    bool adjustToLastDayIfMissing = true,
   }) {
+    final normalizedStartDate = normalizeHabitDay(startDate ?? DateTime.now());
     return HabitEntry(
       id: const Uuid().v4(),
       name: name,
@@ -72,6 +161,11 @@ class HabitEntry {
       targetCount: targetCount,
       subtitle: subtitle,
       createdAt: DateTime.now().toUtc(),
+      startDate: normalizedStartDate,
+      activeWeekdays: _sanitizeWeekdays(activeWeekdays),
+      intervalWeeks: intervalWeeks.clamp(1, 8),
+      dayOfMonth: (dayOfMonth ?? normalizedStartDate.day).clamp(1, 31),
+      adjustToLastDayIfMissing: adjustToLastDayIfMissing,
     );
   }
 
@@ -87,6 +181,11 @@ class HabitEntry {
   final int? targetCount;
   final String? subtitle;
   final DateTime createdAt;
+  final DateTime startDate;
+  final Set<int> activeWeekdays;
+  final int intervalWeeks;
+  final int dayOfMonth;
+  final bool adjustToLastDayIfMissing;
 
   HabitEntry copyWith({
     String? name,
@@ -99,8 +198,14 @@ class HabitEntry {
     bool? isForever,
     int? targetCount,
     String? subtitle,
+    DateTime? startDate,
+    Set<int>? activeWeekdays,
+    int? intervalWeeks,
+    int? dayOfMonth,
+    bool? adjustToLastDayIfMissing,
   }) {
     final forever = isForever ?? this.isForever;
+    final nextStartDate = normalizeHabitDay(startDate ?? this.startDate);
     return HabitEntry(
       id: id,
       name: name ?? this.name,
@@ -114,6 +219,11 @@ class HabitEntry {
       targetCount: targetCount ?? this.targetCount,
       subtitle: subtitle ?? this.subtitle,
       createdAt: createdAt,
+      startDate: nextStartDate,
+      activeWeekdays: _sanitizeWeekdays(activeWeekdays ?? this.activeWeekdays),
+      intervalWeeks: (intervalWeeks ?? this.intervalWeeks).clamp(1, 8),
+      dayOfMonth: (dayOfMonth ?? this.dayOfMonth).clamp(1, 31),
+      adjustToLastDayIfMissing: adjustToLastDayIfMissing ?? this.adjustToLastDayIfMissing,
     );
   }
 
@@ -130,6 +240,11 @@ class HabitEntry {
         'targetCount': targetCount,
         'subtitle': subtitle,
         'createdAt': createdAt.toIso8601String(),
+        'startDate': startDate.toIso8601String(),
+        'activeWeekdays': activeWeekdays.toList()..sort(),
+        'intervalWeeks': intervalWeeks,
+        'dayOfMonth': dayOfMonth,
+        'adjustToLastDayIfMissing': adjustToLastDayIfMissing,
       };
 
   static HabitEntry? tryDecode(Map<String, Object?> map) {
@@ -141,6 +256,10 @@ class HabitEntry {
         ? map['targetCount'] as int
         : int.tryParse('${map['targetCount'] ?? ''}');
     final isCountable = (map['isCountable'] as bool?) ?? (countFromLegacy != null);
+    final startDate = normalizeHabitDay(
+      DateTime.tryParse(map['startDate'] as String? ?? '') ?? DateTime.now(),
+    );
+    final dayOfMonth = (map['dayOfMonth'] is int ? map['dayOfMonth'] as int : null) ?? startDate.day;
 
     return HabitEntry(
       id: id,
@@ -157,7 +276,55 @@ class HabitEntry {
       subtitle: map['subtitle'] as String?,
       createdAt: DateTime.tryParse(map['createdAt'] as String? ?? '') ??
           DateTime.now().toUtc(),
+      startDate: startDate,
+      activeWeekdays: _sanitizeWeekdays(_decodeWeekdays(map['activeWeekdays'])),
+      intervalWeeks: ((map['intervalWeeks'] is int ? map['intervalWeeks'] as int : 1) ?? 1).clamp(1, 8),
+      dayOfMonth: dayOfMonth.clamp(1, 31),
+      adjustToLastDayIfMissing: map['adjustToLastDayIfMissing'] as bool? ?? true,
     );
+  }
+}
+
+Set<int> _decodeWeekdays(Object? value) {
+  if (value is List) {
+    return value
+        .map((item) => item is int ? item : int.tryParse('$item'))
+        .whereType<int>()
+        .toSet();
+  }
+  return kDefaultActiveWeekdays;
+}
+
+Set<int> _sanitizeWeekdays(Set<int>? weekdays) {
+  final source = weekdays ?? kDefaultActiveWeekdays;
+  final cleaned = source.where((day) => day >= 1 && day <= 7).toSet();
+  return cleaned.isEmpty ? kDefaultActiveWeekdays : cleaned;
+}
+
+int _lastDayOfMonth(DateTime day) => DateTime(day.year, day.month + 1, 0).day;
+
+bool shouldAppearOn(HabitEntry habit, DateTime day) {
+  final targetDay = normalizeHabitDay(day);
+  final startDay = normalizeHabitDay(habit.startDate);
+  if (targetDay.isBefore(startDay)) {
+    return false;
+  }
+
+  switch (habit.frequency) {
+    case HabitFrequency.daily:
+      return habit.activeWeekdays.contains(targetDay.weekday);
+    case HabitFrequency.weekly:
+      if (targetDay.weekday != startDay.weekday) {
+        return false;
+      }
+      final weeksBetween = targetDay.difference(startDay).inDays ~/ 7;
+      return weeksBetween % habit.intervalWeeks == 0;
+    case HabitFrequency.monthly:
+      final monthLastDay = _lastDayOfMonth(targetDay);
+      if (habit.dayOfMonth <= monthLastDay) {
+        return targetDay.day == habit.dayOfMonth;
+      }
+      return habit.adjustToLastDayIfMissing && targetDay.day == monthLastDay;
   }
 }
 
@@ -339,28 +506,4 @@ const List<HabitTemplate> kHabitTemplates = [
   ),
 ];
 
-IconData iconForKey(String key) {
-  switch (key) {
-    case 'water':
-      return Icons.water_drop_rounded;
-    case 'breakfast':
-      return Icons.free_breakfast_rounded;
-    case 'nutrition':
-      return Icons.eco_rounded;
-    case 'read':
-      return Icons.menu_book_rounded;
-    case 'workout':
-      return Icons.fitness_center_rounded;
-    case 'meditate':
-      return Icons.self_improvement_rounded;
-    case 'smile':
-      return Icons.sentiment_satisfied_alt_rounded;
-    case 'moon':
-      return Icons.nightlight_round;
-    case 'heart':
-      return Icons.favorite_rounded;
-    case 'spark':
-    default:
-      return Icons.auto_awesome_rounded;
-  }
-}
+IconData iconForKey(String key) => _iconDataByKey[key] ?? Icons.auto_awesome_rounded;
