@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/domain/entities.dart';
 import '../../../main.dart';
 import '../../common/theme/app_colors.dart';
 import '../domain/home_activity_utils.dart';
@@ -78,6 +79,7 @@ class _ModuleDayDetailScreenState extends State<_ModuleDayDetailScreen> {
     final workouts = await repository.getWorkouts();
     final meals = await repository.getMeals();
     final sleepEntries = await repository.getSleep();
+    final preferences = await repository.getPreferences();
 
     final activeDays = buildActiveDaysSet(
       workouts: workouts,
@@ -92,7 +94,11 @@ class _ModuleDayDetailScreenState extends State<_ModuleDayDetailScreen> {
       sleepEntries: sleepEntries,
     );
 
-    return _ActivityDayData(summary: summary, activeDays: activeDays);
+    return _ActivityDayData(
+      summary: summary,
+      activeDays: activeDays,
+      nutritionGoals: _NutritionGoals.fromPreferences(preferences),
+    );
   }
 
   Future<void> _openCalendar(Set<DateTime> activeDays) async {
@@ -177,7 +183,7 @@ class _ModuleDayDetailScreenState extends State<_ModuleDayDetailScreen> {
                       ],
                     ),
                     const SizedBox(height: 20),
-                    _buildStats(summary),
+                    _buildStats(summary, data.nutritionGoals),
                     const SizedBox(height: 18),
                     Text(
                       'Registros del día',
@@ -198,7 +204,7 @@ class _ModuleDayDetailScreenState extends State<_ModuleDayDetailScreen> {
     );
   }
 
-  Widget _buildStats(HomeDayActivitySummary summary) {
+  Widget _buildStats(HomeDayActivitySummary summary, _NutritionGoals nutritionGoals) {
     switch (widget.module) {
       case ActivityModuleType.workout:
         const goalMinutes = 30;
@@ -229,50 +235,50 @@ class _ModuleDayDetailScreenState extends State<_ModuleDayDetailScreen> {
           ],
         );
       case ActivityModuleType.meal:
-        const kcalGoal = 2000;
         final carbs = summary.meals.fold<int>(0, (sum, meal) => sum + meal.macros.carbs);
         final protein = summary.meals.fold<int>(0, (sum, meal) => sum + meal.macros.protein);
         final fat = summary.meals.fold<int>(0, (sum, meal) => sum + meal.macros.fat);
-        final hasMacroData = carbs > 0 || protein > 0 || fat > 0;
 
         return ModuleStatsHeader(
           children: [
             GlassStatCard(
               child: Column(
                 children: [
-                  ProgressBar(
-                    value: percentage(summary.totalCalories, kcalGoal),
+                  _MacroProgressRow(
                     label: 'Kcal consumidas',
-                    trailing: '${summary.totalCalories}/$kcalGoal',
-                    color: AppColors.accentFood,
-                    height: 12,
+                    consumed: summary.totalCalories,
+                    goal: nutritionGoals.kcal,
+                    color: const Color(0xFF6DA8FF),
+                    unit: '',
+                    height: 10,
                   ),
-                  if (hasMacroData) ...[
-                    const SizedBox(height: 14),
-                    ProgressBar(
-                      value: percentage(carbs, 300),
-                      label: 'Carbs',
-                      trailing: '$carbs g',
-                      color: AppColors.accentFood,
-                      height: 8,
-                    ),
-                    const SizedBox(height: 10),
-                    ProgressBar(
-                      value: percentage(protein, 140),
-                      label: 'Protein',
-                      trailing: '$protein g',
-                      color: const Color(0xFFDEB868),
-                      height: 8,
-                    ),
-                    const SizedBox(height: 10),
-                    ProgressBar(
-                      value: percentage(fat, 80),
-                      label: 'Fat',
-                      trailing: '$fat g',
-                      color: const Color(0xFFF7DD8C),
-                      height: 8,
-                    ),
-                  ],
+                  const SizedBox(height: 14),
+                  _MacroProgressRow(
+                    label: 'Carbs',
+                    consumed: carbs,
+                    goal: nutritionGoals.carbs,
+                    unit: 'g',
+                    color: AppColors.accentFood,
+                    height: 8,
+                  ),
+                  const SizedBox(height: 10),
+                  _MacroProgressRow(
+                    label: 'Protein',
+                    consumed: protein,
+                    goal: nutritionGoals.protein,
+                    unit: 'g',
+                    color: const Color(0xFFDEB868),
+                    height: 8,
+                  ),
+                  const SizedBox(height: 10),
+                  _MacroProgressRow(
+                    label: 'Fat',
+                    consumed: fat,
+                    goal: nutritionGoals.fat,
+                    unit: 'g',
+                    color: const Color(0xFFF7DD8C),
+                    height: 8,
+                  ),
                 ],
               ),
             ),
@@ -431,6 +437,7 @@ class _ActivityDayData {
   const _ActivityDayData({
     required this.summary,
     required this.activeDays,
+    required this.nutritionGoals,
   });
 
   factory _ActivityDayData.empty(DateTime day) {
@@ -445,9 +452,131 @@ class _ActivityDayData {
         hasActivity: false,
       ),
       activeDays: const <DateTime>{},
+      nutritionGoals: const _NutritionGoals.defaults(),
     );
   }
 
   final HomeDayActivitySummary summary;
   final Set<DateTime> activeDays;
+  final _NutritionGoals nutritionGoals;
+}
+
+class _NutritionGoals {
+  const _NutritionGoals({
+    required this.kcal,
+    required this.carbs,
+    required this.protein,
+    required this.fat,
+  });
+
+  const _NutritionGoals.defaults()
+      : kcal = 2000,
+        carbs = 250,
+        protein = 150,
+        fat = 70;
+
+  factory _NutritionGoals.fromPreferences(UserPreferences? preferences) {
+    final resolvedKcal = preferences?.targetCalories;
+    return _NutritionGoals(
+      kcal: resolvedKcal != null && resolvedKcal > 0 ? resolvedKcal : 2000,
+      carbs: 250,
+      protein: 150,
+      fat: 70,
+    );
+  }
+
+  final int kcal;
+  final int carbs;
+  final int protein;
+  final int fat;
+}
+
+class _MacroProgressRow extends StatelessWidget {
+  const _MacroProgressRow({
+    required this.label,
+    required this.consumed,
+    required this.goal,
+    required this.unit,
+    required this.color,
+    this.height = 8,
+  });
+
+  final String label;
+  final int consumed;
+  final int? goal;
+  final String unit;
+  final Color color;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasValidGoal = goal != null && goal! > 0;
+    final progress = hasValidGoal ? (consumed / goal!).clamp(0.0, 1.0) : 0.0;
+    final trailing = hasValidGoal
+        ? unit.isEmpty
+            ? '$consumed/$goal'
+            : '$consumed/$goal $unit'
+        : unit.isEmpty
+            ? '$consumed/—'
+            : '$consumed/— $unit';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+            ),
+            Text(
+              trailing,
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: AppColors.textMuted,
+                    fontWeight: FontWeight.w700,
+                  ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(999),
+          child: Container(
+            height: height,
+            color: Colors.white.withOpacity(0.12),
+            child: TweenAnimationBuilder<double>(
+              tween: Tween<double>(begin: 0, end: progress),
+              duration: const Duration(milliseconds: 320),
+              curve: Curves.easeOutCubic,
+              builder: (context, value, child) {
+                return Align(
+                  alignment: Alignment.centerLeft,
+                  child: FractionallySizedBox(
+                    widthFactor: value,
+                    child: child,
+                  ),
+                );
+              },
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(999),
+                  gradient: LinearGradient(
+                    colors: [
+                      color.withOpacity(0.90),
+                      Color.lerp(color, Colors.white, 0.22) ?? color,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 }
