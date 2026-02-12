@@ -116,21 +116,27 @@ class ActivityModuleTile extends StatelessWidget {
                               ),
                             ),
                             if (hasActivity)
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(10),
-                                  color: module.color.withOpacity(0.20),
-                                  border: Border.all(
-                                    color: module.color.withOpacity(0.45),
+                              Align(
+                                alignment: Alignment.center,
+                                child: Container(
+                                  alignment: Alignment.center,
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(10),
+                                    color: module.color.withOpacity(0.20),
+                                    border: Border.all(
+                                      color: module.color.withOpacity(0.45),
+                                    ),
                                   ),
-                                ),
-                                child: Text(
-                                  '$count',
-                                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                                        color: module.color,
-                                        fontWeight: FontWeight.w800,
-                                      ),
+                                  child: Text(
+                                    '$count',
+                                    textAlign: TextAlign.center,
+                                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                          color: module.color,
+                                          fontWeight: FontWeight.w800,
+                                          height: 1,
+                                        ),
+                                  ),
                                 ),
                               ),
                           ],
