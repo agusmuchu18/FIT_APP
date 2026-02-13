@@ -101,7 +101,7 @@ const List<HabitIconOption> kHabitIconOptions = [
   HabitIconOption(iconKey: 'pet', iconData: Icons.pets_rounded),
   HabitIconOption(iconKey: 'travel', iconData: Icons.flight_takeoff_rounded),
   HabitIconOption(iconKey: 'money', iconData: Icons.savings_rounded),
-  HabitIconOption(iconKey: 'work', iconData: Icons.work_rounded
+  HabitIconOption(iconKey: 'work', iconData: Icons.work_rounded),
 ];
 
 final Map<String, IconData> _iconDataByKey = {
