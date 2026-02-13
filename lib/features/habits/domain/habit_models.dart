@@ -340,13 +340,13 @@ bool shouldAppearOn(HabitEntry habit, DateTime day) {
 class HabitTemplate {
   const HabitTemplate({
     required this.templateId,
-    required this.name,
-    required this.subtitle,
-    required this.iconKey,
-    required this.colorArgb,
     required this.category,
+    required this.title,
+    required this.description,
+    required this.iconKey,
+    required this.defaultColor,
     required this.defaultFrequency,
-    required this.defaultIsCountable,
+    required this.isCountable,
     this.defaultGoalDays,
     this.defaultForever = false,
     this.defaultTargetCount,
@@ -354,21 +354,27 @@ class HabitTemplate {
 
   final String templateId;
   String get id => templateId;
-  final String name;
-  final String subtitle;
-  final String iconKey;
-  final int colorArgb;
   final String category;
+  final String title;
+  final String description;
+  final String iconKey;
+  final int defaultColor;
   final HabitFrequency defaultFrequency;
-  final bool defaultIsCountable;
+  final bool isCountable;
   final int? defaultGoalDays;
   final bool defaultForever;
   final int? defaultTargetCount;
 
+  // Backward-compatible aliases used by existing UI.
+  String get name => title;
+  String get subtitle => description;
+  int get colorArgb => defaultColor;
+  bool get defaultIsCountable => isCountable;
+
   HabitCreationConfig defaultConfig() {
     return HabitCreationConfig(
       frequency: defaultFrequency,
-      isCountable: defaultIsCountable,
+      isCountable: isCountable,
       targetCount: defaultTargetCount ?? 1,
       goalDays: defaultGoalDays,
       isForever: defaultForever,
@@ -380,7 +386,7 @@ class HabitTemplate {
     return HabitEntry.create(
       name: name,
       iconKey: iconKey,
-      colorArgb: colorArgb,
+      colorArgb: defaultColor,
       category: category,
       frequency: config.frequency,
       isCountable: config.isCountable,
@@ -435,85 +441,72 @@ const List<String> habitCategories = [
   'Mentalidad',
 ];
 
+const int _sugeridoColor = 0xFF4FC3F7;
+const int _vidaColor = 0xFF7E57C2;
+const int _saludColor = 0xFF66BB6A;
+const int _deportesColor = 0xFFFF7043;
+const int _mentalidadColor = 0xFFAB47BC;
+
 const List<HabitTemplate> kHabitTemplates = [
-  HabitTemplate(
-    templateId: 'daily_check',
-    name: 'Chequeo diario',
-    subtitle: 'Reflexión rápida para cerrar el día.',
-    iconKey: 'smile',
-    colorArgb: 0xFF60D394,
-    category: 'Sugerido',
-    defaultFrequency: HabitFrequency.daily,
-    defaultIsCountable: false,
-    defaultGoalDays: 21,
-  ),
-  HabitTemplate(
-    templateId: 'drink_water',
-    name: 'Beber agua',
-    subtitle: 'Hidratate durante toda la jornada.',
-    iconKey: 'water',
-    colorArgb: 0xFF4FC3F7,
-    category: 'Sugerido',
-    defaultFrequency: HabitFrequency.daily,
-    defaultIsCountable: true,
-    defaultForever: true,
-    defaultTargetCount: 8,
-  ),
-  HabitTemplate(
-    templateId: 'daily_breakfast',
-    name: 'Desayunar',
-    subtitle: 'Comenzá con energía todas las mañanas.',
-    iconKey: 'breakfast',
-    colorArgb: 0xFFFFCA55,
-    category: 'Sugerido',
-    defaultFrequency: HabitFrequency.daily,
-    defaultIsCountable: false,
-    defaultGoalDays: 30,
-  ),
-  HabitTemplate(
-    templateId: 'eat_fruits',
-    name: 'Comer frutas',
-    subtitle: 'Una porción de fruta por día.',
-    iconKey: 'nutrition',
-    colorArgb: 0xFF8BC34A,
-    category: 'Salud',
-    defaultFrequency: HabitFrequency.daily,
-    defaultIsCountable: false,
-    defaultGoalDays: 30,
-  ),
-  HabitTemplate(
-    templateId: 'daily_reading',
-    name: 'Leer',
-    subtitle: '15 minutos de lectura sin distracciones.',
-    iconKey: 'read',
-    colorArgb: 0xFF64B5F6,
-    category: 'Vida',
-    defaultFrequency: HabitFrequency.daily,
-    defaultIsCountable: false,
-    defaultGoalDays: 21,
-  ),
-  HabitTemplate(
-    templateId: 'train_workout',
-    name: 'Entrenar',
-    subtitle: 'Sesiones que eleven tu rendimiento.',
-    iconKey: 'workout',
-    colorArgb: 0xFF26A69A,
-    category: 'Deportes',
-    defaultFrequency: HabitFrequency.weekly,
-    defaultIsCountable: false,
-    defaultGoalDays: 12,
-  ),
-  HabitTemplate(
-    templateId: 'daily_meditation',
-    name: 'Meditar',
-    subtitle: 'Respiración consciente y foco mental.',
-    iconKey: 'meditate',
-    colorArgb: 0xFF9C6ADE,
-    category: 'Mentalidad',
-    defaultFrequency: HabitFrequency.daily,
-    defaultIsCountable: false,
-    defaultGoalDays: 21,
-  ),
+  // Sugerido (10)
+  HabitTemplate(templateId: 'daily_check', category: 'Sugerido', title: 'Chequeo diario', description: 'Reflexión rápida para cerrar el día.', iconKey: 'smile', defaultColor: _sugeridoColor, defaultFrequency: HabitFrequency.daily, isCountable: false, defaultGoalDays: 21),
+  HabitTemplate(templateId: 'drink_water', category: 'Sugerido', title: 'Beber agua', description: 'Hidratate durante toda la jornada.', iconKey: 'water', defaultColor: _sugeridoColor, defaultFrequency: HabitFrequency.daily, isCountable: true, defaultForever: true, defaultTargetCount: 8),
+  HabitTemplate(templateId: 'daily_breakfast', category: 'Sugerido', title: 'Desayunar', description: 'Comenzá con energía todas las mañanas.', iconKey: 'breakfast', defaultColor: _sugeridoColor, defaultFrequency: HabitFrequency.daily, isCountable: false, defaultGoalDays: 30),
+  HabitTemplate(templateId: 'suggested_walk_30', category: 'Sugerido', title: 'Caminar 30 min', description: 'Suma pasos y despejá la mente.', iconKey: 'walk', defaultColor: _sugeridoColor, defaultFrequency: HabitFrequency.daily, isCountable: false, defaultGoalDays: 21),
+  HabitTemplate(templateId: 'suggested_steps_8k', category: 'Sugerido', title: 'Pasos diarios', description: 'Objetivo de 8.000 pasos al día.', iconKey: 'steps', defaultColor: _sugeridoColor, defaultFrequency: HabitFrequency.daily, isCountable: true, defaultForever: true, defaultTargetCount: 8000),
+  HabitTemplate(templateId: 'suggested_sleep_7h', category: 'Sugerido', title: 'Dormir 7 horas', description: 'Priorizá descanso de calidad.', iconKey: 'sleep', defaultColor: _sugeridoColor, defaultFrequency: HabitFrequency.daily, isCountable: false, defaultGoalDays: 21),
+  HabitTemplate(templateId: 'suggested_read_15', category: 'Sugerido', title: 'Leer 15 minutos', description: 'Un bloque corto de lectura diaria.', iconKey: 'read', defaultColor: _sugeridoColor, defaultFrequency: HabitFrequency.daily, isCountable: false, defaultGoalDays: 30),
+  HabitTemplate(templateId: 'suggested_stretch', category: 'Sugerido', title: 'Estirar', description: 'Movilidad suave para iniciar el día.', iconKey: 'stretch', defaultColor: _sugeridoColor, defaultFrequency: HabitFrequency.daily, isCountable: false, defaultGoalDays: 21),
+  HabitTemplate(templateId: 'suggested_plan_day', category: 'Sugerido', title: 'Planificar el día', description: 'Definí 3 prioridades claras.', iconKey: 'plan', defaultColor: _sugeridoColor, defaultFrequency: HabitFrequency.daily, isCountable: false, defaultGoalDays: 21),
+  HabitTemplate(templateId: 'suggested_tidying', category: 'Sugerido', title: 'Orden rápido', description: '10 minutos para ordenar tu espacio.', iconKey: 'clean', defaultColor: _sugeridoColor, defaultFrequency: HabitFrequency.daily, isCountable: false, defaultGoalDays: 21),
+
+  // Vida (10)
+  HabitTemplate(templateId: 'life_daily_reading', category: 'Vida', title: 'Lectura diaria', description: '15 minutos de lectura sin distracciones.', iconKey: 'book', defaultColor: _vidaColor, defaultFrequency: HabitFrequency.daily, isCountable: false, defaultGoalDays: 30),
+  HabitTemplate(templateId: 'life_journal', category: 'Vida', title: 'Escribir diario', description: 'Registrá ideas y aprendizajes del día.', iconKey: 'journal', defaultColor: _vidaColor, defaultFrequency: HabitFrequency.daily, isCountable: false, defaultGoalDays: 21),
+  HabitTemplate(templateId: 'life_study_language', category: 'Vida', title: 'Practicar idioma', description: '10 minutos para expandir vocabulario.', iconKey: 'language', defaultColor: _vidaColor, defaultFrequency: HabitFrequency.daily, isCountable: false, defaultGoalDays: 60),
+  HabitTemplate(templateId: 'life_budget_review', category: 'Vida', title: 'Revisar gastos', description: 'Controlá tus finanzas personales.', iconKey: 'money', defaultColor: _vidaColor, defaultFrequency: HabitFrequency.daily, isCountable: false, defaultGoalDays: 30),
+  HabitTemplate(templateId: 'life_family_time', category: 'Vida', title: 'Tiempo en familia', description: 'Conectá sin pantallas al menos 20 minutos.', iconKey: 'family', defaultColor: _vidaColor, defaultFrequency: HabitFrequency.daily, isCountable: false, defaultGoalDays: 21),
+  HabitTemplate(templateId: 'life_home_order', category: 'Vida', title: 'Casa en orden', description: 'Una tarea doméstica al día.', iconKey: 'home', defaultColor: _vidaColor, defaultFrequency: HabitFrequency.daily, isCountable: false, defaultGoalDays: 21),
+  HabitTemplate(templateId: 'life_focus_block', category: 'Vida', title: 'Bloque de foco', description: '25 minutos de trabajo profundo.', iconKey: 'focus', defaultColor: _vidaColor, defaultFrequency: HabitFrequency.daily, isCountable: false, defaultGoalDays: 21),
+  HabitTemplate(templateId: 'life_digital_cleanup', category: 'Vida', title: 'Limpieza digital', description: 'Borrá archivos o correos innecesarios.', iconKey: 'laptop', defaultColor: _vidaColor, defaultFrequency: HabitFrequency.weekly, isCountable: false, defaultGoalDays: 12),
+  HabitTemplate(templateId: 'life_plan_week', category: 'Vida', title: 'Plan semanal', description: 'Organizá objetivos y agenda.', iconKey: 'calendar', defaultColor: _vidaColor, defaultFrequency: HabitFrequency.weekly, isCountable: false, defaultGoalDays: 12),
+  HabitTemplate(templateId: 'life_wake_early', category: 'Vida', title: 'Despertar temprano', description: 'Comenzá el día con margen de tiempo.', iconKey: 'alarm', defaultColor: _vidaColor, defaultFrequency: HabitFrequency.daily, isCountable: false, defaultGoalDays: 30),
+
+  // Salud (10)
+  HabitTemplate(templateId: 'health_eat_fruits', category: 'Salud', title: 'Comer frutas', description: 'Una porción de fruta por día.', iconKey: 'fruit', defaultColor: _saludColor, defaultFrequency: HabitFrequency.daily, isCountable: false, defaultGoalDays: 30),
+  HabitTemplate(templateId: 'health_veggies', category: 'Salud', title: 'Comer verduras', description: 'Incluí vegetales en al menos una comida.', iconKey: 'salad', defaultColor: _saludColor, defaultFrequency: HabitFrequency.daily, isCountable: false, defaultGoalDays: 30),
+  HabitTemplate(templateId: 'health_hydration_liters', category: 'Salud', title: 'Hidratación', description: 'Tomá 2 litros de agua por día.', iconKey: 'hydrate', defaultColor: _saludColor, defaultFrequency: HabitFrequency.daily, isCountable: true, defaultForever: true, defaultTargetCount: 8),
+  HabitTemplate(templateId: 'health_sleep_routine', category: 'Salud', title: 'Rutina de sueño', description: 'Acostate a horario regular.', iconKey: 'moon', defaultColor: _saludColor, defaultFrequency: HabitFrequency.daily, isCountable: false, defaultGoalDays: 30),
+  HabitTemplate(templateId: 'health_no_sugar', category: 'Salud', title: 'Reducir azúcar', description: 'Evitá bebidas y snacks azucarados.', iconKey: 'no_sugar', defaultColor: _saludColor, defaultFrequency: HabitFrequency.daily, isCountable: false, defaultGoalDays: 21),
+  HabitTemplate(templateId: 'health_no_smoke', category: 'Salud', title: 'Sin fumar', description: 'Sostené un día libre de tabaco.', iconKey: 'no_smoke', defaultColor: _saludColor, defaultFrequency: HabitFrequency.daily, isCountable: false, defaultGoalDays: 60),
+  HabitTemplate(templateId: 'health_vitamins', category: 'Salud', title: 'Tomar vitaminas', description: 'No olvides tus suplementos.', iconKey: 'supplements', defaultColor: _saludColor, defaultFrequency: HabitFrequency.daily, isCountable: false, defaultGoalDays: 30),
+  HabitTemplate(templateId: 'health_walk_after_meal', category: 'Salud', title: 'Caminata post comida', description: '10 minutos para mejorar digestión.', iconKey: 'walk', defaultColor: _saludColor, defaultFrequency: HabitFrequency.daily, isCountable: false, defaultGoalDays: 21),
+  HabitTemplate(templateId: 'health_medical_check', category: 'Salud', title: 'Chequeo médico', description: 'Seguimiento preventivo mensual.', iconKey: 'heart', defaultColor: _saludColor, defaultFrequency: HabitFrequency.monthly, isCountable: false, defaultGoalDays: 12),
+  HabitTemplate(templateId: 'health_cook_home', category: 'Salud', title: 'Cocinar en casa', description: 'Prepará una comida casera saludable.', iconKey: 'cook', defaultColor: _saludColor, defaultFrequency: HabitFrequency.daily, isCountable: false, defaultGoalDays: 30),
+
+  // Deportes (10)
+  HabitTemplate(templateId: 'sports_train_workout', category: 'Deportes', title: 'Entrenamiento principal', description: 'Sesión completa para mejorar rendimiento.', iconKey: 'workout', defaultColor: _deportesColor, defaultFrequency: HabitFrequency.weekly, isCountable: false, defaultGoalDays: 12),
+  HabitTemplate(templateId: 'sports_run', category: 'Deportes', title: 'Salir a correr', description: 'Cardio suave o moderado.', iconKey: 'run', defaultColor: _deportesColor, defaultFrequency: HabitFrequency.daily, isCountable: false, defaultGoalDays: 21),
+  HabitTemplate(templateId: 'sports_steps_10k', category: 'Deportes', title: '10.000 pasos', description: 'Meta de pasos para mantener actividad.', iconKey: 'steps', defaultColor: _deportesColor, defaultFrequency: HabitFrequency.daily, isCountable: true, defaultForever: true, defaultTargetCount: 10000),
+  HabitTemplate(templateId: 'sports_pullups', category: 'Deportes', title: 'Dominadas', description: 'Sumá repeticiones de fuerza de tren superior.', iconKey: 'target', defaultColor: _deportesColor, defaultFrequency: HabitFrequency.daily, isCountable: true, defaultTargetCount: 10, defaultGoalDays: 30),
+  HabitTemplate(templateId: 'sports_stretching', category: 'Deportes', title: 'Movilidad y estiramiento', description: 'Prevención de lesiones y recuperación.', iconKey: 'stretch', defaultColor: _deportesColor, defaultFrequency: HabitFrequency.daily, isCountable: false, defaultGoalDays: 21),
+  HabitTemplate(templateId: 'sports_cycling', category: 'Deportes', title: 'Ciclismo', description: 'Pedaleá para ganar resistencia.', iconKey: 'bike', defaultColor: _deportesColor, defaultFrequency: HabitFrequency.weekly, isCountable: false, defaultGoalDays: 16),
+  HabitTemplate(templateId: 'sports_swimming', category: 'Deportes', title: 'Natación', description: 'Entrená técnica y capacidad aeróbica.', iconKey: 'swim', defaultColor: _deportesColor, defaultFrequency: HabitFrequency.weekly, isCountable: false, defaultGoalDays: 16),
+  HabitTemplate(templateId: 'sports_yoga', category: 'Deportes', title: 'Yoga', description: 'Fuerza, equilibrio y flexibilidad.', iconKey: 'yoga', defaultColor: _deportesColor, defaultFrequency: HabitFrequency.daily, isCountable: false, defaultGoalDays: 21),
+  HabitTemplate(templateId: 'sports_core', category: 'Deportes', title: 'Core 10 minutos', description: 'Trabajo de zona media y postura.', iconKey: 'timer', defaultColor: _deportesColor, defaultFrequency: HabitFrequency.daily, isCountable: false, defaultGoalDays: 21),
+  HabitTemplate(templateId: 'sports_recovery', category: 'Deportes', title: 'Recuperación activa', description: 'Movilidad ligera y descarga muscular.', iconKey: 'heart', defaultColor: _deportesColor, defaultFrequency: HabitFrequency.weekly, isCountable: false, defaultGoalDays: 12),
+
+  // Mentalidad (10)
+  HabitTemplate(templateId: 'mind_daily_meditation', category: 'Mentalidad', title: 'Meditar', description: 'Respiración consciente y foco mental.', iconKey: 'meditate', defaultColor: _mentalidadColor, defaultFrequency: HabitFrequency.daily, isCountable: false, defaultGoalDays: 21),
+  HabitTemplate(templateId: 'mind_gratitude', category: 'Mentalidad', title: 'Gratitud diaria', description: 'Anotá 3 cosas por agradecer.', iconKey: 'gratitude', defaultColor: _mentalidadColor, defaultFrequency: HabitFrequency.daily, isCountable: false, defaultGoalDays: 21),
+  HabitTemplate(templateId: 'mind_visualization', category: 'Mentalidad', title: 'Visualización', description: 'Visualizá tus objetivos por 5 minutos.', iconKey: 'target', defaultColor: _mentalidadColor, defaultFrequency: HabitFrequency.daily, isCountable: false, defaultGoalDays: 30),
+  HabitTemplate(templateId: 'mind_affirmations', category: 'Mentalidad', title: 'Afirmaciones', description: 'Reforzá creencias positivas cada mañana.', iconKey: 'sun', defaultColor: _mentalidadColor, defaultFrequency: HabitFrequency.daily, isCountable: false, defaultGoalDays: 30),
+  HabitTemplate(templateId: 'mind_digital_detox', category: 'Mentalidad', title: 'Detox digital', description: '60 minutos sin redes sociales.', iconKey: 'laptop', defaultColor: _mentalidadColor, defaultFrequency: HabitFrequency.daily, isCountable: false, defaultGoalDays: 21),
+  HabitTemplate(templateId: 'mind_breathing', category: 'Mentalidad', title: 'Respiración guiada', description: 'Pausa de 5 minutos para regular estrés.', iconKey: 'mind', defaultColor: _mentalidadColor, defaultFrequency: HabitFrequency.daily, isCountable: false, defaultGoalDays: 21),
+  HabitTemplate(templateId: 'mind_no_complaints', category: 'Mentalidad', title: 'Día sin quejas', description: 'Practicar lenguaje constructivo.', iconKey: 'smile', defaultColor: _mentalidadColor, defaultFrequency: HabitFrequency.daily, isCountable: false, defaultGoalDays: 21),
+  HabitTemplate(templateId: 'mind_reflection', category: 'Mentalidad', title: 'Reflexión nocturna', description: 'Repasá logros y mejoras del día.', iconKey: 'journal', defaultColor: _mentalidadColor, defaultFrequency: HabitFrequency.daily, isCountable: false, defaultGoalDays: 21),
+  HabitTemplate(templateId: 'mind_focus_session', category: 'Mentalidad', title: 'Sesión de concentración', description: '25 minutos sin interrupciones.', iconKey: 'focus', defaultColor: _mentalidadColor, defaultFrequency: HabitFrequency.daily, isCountable: false, defaultGoalDays: 21),
+  HabitTemplate(templateId: 'mind_learn_new', category: 'Mentalidad', title: 'Aprender algo nuevo', description: 'Un micro aprendizaje diario.', iconKey: 'brain', defaultColor: _mentalidadColor, defaultFrequency: HabitFrequency.daily, isCountable: false, defaultGoalDays: 30),
 ];
 
 IconData iconForKey(String key) => _iconDataByKey[key] ?? Icons.auto_awesome_rounded;
