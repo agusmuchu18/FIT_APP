@@ -5,6 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
+import '../../../core/domain/entities.dart';
+import '../data/habit_template_popularity_store.dart';
+import '../domain/habit_gallery_engine.dart';
+
 import '../../../ui/motion/widgets/habit_check_overlay.dart';
 import '../../common/theme/app_colors.dart';
 import '../domain/habit_models.dart';
@@ -92,6 +96,72 @@ class _HabitsTrackerScreenState extends State<HabitsTrackerScreen> {
       for (final habit in habits) habit.id: jsonEncode(habit.toJson()),
     };
     await box.putAll(entries);
+  }
+
+
+  Future<Map<String, int>> _loadPopularityScores() async {
+    final store = await HabitTemplatePopularityStore.create();
+    return store.loadScores();
+  }
+
+  Future<void> _incrementPopularityScores(List<String> templateIds) async {
+    final store = await HabitTemplatePopularityStore.create();
+    await store.incrementMany(templateIds);
+  }
+
+  Future<bool> _inferTrainingInLast14Days() async {
+    final workoutBox = await Hive.openBox<String>('fit_workouts');
+    final now = DateTime.now().toUtc();
+    final threshold = now.subtract(const Duration(days: 14));
+    for (final raw in workoutBox.values) {
+      try {
+        final map = (jsonDecode(raw) as Map).cast<String, Object?>();
+        final workout = WorkoutEntry.fromJson(map);
+        if (workout.updatedAt.isAfter(threshold)) {
+          return true;
+        }
+      } catch (_) {}
+    }
+    return false;
+  }
+
+  Future<UserPreferences?> _loadPreferences() async {
+    final prefsBox = await Hive.openBox<String>('fit_prefs');
+    final raw = prefsBox.get('prefs');
+    if (raw == null) return null;
+    try {
+      final map = (jsonDecode(raw) as Map).cast<String, Object?>();
+      return UserPreferences.fromJson(map);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _openGallery(Box<String> box) async {
+    final preferences = await _loadPreferences();
+    final inferredTrains = await _inferTrainingInLast14Days();
+    final popularity = await _loadPopularityScores();
+    if (!mounted) return;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.background,
+      builder: (_) => FractionallySizedBox(
+        heightFactor: 0.93,
+        child: HabitGallerySheet(
+          onAddHabit: (habit) => _saveHabit(box, habit),
+          onAddMany: (habits) => _addMany(box, habits),
+          onTemplatesConfirmed: _incrementPopularityScores,
+          alreadyAddedTemplateIds: _loadAddedTemplateIds(box),
+          userContext: HabitUserContext.fromPreferences(
+            preferences: preferences,
+            inferredTrains: inferredTrains || (preferences?.targetSessionsPerWeek ?? 0) > 0,
+          ),
+          popularityByTemplate: popularity,
+        ),
+      ),
+    );
   }
 
 
@@ -236,21 +306,7 @@ class _HabitsTrackerScreenState extends State<HabitsTrackerScreen> {
                           _HeaderPillButton(
                             label: 'Nuevo hábito',
                             icon: Icons.add_rounded,
-                            onTap: () {
-                              showModalBottomSheet<void>(
-                                context: context,
-                                isScrollControlled: true,
-                                backgroundColor: AppColors.background,
-                                builder: (_) => FractionallySizedBox(
-                                  heightFactor: 0.93,
-                                  child: HabitGallerySheet(
-                                    onAddHabit: (habit) => _saveHabit(box, habit),
-                                    onAddMany: (habits) => _addMany(box, habits),
-                                    alreadyAddedTemplateIds: _loadAddedTemplateIds(box),
-                                  ),
-                                ),
-                              );
-                            },
+                            onTap: () => _openGallery(box),
                           ),
                         ],
                       ),
