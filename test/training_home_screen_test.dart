@@ -57,5 +57,7 @@ void main() {
     expect(find.text('Mis rutinas'), findsOneWidget);
     expect(find.text('Ordenar'), findsOneWidget);
     expect(find.byType(RoutineMiniCard), findsAtLeastNWidgets(1));
+    expect(find.text('Gym Gym'), findsNothing);
+    expect(find.text('Press banca'), findsOneWidget);
   });
 }

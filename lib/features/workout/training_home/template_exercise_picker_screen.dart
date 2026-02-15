@@ -229,6 +229,7 @@ class _TemplateExercisePickerScreenState extends State<TemplateExercisePickerScr
   late final bool _ownedController;
   late final RoutineDraftController _draftController;
   late final RoutinesRepository _repository;
+  late final Map<String, ExerciseDefinition> _exercisesById;
 
   @override
   void initState() {
@@ -237,6 +238,7 @@ class _TemplateExercisePickerScreenState extends State<TemplateExercisePickerScr
     _controller = widget.controller ?? ExercisePickerController(exercises: exerciseLibrary);
     _draftController = widget.draftController ?? RoutineDraftController();
     _repository = widget.repository ?? RoutinesRepository();
+    _exercisesById = {for (final exercise in exerciseLibrary) exercise.id: exercise};
     if (_ownedController) {
       unawaited(_controller.loadRecentFromHistory());
     }
@@ -366,7 +368,7 @@ class _TemplateExercisePickerScreenState extends State<TemplateExercisePickerScr
                                 expanded: _controller.expandedExerciseId == exercise.id,
                                 selected: _draftController.contains(exercise.id),
                                 onTap: () => _controller.toggleExpanded(exercise.id),
-                                onAdd: () => _toggleSelection(context, exercise),
+                                onAdd: () => _toggleSelection(exercise),
                               ),
                             );
                           },
@@ -393,6 +395,10 @@ class _TemplateExercisePickerScreenState extends State<TemplateExercisePickerScr
                   child: _SelectionMiniBar(
                     visible: hasSelection,
                     count: _draftController.selectedCount,
+                    selectedExerciseNames: _draftController.selectedExerciseIds
+                        .map((id) => _exercisesById[id]?.name)
+                        .whereType<String>()
+                        .toList(growable: false),
                     onTap: _openReview,
                     onClear: _draftController.clear,
                     extraBottomPadding: bottomInset + overlayPadding,
@@ -407,12 +413,8 @@ class _TemplateExercisePickerScreenState extends State<TemplateExercisePickerScr
     );
   }
 
-  void _toggleSelection(BuildContext context, ExerciseDefinition exercise) {
+  void _toggleSelection(ExerciseDefinition exercise) {
     _draftController.toggleExercise(exercise.id);
-    final selected = _draftController.contains(exercise.id);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(selected ? '${exercise.name} agregado' : '${exercise.name} removido')),
-    );
   }
 
   Future<void> _openReview() async {
@@ -510,6 +512,7 @@ class _SelectionMiniBar extends StatelessWidget {
   const _SelectionMiniBar({
     required this.visible,
     required this.count,
+    required this.selectedExerciseNames,
     required this.onTap,
     required this.onClear,
     required this.extraBottomPadding,
@@ -517,6 +520,7 @@ class _SelectionMiniBar extends StatelessWidget {
 
   final bool visible;
   final int count;
+  final List<String> selectedExerciseNames;
   final VoidCallback onTap;
   final VoidCallback onClear;
   final double extraBottomPadding;
@@ -534,20 +538,59 @@ class _SelectionMiniBar extends StatelessWidget {
           child: Padding(
             padding: EdgeInsets.fromLTRB(16, 8, 16, 10 + extraBottomPadding),
             child: Material(
-              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              color: Theme.of(context).colorScheme.surface,
               borderRadius: BorderRadius.circular(16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
+              ),
               child: InkWell(
                 onTap: onTap,
                 borderRadius: BorderRadius.circular(16),
                 child: Container(
-                  height: 58,
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  height: 64,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: Row(
                     children: [
-                      Expanded(child: Text(count == 1 ? '1 ejercicio agregado' : '$count ejercicios agregados')),
-                      TextButton(onPressed: onClear, child: const Text('Limpiar')),
-                      const SizedBox(width: 8),
-                      FilledButton(onPressed: onTap, child: const Text('Ver rutina')),
+                      Expanded(
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: [
+                              for (final name in selectedExerciseNames.take(3))
+                                Padding(
+                                  padding: const EdgeInsets.only(right: 6),
+                                  child: Chip(
+                                    label: SizedBox(
+                                      width: 108,
+                                      child: Text(
+                                        name,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    visualDensity: VisualDensity.compact,
+                                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  ),
+                                ),
+                              if (count > 3)
+                                Chip(
+                                  label: Text('+${count - 3}'),
+                                  visualDensity: VisualDensity.compact,
+                                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: onClear,
+                        icon: const Icon(Icons.close),
+                        visualDensity: VisualDensity.compact,
+                        tooltip: 'Limpiar selección',
+                      ),
+                      const SizedBox(width: 6),
+                      FilledButton.tonal(onPressed: onTap, child: Text('Ver ($count)')),
                     ],
                   ),
                 ),
