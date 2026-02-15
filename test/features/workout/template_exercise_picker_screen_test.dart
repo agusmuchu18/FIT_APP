@@ -51,7 +51,7 @@ void main() {
         ),
       ];
 
-  testWidgets('renderiza recientes con 3 cards large', (tester) async {
+  testWidgets('estado inicial muestra empty state y no lista completa', (tester) async {
     final controller = ExercisePickerController(
       exercises: buildExercises(),
       initialRecentExerciseIds: const ['curl_biceps', 'martillo', 'predicador'],
@@ -66,11 +66,12 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('Usados recientemente'), findsOneWidget);
-    expect(find.byType(RecentExerciseCard), findsNWidgets(3));
+    expect(find.text('Todos los ejercicios'), findsNothing);
+    expect(find.text('Buscá un ejercicio o músculo'), findsOneWidget);
+    expect(find.byType(ExerciseExpandableCard), findsNothing);
   });
 
-  testWidgets('search por músculo muestra ejercicios aunque el nombre no coincida', (tester) async {
+  testWidgets('con búsqueda muestra resultados y texto Mostrando', (tester) async {
     final controller = ExercisePickerController(
       exercises: buildExercises(),
       initialRecentExerciseIds: const [],
@@ -83,9 +84,16 @@ void main() {
       ),
     );
 
-    await tester.enterText(find.byType(TextField), 'bíceps');
+    await tester.enterText(find.byType(TextField), 'press');
     await tester.pump(const Duration(milliseconds: 260));
 
+    expect(find.text('Sin resultados'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextField), 'curl');
+    await tester.pump(const Duration(milliseconds: 260));
+
+    expect(find.text('Resultados'), findsOneWidget);
+    expect(find.textContaining('Mostrando'), findsOneWidget);
     expect(find.text('Curl clásico'), findsOneWidget);
     expect(find.text('Curl martillo'), findsOneWidget);
     expect(find.text('Curl predicador'), findsOneWidget);
