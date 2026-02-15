@@ -111,38 +111,41 @@ class _TrainingHomeViewState extends State<_TrainingHomeView> {
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
-              GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: controller.routines.length,
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  mainAxisSpacing: 12,
-                  crossAxisSpacing: 12,
-                  childAspectRatio: 0.88,
+              const SizedBox(height: 4),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: controller.routines.length,
+                  gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                    maxCrossAxisExtent: 420,
+                    mainAxisExtent: 185,
+                    mainAxisSpacing: 12,
+                    crossAxisSpacing: 12,
+                  ),
+                  itemBuilder: (context, index) {
+                    final routine = controller.routines[index];
+                    final metadata = controller.metadataFor(routine.id);
+                    final typeLabel = _typeLabel(routine.type);
+                    final previewExercises = routine.exercises
+                        .map((exercise) => exercise.name)
+                        .where((name) => name.trim().isNotEmpty)
+                        .toList(growable: false);
+                    return RoutineMiniCard(
+                      title: routine.name,
+                      typeTag: typeLabel,
+                      secondaryTag: routine.activityName,
+                      exercisePreview: previewExercises,
+                      exerciseCount: routine.exercises.length,
+                      estimatedMinutes: controller.estimatedDuration(routine),
+                      lastUsed: 'Última vez: ${_daysAgoLabel(metadata.lastUsedAt)}',
+                      isPinned: metadata.pinned,
+                      onTap: () => _startRoutine(context, controller, routine),
+                      onMenuSelected: (value) => _handleMenuAction(context, controller, routine, value),
+                    );
+                  },
                 ),
-                itemBuilder: (context, index) {
-                  final routine = controller.routines[index];
-                  final metadata = controller.metadataFor(routine.id);
-                  final typeLabel = _typeLabel(routine.type);
-                  final previewExercises = routine.exercises
-                      .map((exercise) => exercise.name)
-                      .where((name) => name.trim().isNotEmpty)
-                      .toList(growable: false);
-                  return RoutineMiniCard(
-                    title: routine.name,
-                    typeTag: typeLabel,
-                    secondaryTag: routine.activityName,
-                    exercisePreview: previewExercises,
-                    exerciseCount: routine.exercises.length,
-                    estimatedMinutes: controller.estimatedDuration(routine),
-                    lastUsed: 'Última vez: ${_daysAgoLabel(metadata.lastUsedAt)}',
-                    isPinned: metadata.pinned,
-                    onTap: () => _startRoutine(context, controller, routine),
-                    onMenuSelected: (value) => _handleMenuAction(context, controller, routine, value),
-                  );
-                },
               )
             ]
           ],

@@ -183,7 +183,7 @@ class RoutineMiniCard extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final accentColor = _accentForType(typeTag, colorScheme);
-    final preview = exercisePreview.take(3).toList(growable: false);
+    final preview = exercisePreview.take(2).toList(growable: false);
     final remaining = exercisePreview.length - preview.length;
 
     return InkWell(
@@ -197,85 +197,80 @@ class RoutineMiniCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: AppColors.borderSubtle),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            Container(
+              width: 4,
+              decoration: BoxDecoration(
+                color: accentColor,
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            const SizedBox(width: 8),
             Expanded(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: 4,
-                    decoration: BoxDecoration(
-                      color: accentColor,
-                      borderRadius: BorderRadius.circular(12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                      PopupMenuButton<String>(
+                        onSelected: onMenuSelected,
+                        itemBuilder: (context) => [
+                          const PopupMenuItem(value: 'edit', child: Text('Editar')),
+                          const PopupMenuItem(value: 'duplicate', child: Text('Duplicar')),
+                          PopupMenuItem(
+                            value: 'pin',
+                            child: Text(isPinned ? 'Desfijar' : 'Fijar'),
+                          ),
+                          const PopupMenuItem(value: 'delete', child: Text('Eliminar')),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
+                    children: [
+                      _compactChip(typeTag),
+                      if (secondaryTag != null && secondaryTag!.trim().isNotEmpty && secondaryTag != typeTag)
+                        _compactChip(secondaryTag!),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '$exerciseCount ejercicios${estimatedMinutes != null ? ' · ~$estimatedMinutes min' : ''}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    lastUsed,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: AppColors.textMuted,
+                      fontSize: 11,
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                title,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-                              ),
-                            ),
-                            PopupMenuButton<String>(
-                              onSelected: onMenuSelected,
-                              itemBuilder: (context) => [
-                                const PopupMenuItem(value: 'edit', child: Text('Editar')),
-                                const PopupMenuItem(value: 'duplicate', child: Text('Duplicar')),
-                                PopupMenuItem(
-                                  value: 'pin',
-                                  child: Text(isPinned ? 'Desfijar' : 'Fijar'),
-                                ),
-                                const PopupMenuItem(value: 'delete', child: Text('Eliminar')),
-                              ],
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Wrap(
-                          spacing: 6,
-                          runSpacing: 4,
-                          children: [
-                            _compactChip(typeTag),
-                            if (secondaryTag != null && secondaryTag!.trim().isNotEmpty && secondaryTag != typeTag)
-                              _compactChip(secondaryTag!),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 4,
-                          children: [
-                            _statChip(icon: Icons.fitness_center, label: '$exerciseCount ejercicios'),
-                            if (estimatedMinutes != null) _statChip(icon: Icons.schedule, label: '~$estimatedMinutes min'),
-                            _statChip(icon: Icons.history, label: lastUsed),
-                          ],
-                        ),
-                        const Spacer(),
-                        SizedBox(
-                          height: 28,
-                          child: ListView(
-                            scrollDirection: Axis.horizontal,
-                            children: [
-                              for (final exercise in preview) ...[
-                                _compactChip(exercise),
-                                const SizedBox(width: 6),
-                              ],
-                              if (remaining > 0) _compactChip('+$remaining'),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
+                  const Spacer(),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
+                    children: [
+                      for (final exercise in preview) _compactChip(exercise),
+                      if (remaining > 0) _compactChip('+$remaining'),
+                    ],
                   ),
                 ],
               ),
@@ -294,17 +289,6 @@ class RoutineMiniCard extends StatelessWidget {
       ),
       visualDensity: VisualDensity.compact,
       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-    );
-  }
-
-  Widget _statChip({required IconData icon, required String label}) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 14, color: AppColors.textMuted),
-        const SizedBox(width: 4),
-        Text(label, style: const TextStyle(fontSize: 11, color: AppColors.textMuted)),
-      ],
     );
   }
 
