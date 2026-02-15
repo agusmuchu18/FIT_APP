@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../common/theme/app_colors.dart';
 import '../pro/models/workout_models.dart';
+import 'routine_preview_screen.dart';
 import 'training_home_controller.dart';
 import 'training_home_widgets.dart';
 
@@ -141,7 +142,7 @@ class _TrainingHomeViewState extends State<_TrainingHomeView> {
                       estimatedMinutes: controller.estimatedDuration(routine),
                       lastUsed: 'Última vez: ${_daysAgoLabel(metadata.lastUsedAt)}',
                       isPinned: metadata.pinned,
-                      onTap: () => _startRoutine(context, controller, routine),
+                      onTap: () => _openRoutinePreview(context, controller, routine),
                       onMenuSelected: (value) => _handleMenuAction(context, controller, routine, value),
                     );
                   },
@@ -217,10 +218,23 @@ class _TrainingHomeViewState extends State<_TrainingHomeView> {
     }
   }
 
-  Future<void> _startRoutine(BuildContext context, TrainingHomeController controller, WorkoutTemplate routine) async {
-    await controller.markRoutineStarted(routine);
-    if (!context.mounted) return;
-    await Navigator.of(context).pushNamed('/workout/session', arguments: {'templateId': routine.id});
+  Future<void> _openRoutinePreview(
+    BuildContext context,
+    TrainingHomeController controller,
+    WorkoutTemplate routine,
+  ) async {
+    final metadata = controller.metadataFor(routine.id);
+    final typeLabel = _typeLabel(routine.type);
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => RoutinePreviewScreen(
+          routine: routine,
+          controller: controller,
+          typeLabel: typeLabel,
+          lastUsedLabel: _daysAgoLabel(metadata.lastUsedAt),
+        ),
+      ),
+    );
   }
 
   Future<void> _goAndRefresh(BuildContext context, TrainingHomeController controller, String route) async {
