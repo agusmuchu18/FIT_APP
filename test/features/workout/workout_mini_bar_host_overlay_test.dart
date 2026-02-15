@@ -14,12 +14,15 @@ void main() {
       MaterialApp(
         initialRoute: '/workout',
         navigatorObservers: [WorkoutMiniBarRouteObserver()],
-        builder: (context, child) => Stack(
-          children: [
-            if (child != null) child,
-            const WorkoutMiniBarHostOverlay(),
-          ],
-        ),
+        builder: (context, child) {
+          final app = child ?? const SizedBox.shrink();
+          return Overlay(
+            initialEntries: [
+              OverlayEntry(builder: (_) => app),
+              OverlayEntry(builder: (_) => const WorkoutMiniBarHostOverlay()),
+            ],
+          );
+        },
         routes: {
           '/workout': (_) => const TrainingHomeScreen(),
           '/workout/session': (_) => const Scaffold(body: Text('Session')),
@@ -63,4 +66,29 @@ void main() {
 
     expect(find.byType(WorkoutMiniBar), findsNothing);
   });
+
+  testWidgets('tooltips de mini bar funcionan dentro de Overlay real', (tester) async {
+    final now = DateTime.now();
+    SharedPreferences.setMockInitialValues({
+      WorkoutInProgressController.draftKey: jsonEncode({
+        'sessionStart': now.subtract(const Duration(minutes: 1)).toIso8601String(),
+        'isPaused': false,
+        'pausedAt': null,
+        'accumulatedPausedSeconds': 0,
+        'lastUpdated': now.toIso8601String(),
+      }),
+      'pro_workout_templates': jsonEncode([]),
+      'pro_workout_sessions': jsonEncode([]),
+    });
+
+    await WorkoutInProgressController.instance.initialize();
+    await pumpTrainingWithOverlay(tester);
+
+    await tester.longPress(find.byIcon(Icons.pause_rounded));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Pausar'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
 }

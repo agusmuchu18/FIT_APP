@@ -119,10 +119,11 @@ class FitApp extends StatelessWidget {
         theme: AppTheme.dark,
         navigatorObservers: [_miniBarRouteObserver],
         builder: (context, child) {
-          return Stack(
-            children: [
-              if (child != null) child,
-              const WorkoutMiniBarHostOverlay(),
+          final app = child ?? const SizedBox.shrink();
+          return Overlay(
+            initialEntries: [
+              OverlayEntry(builder: (_) => app),
+              OverlayEntry(builder: (_) => const WorkoutMiniBarHostOverlay()),
             ],
           );
         },

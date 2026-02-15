@@ -76,30 +76,41 @@ class WorkoutMiniBarHostOverlay extends StatelessWidget {
               builder: (context, _, ___) {
                 final hidden = draft == null || overlayController.shouldHideMiniBar;
                 final bottomInset = MediaQuery.of(context).padding.bottom;
-                final bottomOffset = bottomInset + (bottomNavVisible ? WorkoutMiniBarOverlayController.mainShellBarHeight : 12) + 12;
+                final bottomOffset = (bottomNavVisible ? WorkoutMiniBarOverlayController.mainShellBarHeight : 0) + bottomInset + 12;
 
-                return Positioned(
-                  left: 20,
-                  right: 20,
-                  bottom: bottomOffset,
-                  child: AnimatedSlide(
-                    duration: _animationDuration,
-                    offset: hidden ? const Offset(0, 1) : Offset.zero,
-                    child: AnimatedOpacity(
-                      duration: _animationDuration,
-                      opacity: hidden ? 0 : 1,
-                      child: IgnorePointer(
-                        ignoring: hidden,
-                        child: draft == null
-                            ? const SizedBox.shrink()
-                            : WorkoutMiniBar(
-                                draft: draft,
-                                onContinue: () => Navigator.of(context).pushNamed('/workout/session'),
-                                onPauseResume: () => draft.isPaused
-                                    ? WorkoutInProgressController.instance.resume()
-                                    : WorkoutInProgressController.instance.pause(),
-                                onDiscard: () => _confirmDiscardDraft(context),
-                              ),
+                return SafeArea(
+                  bottom: false,
+                  child: Align(
+                    alignment: Alignment.bottomCenter,
+                    child: Padding(
+                      padding: EdgeInsets.only(
+                        left: 16,
+                        right: 16,
+                        bottom: bottomOffset,
+                      ),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 560),
+                        child: AnimatedSlide(
+                          duration: _animationDuration,
+                          offset: hidden ? const Offset(0, 1) : Offset.zero,
+                          child: AnimatedOpacity(
+                            duration: _animationDuration,
+                            opacity: hidden ? 0 : 1,
+                            child: IgnorePointer(
+                              ignoring: hidden,
+                              child: draft == null
+                                  ? const SizedBox.shrink()
+                                  : WorkoutMiniBar(
+                                      draft: draft,
+                                      onContinue: () => Navigator.of(context).pushNamed('/workout/session'),
+                                      onPauseResume: () => draft.isPaused
+                                          ? WorkoutInProgressController.instance.resume()
+                                          : WorkoutInProgressController.instance.pause(),
+                                      onDiscard: () => _confirmDiscardDraft(context),
+                                    ),
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ),

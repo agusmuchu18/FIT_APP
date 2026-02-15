@@ -133,15 +133,22 @@ class _WorkoutMiniBarState extends State<WorkoutMiniBar> {
                   ],
                 ),
               ),
-              IconButton(
-                tooltip: widget.draft.isPaused ? 'Reanudar' : 'Pausar',
-                onPressed: widget.onPauseResume,
-                icon: Icon(widget.draft.isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded),
-              ),
-              IconButton(
-                tooltip: 'Descartar',
-                onPressed: widget.onDiscard,
-                icon: const Icon(Icons.delete_outline_rounded),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    tooltip: widget.draft.isPaused ? 'Reanudar' : 'Pausar',
+                    visualDensity: VisualDensity.compact,
+                    onPressed: widget.onPauseResume,
+                    icon: Icon(widget.draft.isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded),
+                  ),
+                  IconButton(
+                    tooltip: 'Descartar',
+                    visualDensity: VisualDensity.compact,
+                    onPressed: widget.onDiscard,
+                    icon: const Icon(Icons.delete_outline_rounded),
+                  ),
+                ],
               ),
             ],
           ),
