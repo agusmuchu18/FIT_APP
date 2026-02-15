@@ -773,6 +773,28 @@ class WorkoutProProvider extends ChangeNotifier {
     WorkoutInProgressController.instance.syncFromRaw(null);
   }
 
+
+  List<SetEntry> _buildTemplateSets(WorkoutExercise exercise) {
+    return List<SetEntry>.generate(exercise.targetSets, (index) {
+      final baseReps = exercise.targetReps ?? exercise.targetRepsMin;
+      final load = exercise.targetLoadType == RoutineExerciseLoadType.weightedKg ||
+              exercise.targetLoadType == RoutineExerciseLoadType.machineKg
+          ? exercise.targetWeightKg
+          : null;
+      final assistance = exercise.targetLoadType == RoutineExerciseLoadType.assistedKg
+          ? exercise.targetWeightKg
+          : null;
+      return SetEntry(
+        id: _uuid.v4(),
+        reps: baseReps,
+        externalLoadKg: load,
+        assistanceKg: assistance,
+        restSeconds: exercise.restSeconds,
+        rir: exercise.rir,
+      );
+    });
+  }
+
   void _applyTemplate(WorkoutTemplate template) {
     setType(template.type, force: true);
     _selectedTemplate = template;
@@ -784,11 +806,20 @@ class WorkoutProProvider extends ChangeNotifier {
               id: _uuid.v4(),
               name: e.name,
               muscleGroup: e.muscleGroup,
+              equipment: e.equipment,
               measurement: e.measurement,
               notes: e.notes,
-              sets: e.sets
-                  .map((s) => s.copyWith(id: _uuid.v4()))
-                  .toList(),
+              targetSets: e.targetSets,
+              targetReps: e.targetReps,
+              targetRepsMin: e.targetRepsMin,
+              targetRepsMax: e.targetRepsMax,
+              targetLoadType: e.targetLoadType,
+              targetWeightKg: e.targetWeightKg,
+              restSeconds: e.restSeconds,
+              rir: e.rir,
+              sets: e.sets.isNotEmpty
+                  ? e.sets.map((s) => s.copyWith(id: _uuid.v4())).toList()
+                  : _buildTemplateSets(e),
             ),
           )
           .toList();

@@ -8,6 +8,13 @@ enum WorkoutType {
   custom,
 }
 
+enum RoutineExerciseLoadType {
+  bodyweight,
+  weightedKg,
+  assistedKg,
+  machineKg,
+}
+
 class SetEntry {
   SetEntry({
     required this.id,
@@ -93,32 +100,68 @@ class WorkoutExercise {
     required this.id,
     required this.name,
     this.muscleGroup,
+    this.equipment,
     this.measurement,
     this.notes,
+    this.targetSets = 3,
+    this.targetReps,
+    this.targetRepsMin = 8,
+    this.targetRepsMax = 12,
+    this.targetLoadType = RoutineExerciseLoadType.bodyweight,
+    this.targetWeightKg,
+    this.restSeconds,
+    this.rir,
     List<SetEntry>? sets,
   }) : sets = sets ?? [];
 
   final String id;
   final String name;
   final String? muscleGroup;
+  final String? equipment;
   final String? measurement;
   final String? notes;
+  final int targetSets;
+  final int? targetReps;
+  final int? targetRepsMin;
+  final int? targetRepsMax;
+  final RoutineExerciseLoadType targetLoadType;
+  final double? targetWeightKg;
+  final int? restSeconds;
+  final int? rir;
   final List<SetEntry> sets;
 
   WorkoutExercise copyWith({
     String? id,
     String? name,
     String? muscleGroup,
+    String? equipment,
     String? measurement,
     String? notes,
+    int? targetSets,
+    int? targetReps,
+    int? targetRepsMin,
+    int? targetRepsMax,
+    RoutineExerciseLoadType? targetLoadType,
+    double? targetWeightKg,
+    int? restSeconds,
+    int? rir,
     List<SetEntry>? sets,
   }) {
     return WorkoutExercise(
       id: id ?? this.id,
       name: name ?? this.name,
       muscleGroup: muscleGroup ?? this.muscleGroup,
+      equipment: equipment ?? this.equipment,
       measurement: measurement ?? this.measurement,
       notes: notes ?? this.notes,
+      targetSets: targetSets ?? this.targetSets,
+      targetReps: targetReps ?? this.targetReps,
+      targetRepsMin: targetRepsMin ?? this.targetRepsMin,
+      targetRepsMax: targetRepsMax ?? this.targetRepsMax,
+      targetLoadType: targetLoadType ?? this.targetLoadType,
+      targetWeightKg: targetWeightKg ?? this.targetWeightKg,
+      restSeconds: restSeconds ?? this.restSeconds,
+      rir: rir ?? this.rir,
       sets: sets ?? List<SetEntry>.from(this.sets),
     );
   }
@@ -127,21 +170,55 @@ class WorkoutExercise {
         'id': id,
         'name': name,
         'muscleGroup': muscleGroup,
+        'equipment': equipment,
         'measurement': measurement,
         'notes': notes,
+        'targetSets': targetSets,
+        'targetReps': targetReps,
+        'targetRepsMin': targetRepsMin,
+        'targetRepsMax': targetRepsMax,
+        'targetLoadType': targetLoadType.name,
+        'targetWeightKg': targetWeightKg,
+        'restSeconds': restSeconds,
+        'rir': rir,
         'sets': sets.map((e) => e.toJson()).toList(),
       };
 
-  factory WorkoutExercise.fromJson(Map<String, dynamic> json) => WorkoutExercise(
-        id: json['id'] as String,
-        name: json['name'] as String,
-        muscleGroup: json['muscleGroup'] as String?,
-        measurement: json['measurement'] as String?,
-        notes: json['notes'] as String?,
-        sets: (json['sets'] as List<dynamic>? ?? [])
-            .map((e) => SetEntry.fromJson(e as Map<String, dynamic>))
-            .toList(),
-      );
+  factory WorkoutExercise.fromJson(Map<String, dynamic> json) {
+    final serializedSets = (json['sets'] as List<dynamic>? ?? [])
+        .map((e) => SetEntry.fromJson(e as Map<String, dynamic>))
+        .toList();
+    final targetWeightKg = (json['targetWeightKg'] as num?)?.toDouble();
+    final targetLoadType = RoutineExerciseLoadType.values.firstWhere(
+      (value) => value.name == json['targetLoadType'],
+      orElse: () {
+        if (targetWeightKg != null) return RoutineExerciseLoadType.weightedKg;
+        final equipment = (json['equipment'] as String? ?? '').toLowerCase();
+        if (equipment.contains('machine') || equipment.contains('máquina')) {
+          return RoutineExerciseLoadType.machineKg;
+        }
+        return RoutineExerciseLoadType.bodyweight;
+      },
+    );
+
+    return WorkoutExercise(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      muscleGroup: json['muscleGroup'] as String?,
+      equipment: json['equipment'] as String?,
+      measurement: json['measurement'] as String?,
+      notes: json['notes'] as String?,
+      targetSets: (json['targetSets'] as int?) ?? (serializedSets.isEmpty ? 3 : serializedSets.length),
+      targetReps: json['targetReps'] as int?,
+      targetRepsMin: (json['targetRepsMin'] as int?) ?? 8,
+      targetRepsMax: (json['targetRepsMax'] as int?) ?? 12,
+      targetLoadType: targetLoadType,
+      targetWeightKg: targetWeightKg,
+      restSeconds: json['restSeconds'] as int?,
+      rir: json['rir'] as int?,
+      sets: serializedSets,
+    );
+  }
 }
 
 class WorkoutTemplate {
