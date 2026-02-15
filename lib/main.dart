@@ -117,6 +117,7 @@ class FitApp extends StatelessWidget {
         title: 'FIT App',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.dark,
+        navigatorKey: appNavigatorKey,
         navigatorObservers: [_miniBarRouteObserver],
         builder: (context, child) {
           final app = child ?? const SizedBox.shrink();
