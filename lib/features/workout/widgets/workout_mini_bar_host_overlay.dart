@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../workout_in_progress_controller.dart';
 import 'workout_mini_bar.dart';
 
+final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
+
 class WorkoutMiniBarOverlayController {
   WorkoutMiniBarOverlayController._();
 
@@ -102,11 +104,11 @@ class WorkoutMiniBarHostOverlay extends StatelessWidget {
                                   ? const SizedBox.shrink()
                                   : WorkoutMiniBar(
                                       draft: draft,
-                                      onContinue: () => Navigator.of(context).pushNamed('/workout/session'),
+                                      onContinue: () => appNavigatorKey.currentState?.pushNamed('/workout/session'),
                                       onPauseResume: () => draft.isPaused
                                           ? WorkoutInProgressController.instance.resume()
                                           : WorkoutInProgressController.instance.pause(),
-                                      onDiscard: () => _confirmDiscardDraft(context),
+                                      onDiscard: _confirmDiscardDraft,
                                     ),
                             ),
                           ),
@@ -123,15 +125,20 @@ class WorkoutMiniBarHostOverlay extends StatelessWidget {
     );
   }
 
-  Future<void> _confirmDiscardDraft(BuildContext context) async {
+  Future<void> _confirmDiscardDraft() async {
+    final navigatorContext = appNavigatorKey.currentContext;
+    if (navigatorContext == null) {
+      return;
+    }
+
     final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
+      context: navigatorContext,
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Descartar entrenamiento'),
         content: const Text('¿Querés descartar el entrenamiento en curso?'),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancelar')),
-          FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Descartar')),
+          TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: const Text('Cancelar')),
+          FilledButton(onPressed: () => Navigator.of(dialogContext).pop(true), child: const Text('Descartar')),
         ],
       ),
     );
