@@ -5,57 +5,57 @@ import '../../common/theme/app_colors.dart';
 class PrimaryStartWorkoutCard extends StatelessWidget {
   const PrimaryStartWorkoutCard({
     super.key,
-    required this.selectedContext,
-    required this.onSelectContext,
     required this.onTap,
   });
 
-  final String selectedContext;
-  final ValueChanged<String> onSelectContext;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    const contexts = ['Gym', 'Casa', 'Outdoor'];
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
-      child: Ink(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          gradient: const LinearGradient(
-            colors: [Color(0xFF1C2A3D), Color(0xFF182333)],
-          ),
-          border: Border.all(color: AppColors.borderSubtle),
+    final colorScheme = theme.colorScheme;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        overlayColor: MaterialStateProperty.resolveWith(
+          (states) => states.contains(MaterialState.pressed)
+              ? colorScheme.primary.withOpacity(0.06)
+              : colorScheme.primary.withOpacity(0.02),
         ),
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '+ Registrar entrenamiento (sin rutina)',
-              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Ideal para sesiones improvisadas o deportes',
-              style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              children: contexts
-                  .map(
-                    (contextName) => ChoiceChip(
-                      label: Text(contextName),
-                      selected: selectedContext == contextName,
-                      onSelected: (_) => onSelectContext(contextName),
-                    ),
-                  )
-                  .toList(),
-            )
-          ],
+        child: Ink(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            color: colorScheme.surface,
+            border: Border.all(color: colorScheme.outlineVariant),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: colorScheme.primary.withOpacity(0.12),
+                ),
+                child: Icon(Icons.add, color: colorScheme.primary),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Registrar entrenamiento (sin rutina)',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Icon(Icons.chevron_right, color: colorScheme.onSurfaceVariant),
+            ],
+          ),
         ),
       ),
     );
@@ -242,33 +242,51 @@ class RoutineMiniCard extends StatelessWidget {
 }
 
 class EmptyRoutinesInfoCard extends StatelessWidget {
-  const EmptyRoutinesInfoCard({
-    super.key,
-    required this.onImport,
-    required this.onCreate,
-  });
-
-  final VoidCallback onImport;
-  final VoidCallback onCreate;
+  const EmptyRoutinesInfoCard({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.card,
+        color: colorScheme.surfaceVariant.withOpacity(0.35),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderSubtle),
+        border: Border.all(color: colorScheme.outlineVariant),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Text('Todavía no tenés rutinas guardadas.', style: Theme.of(context).textTheme.titleSmall),
-          const SizedBox(height: 10),
-          FilledButton.tonal(onPressed: onImport, child: const Text('Importar plantilla')),
-          const SizedBox(height: 4),
-          TextButton(onPressed: onCreate, child: const Text('Crear desde cero')),
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: colorScheme.primary.withOpacity(0.12),
+            ),
+            child: Icon(Icons.bookmark_border, color: colorScheme.primary),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Todavía no tenés rutinas guardadas.',
+                  maxLines: 2,
+                  style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Usá ‘Nueva rutina’ o ‘Buscar rutinas’ para empezar.',
+                  maxLines: 2,
+                  style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
