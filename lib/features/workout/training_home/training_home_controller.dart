@@ -6,6 +6,7 @@ import 'package:uuid/uuid.dart';
 
 import '../pro/models/workout_models.dart';
 import '../workout_in_progress_controller.dart';
+import 'routines_repository.dart';
 
 enum RoutineSortOption { smart, recent, mostUsed, alphabetical }
 
@@ -49,13 +50,13 @@ class RoutineMetadata {
 }
 
 class TrainingHomeController extends ChangeNotifier {
-  static const _templatesKey = 'pro_workout_templates';
   static const _sessionsKey = 'pro_workout_sessions';
   static const _draftKey = 'pro_workout_draft';
   static const _metadataKey = 'pro_workout_template_metadata';
   static const _sortKey = 'pro_workout_sort_preference';
 
   final Uuid _uuid = const Uuid();
+  final RoutinesRepository _routinesRepository = RoutinesRepository();
 
   SharedPreferences? _prefs;
   bool _initialized = false;
@@ -96,6 +97,7 @@ class TrainingHomeController extends ChangeNotifier {
 
   Future<void> initialize() async {
     _prefs ??= await SharedPreferences.getInstance();
+    _routinesRepository.watchRoutines().addListener(_onRoutinesChanged);
     await _loadTemplates();
     await _loadSessions();
     await _loadMetadata();
@@ -252,20 +254,11 @@ class TrainingHomeController extends ChangeNotifier {
   }
 
   Future<void> _loadTemplates() async {
-    final raw = _prefs?.getString(_templatesKey);
-    if (raw == null) {
-      _routines = [];
-      return;
-    }
-    final decoded = jsonDecode(raw) as List<dynamic>;
-    _routines = decoded
-        .map((e) => WorkoutTemplate.fromJson(e as Map<String, dynamic>))
-        .toList();
+    _routines = await _routinesRepository.getAllRoutines();
   }
 
   Future<void> _persistTemplates() async {
-    final payload = jsonEncode(_routines.map((e) => e.toJson()).toList());
-    await _prefs?.setString(_templatesKey, payload);
+    await _routinesRepository.replaceRoutines(_routines);
   }
 
   Future<void> _loadSessions() async {
@@ -305,6 +298,18 @@ class TrainingHomeController extends ChangeNotifier {
 
   Future<void> _loadDraft() async {
     _draftRaw = _prefs?.getString(_draftKey);
+  }
+
+
+  void _onRoutinesChanged() {
+    _routines = _routinesRepository.watchRoutines().value;
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _routinesRepository.watchRoutines().removeListener(_onRoutinesChanged);
+    super.dispose();
   }
 
   Future<void> _loadSortOption() async {
