@@ -38,7 +38,7 @@ void main() {
     expect(find.byType(ExerciseExpandableCard), findsNothing);
   });
 
-  testWidgets('al agregar un ejercicio aparece mini-bar con contador', (tester) async {
+  testWidgets('al agregar un ejercicio aparece mini-bar con Ver (N) y sin snackbar agregado', (tester) async {
     final controller = ExercisePickerController(exercises: buildExercises());
 
     await tester.pumpWidget(
@@ -56,7 +56,8 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Agregar'));
     await tester.pumpAndSettle();
 
-    expect(find.text('1 ejercicio agregado'), findsOneWidget);
-    expect(find.text('Ver rutina'), findsOneWidget);
+    expect(find.textContaining('agregado'), findsNothing);
+    expect(find.text('Ver (1)'), findsOneWidget);
+    expect(find.byType(Chip), findsAtLeastNWidgets(1));
   });
 }

@@ -156,7 +156,9 @@ class RoutineMiniCard extends StatelessWidget {
   const RoutineMiniCard({
     super.key,
     required this.title,
-    required this.tags,
+    required this.typeTag,
+    required this.secondaryTag,
+    required this.exercisePreview,
     required this.exerciseCount,
     required this.estimatedMinutes,
     required this.lastUsed,
@@ -166,7 +168,9 @@ class RoutineMiniCard extends StatelessWidget {
   });
 
   final String title;
-  final List<String> tags;
+  final String typeTag;
+  final String? secondaryTag;
+  final List<String> exercisePreview;
   final int exerciseCount;
   final int? estimatedMinutes;
   final String lastUsed;
@@ -177,12 +181,17 @@ class RoutineMiniCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final accentColor = _accentForType(typeTag, colorScheme);
+    final preview = exercisePreview.take(3).toList(growable: false);
+    final remaining = exercisePreview.length - preview.length;
+
     return InkWell(
       borderRadius: BorderRadius.circular(16),
       onTap: onTap,
       onLongPress: () => onMenuSelected('menu'),
       child: Ink(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
           color: AppColors.card,
           borderRadius: BorderRadius.circular(16),
@@ -191,53 +200,114 @@ class RoutineMiniCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.titleSmall,
+            Expanded(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Container(
+                    width: 4,
+                    decoration: BoxDecoration(
+                      color: accentColor,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
-                ),
-                PopupMenuButton<String>(
-                  onSelected: onMenuSelected,
-                  itemBuilder: (context) => [
-                    const PopupMenuItem(value: 'edit', child: Text('Editar')),
-                    const PopupMenuItem(value: 'duplicate', child: Text('Duplicar')),
-                    PopupMenuItem(
-                      value: 'pin',
-                      child: Text(isPinned ? 'Desfijar' : 'Fijar'),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                              ),
+                            ),
+                            PopupMenuButton<String>(
+                              onSelected: onMenuSelected,
+                              itemBuilder: (context) => [
+                                const PopupMenuItem(value: 'edit', child: Text('Editar')),
+                                const PopupMenuItem(value: 'duplicate', child: Text('Duplicar')),
+                                PopupMenuItem(
+                                  value: 'pin',
+                                  child: Text(isPinned ? 'Desfijar' : 'Fijar'),
+                                ),
+                                const PopupMenuItem(value: 'delete', child: Text('Eliminar')),
+                              ],
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 4,
+                          children: [
+                            _compactChip(typeTag),
+                            if (secondaryTag != null && secondaryTag!.trim().isNotEmpty && secondaryTag != typeTag)
+                              _compactChip(secondaryTag!),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 4,
+                          children: [
+                            _statChip(icon: Icons.fitness_center, label: '$exerciseCount ejercicios'),
+                            if (estimatedMinutes != null) _statChip(icon: Icons.schedule, label: '~$estimatedMinutes min'),
+                            _statChip(icon: Icons.history, label: lastUsed),
+                          ],
+                        ),
+                        const Spacer(),
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 4,
+                          children: [
+                            for (final exercise in preview) _compactChip(exercise),
+                            if (remaining > 0) _compactChip('+$remaining'),
+                          ],
+                        ),
+                      ],
                     ),
-                    const PopupMenuItem(value: 'delete', child: Text('Eliminar')),
-                  ],
-                )
-              ],
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 6),
-            Wrap(
-              spacing: 6,
-              children: tags
-                  .take(2)
-                  .map(
-                    (tag) => Chip(
-                      label: Text(tag),
-                      visualDensity: VisualDensity.compact,
-                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
-                  )
-                  .toList(),
-            ),
-            const Spacer(),
-            Text('$exerciseCount ejercicios', style: theme.textTheme.bodySmall),
-            if (estimatedMinutes != null)
-              Text('~$estimatedMinutes min', style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textMuted)),
-            Text('Última vez: $lastUsed', style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textMuted)),
           ],
         ),
       ),
     );
+  }
+
+  Widget _compactChip(String label) {
+    return Chip(
+      label: Text(
+        label,
+        overflow: TextOverflow.ellipsis,
+      ),
+      visualDensity: VisualDensity.compact,
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    );
+  }
+
+  Widget _statChip({required IconData icon, required String label}) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 14, color: AppColors.textMuted),
+        const SizedBox(width: 4),
+        Text(label, style: const TextStyle(fontSize: 11, color: AppColors.textMuted)),
+      ],
+    );
+  }
+
+  Color _accentForType(String tag, ColorScheme colorScheme) {
+    final normalized = tag.toLowerCase();
+    if (normalized.contains('gym')) return colorScheme.primary;
+    if (normalized.contains('deporte') || normalized.contains('outdoor')) return colorScheme.secondary;
+    return colorScheme.outline;
   }
 }
 

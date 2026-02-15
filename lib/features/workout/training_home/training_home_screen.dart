@@ -125,15 +125,19 @@ class _TrainingHomeViewState extends State<_TrainingHomeView> {
                 itemBuilder: (context, index) {
                   final routine = controller.routines[index];
                   final metadata = controller.metadataFor(routine.id);
+                  final typeLabel = _typeLabel(routine.type);
+                  final previewExercises = routine.exercises
+                      .map((exercise) => exercise.name)
+                      .where((name) => name.trim().isNotEmpty)
+                      .toList(growable: false);
                   return RoutineMiniCard(
                     title: routine.name,
-                    tags: [
-                      _typeLabel(routine.type),
-                      if (routine.activityName != null) routine.activityName!,
-                    ],
+                    typeTag: typeLabel,
+                    secondaryTag: routine.activityName,
+                    exercisePreview: previewExercises,
                     exerciseCount: routine.exercises.length,
                     estimatedMinutes: controller.estimatedDuration(routine),
-                    lastUsed: _daysAgoLabel(metadata.lastUsedAt),
+                    lastUsed: 'Última vez: ${_daysAgoLabel(metadata.lastUsedAt)}',
                     isPinned: metadata.pinned,
                     onTap: () => _startRoutine(context, controller, routine),
                     onMenuSelected: (value) => _handleMenuAction(context, controller, routine, value),
