@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -28,22 +26,6 @@ class _TrainingHomeView extends StatefulWidget {
 }
 
 class _TrainingHomeViewState extends State<_TrainingHomeView> {
-  Timer? _timer;
-
-  @override
-  void initState() {
-    super.initState();
-    _timer = Timer.periodic(const Duration(minutes: 1), (_) {
-      if (mounted) setState(() {});
-    });
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
     final controller = context.watch<TrainingHomeController>();
@@ -82,20 +64,6 @@ class _TrainingHomeViewState extends State<_TrainingHomeView> {
                 ),
               ),
             const SizedBox(height: 14),
-            AnimatedSwitcher(
-              duration: const Duration(milliseconds: 220),
-              child: controller.hasDraft
-                  ? Padding(
-                      key: const ValueKey('continue_card'),
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: ContinueWorkoutCard(
-                        elapsed: _elapsed(controller.draftStart),
-                        onContinue: _openSession,
-                        onDiscard: () => _confirmDiscardDraft(context, controller),
-                      ),
-                    )
-                  : const SizedBox.shrink(key: ValueKey('no_continue_card')),
-            ),
             PrimaryStartWorkoutCard(
               onTap: () => Navigator.of(context).pushNamed(
                 '/workout/session',
@@ -204,22 +172,6 @@ class _TrainingHomeViewState extends State<_TrainingHomeView> {
     }
   }
 
-  Future<void> _confirmDiscardDraft(BuildContext context, TrainingHomeController controller) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Descartar entrenamiento'),
-        content: const Text('¿Querés descartar el entrenamiento en curso?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancelar')),
-          FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Descartar')),
-        ],
-      ),
-    );
-    if (confirmed == true) {
-      await controller.discardDraft();
-    }
-  }
 
   Future<void> _handleMenuAction(
     BuildContext context,
@@ -269,13 +221,6 @@ class _TrainingHomeViewState extends State<_TrainingHomeView> {
     await controller.refresh();
   }
 
-  void _openSession() => Navigator.of(context).pushNamed('/workout/session');
-
-  String _elapsed(DateTime? start) {
-    if (start == null) return '0 min';
-    final mins = DateTime.now().difference(start).inMinutes;
-    return '$mins min';
-  }
 
   String _daysAgoLabel(DateTime? date) {
     if (date == null) return 'Nunca';

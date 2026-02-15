@@ -6,6 +6,7 @@ import 'package:uuid/uuid.dart';
 
 import '../data/exercise_definition.dart';
 import '../models/workout_models.dart';
+import '../../workout_in_progress_controller.dart';
 
 class WorkoutProProvider extends ChangeNotifier {
   WorkoutProProvider();
@@ -18,6 +19,9 @@ class WorkoutProProvider extends ChangeNotifier {
   final Uuid _uuid = const Uuid();
   SharedPreferences? _prefs;
   DateTime _sessionStart = DateTime.now();
+  bool _isPaused = false;
+  DateTime? _pausedAt;
+  Duration _accumulatedPaused = Duration.zero;
 
   WorkoutType _selectedType = WorkoutType.strength;
   String? _customTypeName;
@@ -83,6 +87,9 @@ class WorkoutProProvider extends ChangeNotifier {
   }
   List<WorkoutSession> get storedSessions => _storedSessions;
   DateTime get sessionStart => _sessionStart;
+  bool get isPaused => _isPaused;
+  DateTime? get pausedAt => _pausedAt;
+  Duration get accumulatedPaused => _accumulatedPaused;
 
   bool get canSaveDraft => _validationState().canSave;
   bool get canFinish => _validationState().canFinish;
@@ -112,6 +119,7 @@ class WorkoutProProvider extends ChangeNotifier {
     await _loadRecentExercises();
     await _loadSessions();
     await _loadDraft();
+    WorkoutInProgressController.instance.syncFromRaw(_draftRaw);
     _initialized = true;
     notifyListeners();
   }
@@ -441,6 +449,9 @@ class WorkoutProProvider extends ChangeNotifier {
     clearClosing();
     await _clearDraft();
     _sessionStart = DateTime.now();
+    _isPaused = false;
+    _pausedAt = null;
+    _accumulatedPaused = Duration.zero;
     notifyListeners();
   }
 
@@ -472,7 +483,35 @@ class WorkoutProProvider extends ChangeNotifier {
     _storedSessions = [..._storedSessions, session];
     await _persistSessions();
     await _clearDraft();
+    WorkoutInProgressController.instance.syncFromRaw(_draftRaw);
     return true;
+  }
+
+
+  Future<void> pauseWorkout() async {
+    if (_isPaused || !hasDraft) return;
+    _isPaused = true;
+    _pausedAt = DateTime.now();
+    await _persistDraft();
+    notifyListeners();
+  }
+
+  Future<void> resumeWorkout() async {
+    if (!_isPaused || !hasDraft) return;
+    final now = DateTime.now();
+    if (_pausedAt != null) {
+      _accumulatedPaused += now.difference(_pausedAt!);
+    }
+    _isPaused = false;
+    _pausedAt = null;
+    await _persistDraft();
+    notifyListeners();
+  }
+
+  Duration get elapsed {
+    final effectiveNow = _isPaused ? (_pausedAt ?? DateTime.now()) : DateTime.now();
+    final value = effectiveNow.difference(_sessionStart) - _accumulatedPaused;
+    return value.isNegative ? Duration.zero : value;
   }
 
   String exportDebugJson() {
@@ -659,10 +698,15 @@ class WorkoutProProvider extends ChangeNotifier {
       'closingPerformance': _closingPerformance,
       'finalNotes': _finalNotes,
       'sessionStart': _sessionStart.toIso8601String(),
+      'isPaused': _isPaused,
+      'pausedAt': _pausedAt?.toIso8601String(),
+      'accumulatedPausedSeconds': _accumulatedPaused.inSeconds,
+      'lastUpdated': DateTime.now().toIso8601String(),
       'exercises': _exercises.map((e) => e.toJson()).toList(),
     };
     _draftRaw = jsonEncode(map);
     await _prefs?.setString(_draftKey, _draftRaw!);
+    WorkoutInProgressController.instance.syncFromRaw(_draftRaw);
   }
 
   Future<void> _loadDraft() async {
@@ -703,6 +747,9 @@ class WorkoutProProvider extends ChangeNotifier {
       if (startRaw != null) {
         _sessionStart = DateTime.tryParse(startRaw) ?? DateTime.now();
       }
+      _isPaused = json['isPaused'] as bool? ?? false;
+      _pausedAt = DateTime.tryParse(json['pausedAt'] as String? ?? '');
+      _accumulatedPaused = Duration(seconds: json['accumulatedPausedSeconds'] as int? ?? 0);
       final exercisesJson = json['exercises'] as List<dynamic>?;
       if (exercisesJson != null) {
         _exercises = exercisesJson
@@ -711,12 +758,19 @@ class WorkoutProProvider extends ChangeNotifier {
       }
     } catch (_) {
       _draftRaw = null;
+      _isPaused = false;
+      _pausedAt = null;
+      _accumulatedPaused = Duration.zero;
     }
   }
 
   Future<void> _clearDraft() async {
     _draftRaw = null;
+    _isPaused = false;
+    _pausedAt = null;
+    _accumulatedPaused = Duration.zero;
     await _prefs?.remove(_draftKey);
+    WorkoutInProgressController.instance.syncFromRaw(null);
   }
 
   void _applyTemplate(WorkoutTemplate template) {
