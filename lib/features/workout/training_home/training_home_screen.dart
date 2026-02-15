@@ -28,7 +28,6 @@ class _TrainingHomeView extends StatefulWidget {
 }
 
 class _TrainingHomeViewState extends State<_TrainingHomeView> {
-  String _selectedContext = 'Gym';
   Timer? _timer;
 
   @override
@@ -98,11 +97,9 @@ class _TrainingHomeViewState extends State<_TrainingHomeView> {
                   : const SizedBox.shrink(key: ValueKey('no_continue_card')),
             ),
             PrimaryStartWorkoutCard(
-              selectedContext: _selectedContext,
-              onSelectContext: (value) => setState(() => _selectedContext = value),
               onTap: () => Navigator.of(context).pushNamed(
                 '/workout/session',
-                arguments: {'trainingContext': _selectedContext},
+                arguments: {'trainingContext': 'Gym'},
               ),
             ),
             const SizedBox(height: 20),
@@ -133,11 +130,7 @@ class _TrainingHomeViewState extends State<_TrainingHomeView> {
               ),
             ),
             const SizedBox(height: 16),
-            if (!controller.hasRoutines)
-              EmptyRoutinesInfoCard(
-                onImport: () => _goAndRefresh(context, controller, '/workout/routines/search'),
-                onCreate: () => _goAndRefresh(context, controller, '/workout/routines/new'),
-              )
+            if (!controller.hasRoutines) const EmptyRoutinesInfoCard()
             else ...[
               Row(
                 children: [
