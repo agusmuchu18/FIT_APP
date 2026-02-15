@@ -539,7 +539,6 @@ class _SelectionMiniBar extends StatelessWidget {
             padding: EdgeInsets.fromLTRB(16, 8, 16, 10 + extraBottomPadding),
             child: Material(
               color: Theme.of(context).colorScheme.surface,
-              borderRadius: BorderRadius.circular(16),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
                 side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
