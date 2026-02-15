@@ -27,6 +27,7 @@ import 'features/sleep/sleep_screens.dart';
 import 'features/streak/presentation/streak_screen.dart';
 import 'features/workout/pro/workout_pro_screen.dart';
 import 'features/workout/training_home/training_home_screen.dart';
+import 'features/workout/workout_in_progress_controller.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -86,6 +87,8 @@ Future<void> main() async {
       toJson: (e) => e.toJson(),
     ),
   );
+
+  await WorkoutInProgressController.instance.initialize();
 
   final repository = FitnessRepository(
     local: local,

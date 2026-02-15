@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
 import '../pro/models/workout_models.dart';
+import '../workout_in_progress_controller.dart';
 
 enum RoutineSortOption { smart, recent, mostUsed, alphabetical }
 
@@ -100,6 +101,7 @@ class TrainingHomeController extends ChangeNotifier {
     await _loadMetadata();
     await _loadDraft();
     await _loadSortOption();
+    WorkoutInProgressController.instance.syncFromRaw(_draftRaw);
     _initialized = true;
     notifyListeners();
   }
@@ -110,6 +112,7 @@ class TrainingHomeController extends ChangeNotifier {
     await _loadMetadata();
     await _loadDraft();
     await _loadSortOption();
+    WorkoutInProgressController.instance.syncFromRaw(_draftRaw);
     notifyListeners();
   }
 
@@ -122,6 +125,7 @@ class TrainingHomeController extends ChangeNotifier {
   Future<void> discardDraft() async {
     _draftRaw = null;
     await _prefs?.remove(_draftKey);
+    WorkoutInProgressController.instance.syncFromRaw(null);
     notifyListeners();
   }
 
