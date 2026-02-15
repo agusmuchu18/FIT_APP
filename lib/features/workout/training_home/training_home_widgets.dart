@@ -263,14 +263,19 @@ class RoutineMiniCard extends StatelessWidget {
                       fontSize: 11,
                     ),
                   ),
-                  const Spacer(),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 4,
-                    children: [
-                      for (final exercise in preview) _compactChip(exercise),
-                      if (remaining > 0) _compactChip('+$remaining'),
-                    ],
+                  const SizedBox(height: 6),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        for (final exercise in preview)
+                          Padding(
+                            padding: const EdgeInsets.only(right: 6),
+                            child: _compactChip(exercise),
+                          ),
+                        if (remaining > 0) _compactChip('+$remaining'),
+                      ],
+                    ),
                   ),
                 ],
               ),
