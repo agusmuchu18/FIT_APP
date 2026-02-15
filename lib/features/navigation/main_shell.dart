@@ -8,8 +8,6 @@ import '../profile/profile_screen.dart';
 import '../../ui/motion/controllers/motion_durations.dart';
 import '../../ui/motion/widgets/animated_plus_x_button.dart';
 import '../../ui/motion/widgets/speed_dial_menu.dart';
-import '../workout/widgets/workout_mini_bar.dart';
-import '../workout/workout_in_progress_controller.dart';
 
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
@@ -21,11 +19,6 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   static const double _barHeight = 76;
 
-  @override
-  void initState() {
-    super.initState();
-    WorkoutInProgressController.instance.initialize();
-  }
   int _currentIndex = 0;
   bool _menuOpen = false;
 
@@ -42,30 +35,12 @@ class _MainShellState extends State<MainShell> {
       _menuOpen = false;
     });
   }
-
   void _toggleMenu() {
     setState(() {
       _menuOpen = !_menuOpen;
     });
   }
 
-
-  Future<void> _confirmDiscardDraft(BuildContext context) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Descartar entrenamiento'),
-        content: const Text('¿Querés descartar el entrenamiento en curso?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancelar')),
-          FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Descartar')),
-        ],
-      ),
-    );
-    if (confirmed == true) {
-      await WorkoutInProgressController.instance.discard();
-    }
-  }
 
   Future<void> _navigateTo(String route) async {
     if (_menuOpen) {
@@ -94,38 +69,6 @@ class _MainShellState extends State<MainShell> {
           IndexedStack(
             index: _currentIndex,
             children: _pages,
-          ),
-          ValueListenableBuilder<WorkoutInProgressDraft?>(
-            valueListenable: WorkoutInProgressController.instance.watchDraft(),
-            builder: (context, draft, _) {
-              final hidden = draft == null || ModalRoute.of(context)?.settings.name == '/workout/session';
-              return Positioned(
-                left: 20,
-                right: 20,
-                bottom: _barHeight + bottomInset + 24,
-                child: AnimatedSlide(
-                  duration: const Duration(milliseconds: 180),
-                  offset: hidden ? const Offset(0, 1) : Offset.zero,
-                  child: AnimatedOpacity(
-                    duration: const Duration(milliseconds: 180),
-                    opacity: hidden ? 0 : 1,
-                    child: IgnorePointer(
-                      ignoring: hidden,
-                      child: draft == null
-                          ? const SizedBox.shrink()
-                          : WorkoutMiniBar(
-                              draft: draft,
-                              onContinue: () => _navigateTo('/workout/session'),
-                              onPauseResume: () => draft.isPaused
-                                  ? WorkoutInProgressController.instance.resume()
-                                  : WorkoutInProgressController.instance.pause(),
-                              onDiscard: () => _confirmDiscardDraft(context),
-                            ),
-                    ),
-                  ),
-                ),
-              );
-            },
           ),
           SpeedDialMenu(
             isOpen: _menuOpen,
