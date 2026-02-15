@@ -26,6 +26,7 @@ import 'features/sleep/presentation/sleep_history_screen.dart';
 import 'features/sleep/sleep_screens.dart';
 import 'features/streak/presentation/streak_screen.dart';
 import 'features/workout/pro/workout_pro_screen.dart';
+import 'features/workout/training_home/training_home_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -116,7 +117,18 @@ class FitApp extends StatelessWidget {
           '/home': (_) => const MainShell(),
           '/auth/login': (_) => const LoginScreen(),
           '/auth/signup': (_) => const SignupScreen(),
-          '/workout': (_) => const WorkoutProScreen(),
+          '/workout': (_) => const TrainingHomeScreen(),
+          '/workout/session': (context) {
+            final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+            return WorkoutProScreen(
+              initialTemplateId: args?['templateId'] as String?,
+              trainingContext: args?['trainingContext'] as String?,
+            );
+          },
+          '/workout/history': (_) => const WorkoutHistoryPlaceholderScreen(),
+          '/workout/settings': (_) => const WorkoutSettingsPlaceholderScreen(),
+          '/workout/routines/new': (_) => const WorkoutRoutineCreatePlaceholderScreen(),
+          '/workout/routines/search': (_) => const WorkoutRoutineSearchPlaceholderScreen(),
           '/nutrition': (_) => const NutritionProScreen(),
           '/sleep': (_) => const SleepProScreen(),
           '/sleep/overview': (_) => const SleepOverviewScreen(),

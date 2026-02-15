@@ -18,12 +18,28 @@ import 'widgets/workout_bottom_bar.dart';
 import 'widgets/workout_type_selector.dart';
 
 class WorkoutProScreen extends StatelessWidget {
-  const WorkoutProScreen({super.key});
+  const WorkoutProScreen({
+    super.key,
+    this.initialTemplateId,
+    this.trainingContext,
+  });
+
+  final String? initialTemplateId;
+  final String? trainingContext;
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => WorkoutProProvider()..initialize(),
+      create: (_) {
+        final provider = WorkoutProProvider();
+        provider.initialize().then(
+              (_) => provider.applyEntryArgs(
+                templateId: initialTemplateId,
+                trainingContext: trainingContext,
+              ),
+            );
+        return provider;
+      },
       child: const _WorkoutProContent(),
     );
   }
