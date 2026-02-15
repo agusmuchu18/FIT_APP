@@ -26,6 +26,7 @@ import 'features/sleep/presentation/sleep_history_screen.dart';
 import 'features/sleep/sleep_screens.dart';
 import 'features/streak/presentation/streak_screen.dart';
 import 'features/workout/pro/workout_pro_screen.dart';
+import 'features/workout/training_home/template_exercise_picker_screen.dart';
 import 'features/workout/training_home/training_home_screen.dart';
 import 'features/workout/workout_in_progress_controller.dart';
 import 'features/workout/widgets/workout_mini_bar_host_overlay.dart';
@@ -143,7 +144,7 @@ class FitApp extends StatelessWidget {
           },
           '/workout/history': (_) => const WorkoutHistoryPlaceholderScreen(),
           '/workout/settings': (_) => const WorkoutSettingsPlaceholderScreen(),
-          '/workout/routines/new': (_) => const WorkoutRoutineCreatePlaceholderScreen(),
+          '/workout/routines/new': (_) => const TemplateExercisePickerScreen(),
           '/workout/routines/search': (_) => const WorkoutRoutineSearchPlaceholderScreen(),
           '/nutrition': (_) => const NutritionProScreen(),
           '/sleep': (_) => const SleepProScreen(),
