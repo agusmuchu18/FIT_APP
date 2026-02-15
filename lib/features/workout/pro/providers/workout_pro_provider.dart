@@ -88,6 +88,24 @@ class WorkoutProProvider extends ChangeNotifier {
   bool get canFinish => _validationState().canFinish;
   String? get validationHint => _validationState().message;
 
+
+  Future<void> applyEntryArgs({String? templateId, String? trainingContext}) async {
+    if (!_initialized) return;
+    if (templateId != null) {
+      final template = [..._standardTemplates, ..._userTemplates].cast<WorkoutTemplate?>().firstWhere(
+            (element) => element?.id == templateId,
+            orElse: () => null,
+          );
+      if (template != null) {
+        _applyTemplate(template);
+      }
+    }
+    if (trainingContext != null && trainingContext.isNotEmpty) {
+      _notes = ((_notes ?? '').trim().isEmpty) ? 'Contexto: $trainingContext' : _notes;
+    }
+    await _persistDraft();
+    notifyListeners();
+  }
   Future<void> initialize() async {
     _prefs ??= await SharedPreferences.getInstance();
     await _loadTemplates();
