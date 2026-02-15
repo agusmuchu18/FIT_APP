@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -32,6 +33,8 @@ class ExercisePickerController extends ChangeNotifier {
   }
 
   static const _sessionsKey = 'pro_workout_sessions';
+  static const int _minimumQueryLength = 2;
+  static const int _resultsPageSize = 50;
 
   final List<ExerciseDefinition> _allExercises;
   Timer? _debounce;
@@ -44,6 +47,7 @@ class ExercisePickerController extends ChangeNotifier {
   List<String> _recentExerciseIds = [];
   String? _expandedExerciseId;
   List<ExerciseDefinition> _filteredExercises = [];
+  int _visibleLimit = _resultsPageSize;
 
   TemplateWorkoutType get workoutType => _workoutType;
   String get query => _query;
@@ -51,6 +55,22 @@ class ExercisePickerController extends ChangeNotifier {
   Set<String> get muscleFilters => _muscleFilters;
   Set<String> get selectedExerciseIds => _selectedExerciseIds;
   String? get expandedExerciseId => _expandedExerciseId;
+  bool get hasActiveFilters => _equipmentFilters.isNotEmpty || _muscleFilters.isNotEmpty;
+  bool get shouldShowResults => hasActiveFilters || _normalizedQuery.length >= _minimumQueryLength;
+  bool get hasShortQueryHint => !hasActiveFilters && _query.trim().isNotEmpty && _normalizedQuery.length < _minimumQueryLength;
+  int get totalCount => _filteredExercises.length;
+  int get visibleCount => math.min(_visibleLimit, totalCount);
+  bool get canShowMore => visibleCount < totalCount;
+  List<ExerciseDefinition> get itemsVisible => _filteredExercises.take(visibleCount).toList(growable: false);
+
+  String get showingResultsLabel {
+    if (totalCount <= _visibleLimit) {
+      return 'Mostrando $totalCount resultados';
+    }
+    return 'Mostrando $visibleCount de $totalCount resultados';
+  }
+
+  String get _normalizedQuery => _normalize(_query);
 
   List<String> get allEquipment =>
       _allExercises.map((e) => e.equipment).toSet().toList()..sort();
@@ -65,6 +85,7 @@ class ExercisePickerController extends ChangeNotifier {
   }
 
   List<ExerciseDefinition> get recentExercises {
+    if (!shouldShowResults) return const [];
     final byId = {for (final e in _allExercises) e.id: e};
     return _recentExerciseIds
         .map((id) => byId[id])
@@ -126,6 +147,7 @@ class ExercisePickerController extends ChangeNotifier {
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 200), () {
       _query = value;
+      _visibleLimit = _resultsPageSize;
       _recompute();
       notifyListeners();
     });
@@ -133,13 +155,20 @@ class ExercisePickerController extends ChangeNotifier {
 
   void setEquipmentFilters(Set<String> values) {
     _equipmentFilters = values;
+    _visibleLimit = _resultsPageSize;
     _recompute();
     notifyListeners();
   }
 
   void setMuscleFilters(Set<String> values) {
     _muscleFilters = values;
+    _visibleLimit = _resultsPageSize;
     _recompute();
+    notifyListeners();
+  }
+
+  void showMore() {
+    _visibleLimit += _resultsPageSize;
     notifyListeners();
   }
 
@@ -160,6 +189,10 @@ class ExercisePickerController extends ChangeNotifier {
   }
 
   void _recompute() {
+    if (!shouldShowResults) {
+      _filteredExercises = const [];
+      return;
+    }
     _filteredExercises = _allExercises.where(_matchesFilters).toList(growable: false);
   }
 
@@ -174,8 +207,8 @@ class ExercisePickerController extends ChangeNotifier {
       if (!hasMuscleMatch) return false;
     }
 
-    final normalizedQuery = _normalize(_query);
-    if (normalizedQuery.isEmpty) return true;
+    final normalizedQuery = _normalizedQuery;
+    if (normalizedQuery.length < _minimumQueryLength) return true;
 
     final searchable = [
       exercise.name,
@@ -252,7 +285,7 @@ class _TemplateExercisePickerScreenState extends State<TemplateExercisePickerScr
         return Scaffold(
           resizeToAvoidBottomInset: true,
           appBar: AppBar(
-            title: const Text('Crear plantilla'),
+            title: const Text('Crear rutina'),
             actions: [
               TextButton(
                 onPressed: _controller.selectedExerciseIds.isEmpty
@@ -303,53 +336,63 @@ class _TemplateExercisePickerScreenState extends State<TemplateExercisePickerScr
                   ),
                 ),
               ),
-              if (_controller.recentExercises.isNotEmpty) ...[
+              if (!_controller.shouldShowResults)
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: _SearchEmptyState(showShortHint: _controller.hasShortQueryHint),
+                )
+              else ...[
                 const SliverToBoxAdapter(
                   child: Padding(
                     padding: EdgeInsets.fromLTRB(16, 8, 16, 8),
-                    child: SectionHeader(title: 'Usados recientemente'),
+                    child: SectionHeader(title: 'Resultados'),
                   ),
                 ),
-                SliverList.builder(
-                  itemCount: _controller.recentExercises.length,
-                  itemBuilder: (context, index) {
-                    final exercise = _controller.recentExercises[index];
-                    return Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-                      child: RecentExerciseCard(
-                        key: ValueKey('recent_${exercise.id}'),
-                        exercise: exercise,
-                        expanded: _controller.expandedExerciseId == exercise.id,
-                        selected: _controller.isSelected(exercise.id),
-                        onTap: () => _controller.toggleExpanded(exercise.id),
-                        onAdd: () => _toggleSelection(context, exercise),
-                      ),
-                    );
-                  },
-                ),
-              ],
-              const SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.fromLTRB(16, 8, 16, 8),
-                  child: SectionHeader(title: 'Todos los ejercicios'),
-                ),
-              ),
-              SliverList.builder(
-                itemCount: _controller.filteredExercises.length,
-                itemBuilder: (context, index) {
-                  final exercise = _controller.filteredExercises[index];
-                  return Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-                    child: ExerciseExpandableCard(
-                      exercise: exercise,
-                      expanded: _controller.expandedExerciseId == exercise.id,
-                      selected: _controller.isSelected(exercise.id),
-                      onTap: () => _controller.toggleExpanded(exercise.id),
-                      onAdd: () => _toggleSelection(context, exercise),
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                    child: Text(
+                      _controller.showingResultsLabel,
+                      style: Theme.of(context).textTheme.bodySmall,
                     ),
-                  );
-                },
-              ),
+                  ),
+                ),
+                if (_controller.totalCount == 0)
+                  const SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: _NoResultsState(),
+                  )
+                else ...[
+                  SliverList.builder(
+                    itemCount: _controller.itemsVisible.length,
+                    itemBuilder: (context, index) {
+                      final exercise = _controller.itemsVisible[index];
+                      return Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+                        child: ExerciseExpandableCard(
+                          exercise: exercise,
+                          expanded: _controller.expandedExerciseId == exercise.id,
+                          selected: _controller.isSelected(exercise.id),
+                          onTap: () => _controller.toggleExpanded(exercise.id),
+                          onAdd: () => _toggleSelection(context, exercise),
+                        ),
+                      );
+                    },
+                  ),
+                  if (_controller.canShowMore)
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+                        child: Center(
+                          child: OutlinedButton(
+                            onPressed: _controller.showMore,
+                            child: const Text('Mostrar más'),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ],
               SliverToBoxAdapter(child: SizedBox(height: MediaQuery.of(context).padding.bottom + 16)),
             ],
           ),
@@ -453,14 +496,9 @@ class WorkoutTypeSegment extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SegmentedButton<TemplateWorkoutType>(
-      segments: const [
-        ButtonSegment(value: TemplateWorkoutType.gym, label: Text('Gym')),
-        ButtonSegment(value: TemplateWorkoutType.sport, label: Text('Deporte')),
-        ButtonSegment(value: TemplateWorkoutType.other, label: Text('Otros')),
-      ],
-      selected: {selected},
-      onSelectionChanged: (value) => onChanged(value.first),
+    return _WorkoutTypeCarousel(
+      selected: selected,
+      onChanged: onChanged,
     );
   }
 }
@@ -503,16 +541,171 @@ class FilterPillsRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        OutlinedButton(
-          onPressed: onTapEquipment,
-          child: Text(equipmentCount == 0 ? 'Equipamiento' : 'Equipamiento · $equipmentCount'),
+        Expanded(
+          child: OutlinedButton(
+            onPressed: onTapEquipment,
+            child: Text(
+              equipmentCount == 0 ? 'Filtro equipamiento' : 'Filtro equipamiento · $equipmentCount',
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
         ),
-        const SizedBox(width: 8),
-        OutlinedButton(
-          onPressed: onTapMuscle,
-          child: Text(muscleCount == 0 ? 'Músculo' : 'Músculo · $muscleCount'),
+        const SizedBox(width: 12),
+        Expanded(
+          child: OutlinedButton(
+            onPressed: onTapMuscle,
+            child: Text(
+              muscleCount == 0 ? 'Filtro muscular' : 'Filtro muscular · $muscleCount',
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
         ),
       ],
+    );
+  }
+}
+
+class _WorkoutTypeCarousel extends StatefulWidget {
+  const _WorkoutTypeCarousel({required this.selected, required this.onChanged});
+
+  final TemplateWorkoutType selected;
+  final ValueChanged<TemplateWorkoutType> onChanged;
+
+  @override
+  State<_WorkoutTypeCarousel> createState() => _WorkoutTypeCarouselState();
+}
+
+class _WorkoutTypeCarouselState extends State<_WorkoutTypeCarousel> {
+  static const _types = [TemplateWorkoutType.gym, TemplateWorkoutType.sport, TemplateWorkoutType.other];
+  late final PageController _controller;
+  double _page = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _page = _types.indexOf(widget.selected).toDouble();
+    _controller = PageController(initialPage: _page.toInt(), viewportFraction: 0.35)
+      ..addListener(() {
+        setState(() {
+          _page = _controller.page ?? _page;
+        });
+      });
+  }
+
+  @override
+  void didUpdateWidget(covariant _WorkoutTypeCarousel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.selected != widget.selected) {
+      final target = _types.indexOf(widget.selected);
+      if ((_page - target).abs() > 0.01) {
+        _controller.animateToPage(target, duration: const Duration(milliseconds: 200), curve: Curves.easeOut);
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 52,
+      child: PageView.builder(
+        controller: _controller,
+        itemCount: _types.length,
+        onPageChanged: (index) => widget.onChanged(_types[index]),
+        itemBuilder: (context, index) {
+          final delta = (_page - index).abs().clamp(0.0, 1.0);
+          final selected = delta < 0.2;
+          final scale = 1 - (delta * 0.18);
+          final opacity = 1 - (delta * 0.45);
+          return Opacity(
+            opacity: opacity,
+            child: Transform.scale(
+              scale: scale,
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+                    color: selected ? Theme.of(context).colorScheme.surfaceContainerHighest : Colors.transparent,
+                  ),
+                  child: Text(_typeLabel(_types[index]), style: Theme.of(context).textTheme.titleSmall),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  String _typeLabel(TemplateWorkoutType type) {
+    switch (type) {
+      case TemplateWorkoutType.gym:
+        return 'Gym';
+      case TemplateWorkoutType.sport:
+        return 'Deporte';
+      case TemplateWorkoutType.other:
+        return 'Otros';
+    }
+  }
+}
+
+class _SearchEmptyState extends StatelessWidget {
+  const _SearchEmptyState({required this.showShortHint});
+
+  final bool showShortHint;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.search, size: 38, color: Theme.of(context).colorScheme.outline),
+            const SizedBox(height: 12),
+            Text('Buscá un ejercicio o músculo', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            Text(
+              showShortHint ? 'Escribí 2 o más letras' : 'Escribí arriba para ver resultados',
+              style: Theme.of(context).textTheme.bodyMedium,
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _NoResultsState extends StatelessWidget {
+  const _NoResultsState();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Sin resultados', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            Text(
+              'Probá otro término o ajustá filtros.',
+              style: Theme.of(context).textTheme.bodyMedium,
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
