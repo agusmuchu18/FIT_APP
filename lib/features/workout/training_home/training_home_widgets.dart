@@ -261,13 +261,18 @@ class RoutineMiniCard extends StatelessWidget {
                           ],
                         ),
                         const Spacer(),
-                        Wrap(
-                          spacing: 6,
-                          runSpacing: 4,
-                          children: [
-                            for (final exercise in preview) _compactChip(exercise),
-                            if (remaining > 0) _compactChip('+$remaining'),
-                          ],
+                        SizedBox(
+                          height: 28,
+                          child: ListView(
+                            scrollDirection: Axis.horizontal,
+                            children: [
+                              for (final exercise in preview) ...[
+                                _compactChip(exercise),
+                                const SizedBox(width: 6),
+                              ],
+                              if (remaining > 0) _compactChip('+$remaining'),
+                            ],
+                          ),
                         ),
                       ],
                     ),
