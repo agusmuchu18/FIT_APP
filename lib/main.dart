@@ -25,7 +25,7 @@ import 'features/sleep/presentation/sleep_overview_screen.dart';
 import 'features/sleep/presentation/sleep_history_screen.dart';
 import 'features/sleep/sleep_screens.dart';
 import 'features/streak/presentation/streak_screen.dart';
-import 'features/workout/pro/workout_pro_screen.dart';
+import 'features/workout/presentation/workout_in_progress_screen.dart';
 import 'features/workout/training_home/template_exercise_picker_screen.dart';
 import 'features/workout/training_home/training_home_screen.dart';
 import 'features/workout/workout_in_progress_controller.dart';
@@ -135,13 +135,7 @@ class FitApp extends StatelessWidget {
           '/auth/login': (_) => const LoginScreen(),
           '/auth/signup': (_) => const SignupScreen(),
           '/workout': (_) => const TrainingHomeScreen(),
-          '/workout/session': (context) {
-            final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-            return WorkoutProScreen(
-              initialTemplateId: args?['templateId'] as String?,
-              trainingContext: args?['trainingContext'] as String?,
-            );
-          },
+          '/workout/session': (_) => const WorkoutInProgressScreen(),
           '/workout/history': (_) => const WorkoutHistoryPlaceholderScreen(),
           '/workout/settings': (_) => const WorkoutSettingsPlaceholderScreen(),
           '/workout/routines/new': (_) => const TemplateExercisePickerScreen(),
