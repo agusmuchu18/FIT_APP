@@ -29,6 +29,7 @@ class RoutinesRepository {
     required WorkoutType workoutType,
     required List<WorkoutExercise> exercises,
     String? activityName,
+    String? folderId,
   }) async {
     await _ensurePrefs();
     final routines = _readTemplates();
@@ -38,6 +39,7 @@ class RoutinesRepository {
       type: workoutType,
       origin: TemplateOrigin.user,
       activityName: activityName,
+      folderId: folderId,
       exercises: exercises,
     );
     routines.add(template);

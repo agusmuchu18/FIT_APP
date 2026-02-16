@@ -26,6 +26,7 @@ class _RoutineReviewScreenState extends State<RoutineReviewScreen> {
   late final TextEditingController _nameController;
   final TextEditingController _notesController = TextEditingController();
   final Map<String, WorkoutExercise> _exerciseConfigs = <String, WorkoutExercise>{};
+  String? _expandedExerciseId;
 
   bool get _canSave => _nameController.text.trim().isNotEmpty && widget.draftController.selectedExerciseIds.isNotEmpty;
 
@@ -49,6 +50,9 @@ class _RoutineReviewScreenState extends State<RoutineReviewScreen> {
       animation: widget.draftController,
       builder: (context, _) {
         final selected = widget.draftController.selectedExerciseIds;
+        if (_expandedExerciseId != null && !selected.contains(_expandedExerciseId)) {
+          _expandedExerciseId = null;
+        }
         return Scaffold(
           appBar: AppBar(
             title: const Text('Nueva rutina'),
@@ -105,25 +109,15 @@ class _RoutineReviewScreenState extends State<RoutineReviewScreen> {
                       final id = selected[index];
                       final exercise = widget.exercisesById[id];
                       final configured = _configFor(id, exercise);
+                      final expanded = _expandedExerciseId == id;
                       return Card(
                         key: ValueKey(id),
-                        child: ListTile(
-                          onTap: () => _openConfigSheet(id, exercise),
-                          title: Text(
-                            exercise?.name ?? id,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                _subtitle(exercise),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 6),
-                              Wrap(
+                        child: Column(
+                          children: [
+                            ListTile(
+                              onTap: () => setState(() => _expandedExerciseId = expanded ? null : id),
+                              title: Text(exercise?.name ?? id, maxLines: 1, overflow: TextOverflow.ellipsis),
+                              subtitle: Wrap(
                                 spacing: 6,
                                 runSpacing: 6,
                                 children: [
@@ -132,26 +126,38 @@ class _RoutineReviewScreenState extends State<RoutineReviewScreen> {
                                   _summaryChip(_loadSummary(configured)),
                                 ],
                               ),
-                            ],
-                          ),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              ReorderableDragStartListener(
-                                index: index,
-                                child: const Icon(Icons.drag_handle),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  ReorderableDragStartListener(index: index, child: const Icon(Icons.drag_handle)),
+                                  IconButton(
+                                    icon: const Icon(Icons.close),
+                                    onPressed: () {
+                                      setState(() {
+                                        _exerciseConfigs.remove(id);
+                                        if (_expandedExerciseId == id) _expandedExerciseId = null;
+                                      });
+                                      widget.draftController.removeExercise(id);
+                                    },
+                                  ),
+                                  Icon(expanded ? Icons.expand_less : Icons.expand_more),
+                                ],
                               ),
-                              IconButton(
-                                icon: const Icon(Icons.close),
-                                onPressed: () {
-                                  setState(() {
-                                    _exerciseConfigs.remove(id);
-                                  });
-                                  widget.draftController.removeExercise(id);
-                                },
-                              ),
-                            ],
-                          ),
+                            ),
+                            AnimatedSize(
+                              duration: const Duration(milliseconds: 180),
+                              curve: Curves.easeInOut,
+                              child: expanded
+                                  ? Padding(
+                                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+                                      child: ExerciseConfigInline(
+                                        config: configured,
+                                        onChanged: (updated) => _updateExerciseConfig(id, updated),
+                                      ),
+                                    )
+                                  : const SizedBox.shrink(),
+                            ),
+                          ],
                         ),
                       );
                     },
@@ -165,6 +171,12 @@ class _RoutineReviewScreenState extends State<RoutineReviewScreen> {
     );
   }
 
+  void _updateExerciseConfig(String exerciseId, WorkoutExercise newConfig) {
+    setState(() {
+      _exerciseConfigs[exerciseId] = newConfig;
+    });
+  }
+
   Widget _summaryChip(String label) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -174,12 +186,6 @@ class _RoutineReviewScreenState extends State<RoutineReviewScreen> {
       ),
       child: Text(label, style: Theme.of(context).textTheme.labelMedium),
     );
-  }
-
-  String _subtitle(def.ExerciseDefinition? exercise) {
-    if (exercise == null) return 'Sin detalles';
-    final muscle = exercise.primaryMuscles.isEmpty ? 'Sin músculo' : exercise.primaryMuscles.first;
-    return '$muscle · ${exercise.equipment}';
   }
 
   WorkoutExercise _configFor(String id, def.ExerciseDefinition? exercise) {
@@ -203,8 +209,7 @@ class _RoutineReviewScreenState extends State<RoutineReviewScreen> {
         return RoutineExerciseLoadType.assistedKg;
       case def.LoadType.external:
       case def.LoadType.bodyweight_plus_external:
-        return exercise.equipment.toLowerCase().contains('machine') ||
-                exercise.equipment.toLowerCase().contains('máquina')
+        return exercise.equipment.toLowerCase().contains('machine') || exercise.equipment.toLowerCase().contains('máquina')
             ? RoutineExerciseLoadType.machineKg
             : RoutineExerciseLoadType.weightedKg;
       case def.LoadType.bodyweight_effective:
@@ -213,9 +218,7 @@ class _RoutineReviewScreenState extends State<RoutineReviewScreen> {
   }
 
   String _repsSummary(WorkoutExercise exercise) {
-    if (exercise.targetReps != null) {
-      return 'Reps ${exercise.targetReps}';
-    }
+    if (exercise.targetReps != null) return 'Reps ${exercise.targetReps}';
     return 'Reps ${exercise.targetRepsMin ?? 8}-${exercise.targetRepsMax ?? 12}';
   }
 
@@ -233,26 +236,9 @@ class _RoutineReviewScreenState extends State<RoutineReviewScreen> {
     }
   }
 
-  Future<void> _openConfigSheet(String id, def.ExerciseDefinition? exercise) async {
-    final current = _configFor(id, exercise);
-    final updated = await showModalBottomSheet<WorkoutExercise>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (context) => _ExerciseConfigSheet(initial: current),
-    );
-    if (updated == null) return;
-    setState(() {
-      _exerciseConfigs[id] = updated;
-    });
-  }
-
   Future<void> _saveRoutine() async {
     final name = _nameController.text.trim();
-    if (name.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Ingresá un nombre para la rutina')));
-      return;
-    }
+    if (name.isEmpty) return;
     final notes = _notesController.text.trim();
     final exercises = widget.draftController.selectedExerciseIds
         .map((id) => _configFor(id, widget.exercisesById[id]))
@@ -271,164 +257,154 @@ class _RoutineReviewScreenState extends State<RoutineReviewScreen> {
   }
 }
 
-class _ExerciseConfigSheet extends StatefulWidget {
-  const _ExerciseConfigSheet({required this.initial});
+class ExerciseConfigInline extends StatefulWidget {
+  const ExerciseConfigInline({super.key, required this.config, required this.onChanged});
 
-  final WorkoutExercise initial;
+  final WorkoutExercise config;
+  final ValueChanged<WorkoutExercise> onChanged;
 
   @override
-  State<_ExerciseConfigSheet> createState() => _ExerciseConfigSheetState();
+  State<ExerciseConfigInline> createState() => _ExerciseConfigInlineState();
 }
 
-class _ExerciseConfigSheetState extends State<_ExerciseConfigSheet> {
-  late int _sets;
+class _ExerciseConfigInlineState extends State<ExerciseConfigInline> {
   late bool _fixedReps;
-  late int _reps;
-  late int _repsMin;
-  late int _repsMax;
-  late RoutineExerciseLoadType _loadType;
-  late final TextEditingController _weightController;
+  late TextEditingController _repsController;
+  late TextEditingController _minController;
+  late TextEditingController _maxController;
+  late TextEditingController _weightController;
 
   @override
   void initState() {
     super.initState();
-    _sets = widget.initial.targetSets;
-    _fixedReps = widget.initial.targetReps != null;
-    _reps = widget.initial.targetReps ?? 10;
-    _repsMin = widget.initial.targetRepsMin ?? 8;
-    _repsMax = widget.initial.targetRepsMax ?? 12;
-    _loadType = widget.initial.targetLoadType;
-    _weightController = TextEditingController(
-      text: widget.initial.targetWeightKg == null ? '' : widget.initial.targetWeightKg!.toStringAsFixed(1),
-    );
+    _fixedReps = widget.config.targetReps != null;
+    _repsController = TextEditingController(text: '${widget.config.targetReps ?? 10}');
+    _minController = TextEditingController(text: '${widget.config.targetRepsMin ?? 8}');
+    _maxController = TextEditingController(text: '${widget.config.targetRepsMax ?? 12}');
+    _weightController = TextEditingController(text: widget.config.targetWeightKg?.toStringAsFixed(1) ?? '');
   }
 
   @override
   void dispose() {
+    _repsController.dispose();
+    _minController.dispose();
+    _maxController.dispose();
     _weightController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
-    return SafeArea(
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(16, 12, 16, 16 + bottomInset),
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
+    final canWeight = widget.config.targetLoadType == RoutineExerciseLoadType.weightedKg ||
+        widget.config.targetLoadType == RoutineExerciseLoadType.machineKg;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Sets', style: Theme.of(context).textTheme.titleSmall),
+        Row(
+          children: [
+            IconButton(
+              onPressed: widget.config.targetSets > 1 ? () => _setSets(widget.config.targetSets - 1) : null,
+              icon: const Icon(Icons.remove_circle_outline),
+            ),
+            Text('${widget.config.targetSets}', style: Theme.of(context).textTheme.titleMedium),
+            IconButton(
+              onPressed: widget.config.targetSets < 20 ? () => _setSets(widget.config.targetSets + 1) : null,
+              icon: const Icon(Icons.add_circle_outline),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        SegmentedButton<bool>(
+          segments: const [
+            ButtonSegment(value: true, label: Text('Fijas')),
+            ButtonSegment(value: false, label: Text('Rango')),
+          ],
+          selected: {_fixedReps},
+          onSelectionChanged: (v) {
+            setState(() => _fixedReps = v.first);
+            _emit();
+          },
+        ),
+        const SizedBox(height: 8),
+        if (_fixedReps)
+          TextField(
+            controller: _repsController,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(labelText: 'Reps'),
+            onChanged: (_) => _emit(),
+          )
+        else
+          Row(
             children: [
-              Text('Configurar ejercicio', style: Theme.of(context).textTheme.titleLarge),
-              const SizedBox(height: 16),
-              Text('Sets', style: Theme.of(context).textTheme.titleSmall),
-              Row(
-                children: [
-                  IconButton(
-                    onPressed: _sets > 1 ? () => setState(() => _sets--) : null,
-                    icon: const Icon(Icons.remove_circle_outline),
-                  ),
-                  Text('$_sets', style: Theme.of(context).textTheme.titleMedium),
-                  IconButton(
-                    onPressed: _sets < 20 ? () => setState(() => _sets++) : null,
-                    icon: const Icon(Icons.add_circle_outline),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Text('Reps', style: Theme.of(context).textTheme.titleSmall),
-              RadioListTile<bool>(
-                value: true,
-                groupValue: _fixedReps,
-                onChanged: (value) => setState(() => _fixedReps = value ?? true),
-                title: const Text('Fijas'),
-              ),
-              if (_fixedReps)
-                TextFormField(
-                  initialValue: '$_reps',
+              Expanded(
+                child: TextField(
+                  controller: _minController,
                   keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'Reps'),
-                  onChanged: (value) => _reps = int.tryParse(value) ?? _reps,
-                ),
-              RadioListTile<bool>(
-                value: false,
-                groupValue: _fixedReps,
-                onChanged: (value) => setState(() => _fixedReps = value ?? false),
-                title: const Text('Rango'),
-              ),
-              if (!_fixedReps)
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextFormField(
-                        initialValue: '$_repsMin',
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(labelText: 'Mínimo'),
-                        onChanged: (value) => _repsMin = int.tryParse(value) ?? _repsMin,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextFormField(
-                        initialValue: '$_repsMax',
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(labelText: 'Máximo'),
-                        onChanged: (value) => _repsMax = int.tryParse(value) ?? _repsMax,
-                      ),
-                    ),
-                  ],
-                ),
-              const SizedBox(height: 10),
-              Text('Tipo de carga', style: Theme.of(context).textTheme.titleSmall),
-              Wrap(
-                spacing: 8,
-                children: RoutineExerciseLoadType.values
-                    .map(
-                      (type) => ChoiceChip(
-                        selected: type == _loadType,
-                        label: Text(_loadTypeLabel(type)),
-                        onSelected: (_) => setState(() => _loadType = type),
-                      ),
-                    )
-                    .toList(),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _weightController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: InputDecoration(
-                  labelText: _loadType == RoutineExerciseLoadType.bodyweight
-                      ? 'Peso adicional opcional (kg)'
-                      : 'Peso objetivo (kg)',
+                  decoration: const InputDecoration(labelText: 'Mínimo'),
+                  onChanged: (_) => _emit(),
                 ),
               ),
-              const SizedBox(height: 18),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('Cancelar'),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: FilledButton(
-                      onPressed: _save,
-                      child: const Text('Guardar cambios'),
-                    ),
-                  ),
-                ],
+              const SizedBox(width: 10),
+              Expanded(
+                child: TextField(
+                  controller: _maxController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: 'Máximo'),
+                  onChanged: (_) => _emit(),
+                ),
               ),
             ],
           ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 8,
+          children: RoutineExerciseLoadType.values
+              .map((type) => ChoiceChip(
+                    selected: type == widget.config.targetLoadType,
+                    label: Text(_label(type)),
+                    onSelected: (_) => _setLoadType(type),
+                  ))
+              .toList(),
         ),
-      ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _weightController,
+          enabled: canWeight,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: const InputDecoration(labelText: 'Peso objetivo (kg)'),
+          onChanged: (_) => _emit(),
+        ),
+      ],
     );
   }
 
-  String _loadTypeLabel(RoutineExerciseLoadType type) {
+  void _setSets(int sets) => widget.onChanged(widget.config.copyWith(targetSets: sets));
+
+  void _setLoadType(RoutineExerciseLoadType type) {
+    final clearWeight = type == RoutineExerciseLoadType.assistedKg || type == RoutineExerciseLoadType.bodyweight;
+    if (clearWeight) _weightController.text = '';
+    widget.onChanged(widget.config.copyWith(targetLoadType: type, targetWeightKg: clearWeight ? null : widget.config.targetWeightKg));
+  }
+
+  void _emit() {
+    final fixed = int.tryParse(_repsController.text) ?? widget.config.targetReps ?? 10;
+    final minRaw = int.tryParse(_minController.text) ?? widget.config.targetRepsMin ?? 8;
+    final maxRaw = int.tryParse(_maxController.text) ?? widget.config.targetRepsMax ?? 12;
+    final min = minRaw <= maxRaw ? minRaw : maxRaw;
+    final max = maxRaw >= minRaw ? maxRaw : minRaw;
+    final weight = double.tryParse(_weightController.text.replaceAll(',', '.'));
+    final canWeight = widget.config.targetLoadType == RoutineExerciseLoadType.weightedKg ||
+        widget.config.targetLoadType == RoutineExerciseLoadType.machineKg;
+    widget.onChanged(widget.config.copyWith(
+      targetReps: _fixedReps ? fixed : null,
+      targetRepsMin: _fixedReps ? null : min,
+      targetRepsMax: _fixedReps ? null : max,
+      targetWeightKg: canWeight ? weight : null,
+    ));
+  }
+
+  String _label(RoutineExerciseLoadType type) {
     switch (type) {
       case RoutineExerciseLoadType.bodyweight:
         return 'Bodyweight';
@@ -439,30 +415,5 @@ class _ExerciseConfigSheetState extends State<_ExerciseConfigSheet> {
       case RoutineExerciseLoadType.machineKg:
         return 'Machine';
     }
-  }
-
-  void _save() {
-    final min = _repsMin <= _repsMax ? _repsMin : _repsMax;
-    final max = _repsMax >= _repsMin ? _repsMax : _repsMin;
-    final weight = double.tryParse(_weightController.text.replaceAll(',', '.'));
-    Navigator.of(context).pop(
-      WorkoutExercise(
-        id: widget.initial.id,
-        name: widget.initial.name,
-        muscleGroup: widget.initial.muscleGroup,
-        equipment: widget.initial.equipment,
-        measurement: widget.initial.measurement,
-        notes: widget.initial.notes,
-        targetSets: _sets,
-        targetReps: _fixedReps ? _reps : null,
-        targetRepsMin: _fixedReps ? null : min,
-        targetRepsMax: _fixedReps ? null : max,
-        targetLoadType: _loadType,
-        targetWeightKg: weight,
-        restSeconds: widget.initial.restSeconds,
-        rir: widget.initial.rir,
-        sets: widget.initial.sets,
-      ),
-    );
   }
 }

@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
+import '../data/workout_repository.dart';
 import '../pro/models/workout_models.dart';
 import '../workout_in_progress_controller.dart';
 import 'routines_repository.dart';
@@ -54,15 +55,18 @@ class TrainingHomeController extends ChangeNotifier {
   static const _draftKey = 'pro_workout_draft';
   static const _metadataKey = 'pro_workout_template_metadata';
   static const _sortKey = 'pro_workout_sort_preference';
+  static const _foldersKey = 'pro_workout_folders';
 
   final Uuid _uuid = const Uuid();
   final RoutinesRepository _routinesRepository = RoutinesRepository();
+  final WorkoutRepository _workoutRepository = WorkoutRepository();
 
   SharedPreferences? _prefs;
   bool _initialized = false;
   List<WorkoutTemplate> _routines = [];
   List<WorkoutSession> _sessions = [];
   Map<String, RoutineMetadata> _metadata = {};
+  List<RoutineFolder> _folders = [];
   RoutineSortOption _sortOption = RoutineSortOption.smart;
   String? _draftRaw;
 
@@ -71,6 +75,8 @@ class TrainingHomeController extends ChangeNotifier {
   bool get hasRoutines => _routines.isNotEmpty;
   bool get hasDraft => _draftRaw != null;
   RoutineSortOption get sortOption => _sortOption;
+  List<RoutineFolder> get folders => List.unmodifiable(_folders);
+  List<WorkoutSession> get sessions => List.unmodifiable(_sessions);
 
   DateTime? get draftStart {
     if (_draftRaw == null) return null;
@@ -103,6 +109,7 @@ class TrainingHomeController extends ChangeNotifier {
     await _loadMetadata();
     await _loadDraft();
     await _loadSortOption();
+    await _loadFolders();
     WorkoutInProgressController.instance.syncFromRaw(_draftRaw);
     _initialized = true;
     notifyListeners();
@@ -114,6 +121,7 @@ class TrainingHomeController extends ChangeNotifier {
     await _loadMetadata();
     await _loadDraft();
     await _loadSortOption();
+    await _loadFolders();
     WorkoutInProgressController.instance.syncFromRaw(_draftRaw);
     notifyListeners();
   }
@@ -163,6 +171,7 @@ class TrainingHomeController extends ChangeNotifier {
       type: routine.type,
       origin: TemplateOrigin.user,
       activityName: routine.activityName,
+      folderId: routine.folderId,
       exercises: routine.exercises
           .map((exercise) => exercise.copyWith(
                 id: _uuid.v4(),
@@ -185,6 +194,7 @@ class TrainingHomeController extends ChangeNotifier {
                     type: element.type,
                     origin: element.origin,
                     activityName: element.activityName,
+                    folderId: element.folderId,
                     exercises: element.exercises,
                   )
                 : element)
@@ -193,6 +203,60 @@ class TrainingHomeController extends ChangeNotifier {
     notifyListeners();
   }
 
+
+  Future<void> createFolder(String name) async {
+    _folders = [..._folders, RoutineFolder(id: _uuid.v4(), name: name)];
+    await _persistFolders();
+    notifyListeners();
+  }
+
+  Future<void> renameFolder(String folderId, String name) async {
+    _folders = _folders.map((f) => f.id == folderId ? RoutineFolder(id: f.id, name: name) : f).toList();
+    await _persistFolders();
+    notifyListeners();
+  }
+
+  Future<void> deleteFolder(String folderId) async {
+    _folders = _folders.where((f) => f.id != folderId).toList();
+    _routines = _routines
+        .map((r) => r.folderId == folderId
+            ? WorkoutTemplate(
+                id: r.id,
+                name: r.name,
+                type: r.type,
+                origin: r.origin,
+                activityName: r.activityName,
+                folderId: null,
+                exercises: r.exercises,
+              )
+            : r)
+        .toList();
+    await _persistFolders();
+    await _persistTemplates();
+    notifyListeners();
+  }
+
+  Future<void> moveRoutineToFolder(WorkoutTemplate routine, String? folderId) async {
+    _routines = _routines
+        .map((r) => r.id == routine.id
+            ? WorkoutTemplate(
+                id: r.id,
+                name: r.name,
+                type: r.type,
+                origin: r.origin,
+                activityName: r.activityName,
+                folderId: folderId,
+                exercises: r.exercises,
+              )
+            : r)
+        .toList();
+    await _persistTemplates();
+    notifyListeners();
+  }
+
+  List<WorkoutTemplate> routinesForFolder(String? folderId) {
+    return routines.where((r) => r.folderId == folderId).toList();
+  }
   int estimatedDuration(WorkoutTemplate routine) {
     if (routine.exercises.isEmpty) return 20;
     final sets = routine.exercises.fold<int>(0, (sum, e) => sum + e.sets.length);
@@ -262,15 +326,14 @@ class TrainingHomeController extends ChangeNotifier {
   }
 
   Future<void> _loadSessions() async {
+    final fromRepo = await _workoutRepository.listSessions();
     final raw = _prefs?.getString(_sessionsKey);
-    if (raw == null) {
-      _sessions = [];
-      return;
+    final legacy = <WorkoutSession>[];
+    if (raw != null) {
+      final decoded = jsonDecode(raw) as List<dynamic>;
+      legacy.addAll(decoded.map((e) => WorkoutSession.fromJson(e as Map<String, dynamic>)));
     }
-    final decoded = jsonDecode(raw) as List<dynamic>;
-    _sessions = decoded
-        .map((e) => WorkoutSession.fromJson(e as Map<String, dynamic>))
-        .toList()
+    _sessions = [...legacy, ...fromRepo]
       ..sort((a, b) => a.date.compareTo(b.date));
   }
 
@@ -294,6 +357,21 @@ class TrainingHomeController extends ChangeNotifier {
       _metadata.map((key, value) => MapEntry(key, value.toJson())),
     );
     await _prefs?.setString(_metadataKey, payload);
+  }
+
+
+  Future<void> _loadFolders() async {
+    final raw = _prefs?.getString(_foldersKey);
+    if (raw == null) {
+      _folders = [];
+      return;
+    }
+    final decoded = jsonDecode(raw) as List<dynamic>;
+    _folders = decoded.map((e) => RoutineFolder.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  Future<void> _persistFolders() async {
+    await _prefs?.setString(_foldersKey, jsonEncode(_folders.map((e) => e.toJson()).toList()));
   }
 
   Future<void> _loadDraft() async {

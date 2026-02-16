@@ -228,6 +228,7 @@ class WorkoutTemplate {
     required this.type,
     this.origin = TemplateOrigin.standard,
     this.activityName,
+    this.folderId,
     List<WorkoutExercise>? exercises,
   }) : exercises = exercises ?? [];
 
@@ -236,6 +237,7 @@ class WorkoutTemplate {
   final WorkoutType type;
   final TemplateOrigin origin;
   final String? activityName;
+  final String? folderId;
   final List<WorkoutExercise> exercises;
 
   Map<String, dynamic> toJson() => {
@@ -244,6 +246,7 @@ class WorkoutTemplate {
         'type': type.name,
         'origin': origin.name,
         'activityName': activityName,
+        'folderId': folderId,
         'exercises': exercises.map((e) => e.toJson()).toList(),
       };
 
@@ -256,10 +259,27 @@ class WorkoutTemplate {
             .firstWhere((element) => element.name == json['origin'],
                 orElse: () => TemplateOrigin.custom),
         activityName: json['activityName'] as String?,
+        folderId: json['folderId'] as String?,
         exercises: (json['exercises'] as List<dynamic>? ?? [])
             .map((e) => WorkoutExercise.fromJson(e as Map<String, dynamic>))
             .toList(),
       );
+}
+
+class RoutineFolder {
+  const RoutineFolder({required this.id, required this.name});
+
+  final String id;
+  final String name;
+
+  Map<String, dynamic> toJson() => {'id': id, 'name': name};
+
+  factory RoutineFolder.fromJson(Map<String, dynamic> json) {
+    return RoutineFolder(
+      id: json['id'] as String,
+      name: json['name'] as String,
+    );
+  }
 }
 
 enum TemplateOrigin { standard, user, custom }

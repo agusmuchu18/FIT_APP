@@ -5,6 +5,8 @@ import 'package:uuid/uuid.dart';
 
 import '../data/workout_repository.dart';
 import '../domain/session_models.dart';
+import '../pro/models/workout_models.dart';
+import '../training_home/routines_repository.dart';
 
 class WorkoutSessionController extends ChangeNotifier {
   WorkoutSessionController({WorkoutRepository? repository})
@@ -16,11 +18,26 @@ class WorkoutSessionController extends ChangeNotifier {
   List<ExerciseInSession> _exercises = [];
   String? _expandedExerciseId;
   Timer? _autosaveTimer;
+  String? _routineId;
+  String? _routineName;
+  DateTime _sessionStart = DateTime.now();
 
   List<ExerciseInSession> get exercises => _exercises;
   String? get expandedExerciseId => _expandedExerciseId;
 
-  Future<void> initialize({List<ExerciseInSession>? initialExercises}) async {
+  Future<void> initialize({List<ExerciseInSession>? initialExercises, String? templateId}) async {
+    _routineId = templateId;
+    if (templateId != null) {
+      final routines = await RoutinesRepository().getAllRoutines();
+      WorkoutTemplate? routine;
+      for (final item in routines) {
+        if (item.id == templateId) {
+          routine = item;
+          break;
+        }
+      }
+      if (routine != null) _routineName = routine.name;
+    }
     final draft = await _repository.loadDraftExercises();
     if (draft != null && draft.isNotEmpty) {
       _exercises = draft;
@@ -28,6 +45,25 @@ class WorkoutSessionController extends ChangeNotifier {
       _exercises = initialExercises;
       _expandedExerciseId = initialExercises.first.id;
       _scheduleAutosave();
+    }
+    if (_exercises.isEmpty && templateId != null) {
+      final routines = await RoutinesRepository().getAllRoutines();
+      WorkoutTemplate? routine;
+      for (final item in routines) {
+        if (item.id == templateId) {
+          routine = item;
+          break;
+        }
+      }
+      if (routine != null) {
+        _routineName = routine.name;
+        _exercises = routine.exercises
+            .map((exercise) {
+              final sets = List.generate(exercise.targetSets, (index) => SetInSession(id: _uuid.v4(), index: index + 1));
+              return ExerciseInSession(id: _uuid.v4(), exerciseId: exercise.id, name: exercise.name, sets: sets);
+            })
+            .toList();
+      }
     }
     notifyListeners();
   }
@@ -182,7 +218,12 @@ class WorkoutSessionController extends ChangeNotifier {
 
   Future<void> finishWorkout() async {
     _autosaveTimer?.cancel();
-    await _repository.persistCompletedWorkout(_exercises);
+    await _repository.persistCompletedWorkout(
+      _exercises,
+      routineId: _routineId,
+      routineName: _routineName,
+      duration: DateTime.now().difference(_sessionStart),
+    );
     _exercises = [];
     _expandedExerciseId = null;
     notifyListeners();
