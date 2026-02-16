@@ -63,7 +63,7 @@ class _CreateFoodItemSheetState extends State<CreateFoodItemSheet> {
       id: DateTime.now().microsecondsSinceEpoch.toString(),
       name: name,
       categoryLabel: _category.text,
-      macrosPer100: base.scale(factor),
+      macrosPer100: base.scale(factor.toDouble()),
       defaultServingGrams: serving,
       unitSupport: FoodUnitSupport.gramsAndServing,
       isCustom: true,
