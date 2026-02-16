@@ -231,6 +231,7 @@ class RoutineMiniCard extends StatelessWidget {
                             value: 'pin',
                             child: Text(isPinned ? 'Desfijar' : 'Fijar'),
                           ),
+                          const PopupMenuItem(value: 'move', child: Text('Mover a carpeta')),
                           const PopupMenuItem(value: 'delete', child: Text('Eliminar')),
                         ],
                       ),

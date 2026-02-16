@@ -5,15 +5,42 @@ import '../application/workout_session_controller.dart';
 import '../pro/data/exercise_library.dart';
 import 'widgets/exercise_card.dart';
 
-class WorkoutInProgressScreen extends StatelessWidget {
+class WorkoutInProgressScreen extends StatefulWidget {
   const WorkoutInProgressScreen({super.key});
 
   @override
+  State<WorkoutInProgressScreen> createState() => _WorkoutInProgressScreenState();
+}
+
+class _WorkoutInProgressScreenState extends State<WorkoutInProgressScreen> {
+  late final WorkoutSessionController _controller;
+  bool _didInit = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = WorkoutSessionController();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_didInit) return;
+    _didInit = true;
+    final args = ModalRoute.of(context)?.settings.arguments;
+    final map = args is Map ? Map<String, dynamic>.from(args) : const <String, dynamic>{};
+    _controller.initialize(templateId: map['templateId'] as String?);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => WorkoutSessionController()..initialize(),
-      child: const _WorkoutInProgressView(),
-    );
+    return ChangeNotifierProvider.value(value: _controller, child: const _WorkoutInProgressView());
   }
 }
 
@@ -136,20 +163,13 @@ class _WorkoutInProgressView extends StatelessWidget {
       showDragHandle: true,
       builder: (sheetContext) {
         return Padding(
-          padding: EdgeInsets.only(
-            left: 16,
-            right: 16,
-            bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 12,
-          ),
+          padding: EdgeInsets.only(left: 16, right: 16, bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 12),
           child: SizedBox(
             height: 460,
             child: Column(
               children: [
                 TextField(
-                  decoration: const InputDecoration(
-                    hintText: 'Buscar ejercicio',
-                    prefixIcon: Icon(Icons.search),
-                  ),
+                  decoration: const InputDecoration(hintText: 'Buscar ejercicio', prefixIcon: Icon(Icons.search)),
                   onChanged: (value) => query.value = value,
                 ),
                 const SizedBox(height: 12),
@@ -157,26 +177,16 @@ class _WorkoutInProgressView extends StatelessWidget {
                   child: ValueListenableBuilder<String>(
                     valueListenable: query,
                     builder: (context, value, _) {
-                      final filtered = exerciseLibrary
-                          .where((exercise) =>
-                              exercise.name.toLowerCase().contains(value.toLowerCase()))
-                          .toList();
+                      final filtered = exerciseLibrary.where((exercise) => exercise.name.toLowerCase().contains(value.toLowerCase())).toList();
                       return ListView.builder(
                         itemCount: filtered.length,
                         itemBuilder: (context, index) {
                           final exercise = filtered[index];
                           return ListTile(
                             title: Text(exercise.name),
-                            subtitle: Text(
-                              exercise.primaryMuscles.join(', '),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                            subtitle: Text(exercise.primaryMuscles.join(', '), maxLines: 1, overflow: TextOverflow.ellipsis),
                             onTap: () async {
-                              await controller.addExercise(
-                                exerciseId: exercise.id,
-                                name: exercise.name,
-                              );
+                              await controller.addExercise(exerciseId: exercise.id, name: exercise.name);
                               if (context.mounted) Navigator.of(context).pop();
                             },
                           );
@@ -200,14 +210,8 @@ class _WorkoutInProgressView extends StatelessWidget {
         title: const Text('Descartar entreno'),
         content: const Text('Se perderá el borrador actual. ¿Continuar?'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Descartar'),
-          ),
+          TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: const Text('Cancelar')),
+          FilledButton(onPressed: () => Navigator.of(dialogContext).pop(true), child: const Text('Descartar')),
         ],
       ),
     );
