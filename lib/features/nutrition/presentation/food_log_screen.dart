@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../application/food_log_controller.dart';
@@ -25,14 +26,27 @@ class FoodLogScreen extends StatefulWidget {
 class _FoodLogScreenState extends State<FoodLogScreen> {
   late final FoodLogController controller;
   late final FoodRepository repository;
+  bool _didLogUsdaKeyState = false;
   final searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
+    _logUsdaKeyLoaded();
+
     final fdcClient = FdcClient(apiKey: NutritionApiConfig.usdaApiKey);
     repository = FoodRepository(fdc: fdcClient);
     controller = FoodLogController(repository: repository)..addListener(_refresh);
+
+    if (!NutritionApiConfig.hasUsdaKey) {
+      controller.setUiMessage('Falta USDA_API_KEY. Mostrando catálogo local.');
+    }
+  }
+
+  void _logUsdaKeyLoaded() {
+    if (!kDebugMode || _didLogUsdaKeyState) return;
+    _didLogUsdaKeyState = true;
+    debugPrint('USDA key loaded: ${NutritionApiConfig.hasUsdaKey ? 'YES' : 'NO'}');
   }
 
   void _refresh() {
