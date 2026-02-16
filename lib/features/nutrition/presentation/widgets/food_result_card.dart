@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 
 import '../../../common/theme/app_colors.dart';
@@ -115,7 +113,11 @@ class _FoodResultCardState extends State<FoodResultCard> {
             ),
             if (!widget.isPro)
               Positioned.fill(
-                child: BackdropFilter(filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4), child: Container(color: Colors.black.withOpacity(0.15), alignment: Alignment.center, child: const Icon(Icons.lock_outline))),
+                child: Container(
+                  color: Colors.black.withOpacity(0.06),
+                  alignment: Alignment.center,
+                  child: const Icon(Icons.lock_outline),
+                ),
               ),
           ]),
         ),

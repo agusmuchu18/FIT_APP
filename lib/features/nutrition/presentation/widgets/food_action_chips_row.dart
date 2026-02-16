@@ -22,7 +22,7 @@ class FoodActionChipsRow extends StatelessWidget {
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
-          ActionChip(label: Text('Borrador ($draftCount)'), onPressed: onDraftTap),
+          ActionChip(label: Text('($draftCount)'), onPressed: onDraftTap),
           const SizedBox(width: 8),
           ActionChip(label: const Text('Plantillas'), onPressed: onTemplatesTap),
           const SizedBox(width: 8),
