@@ -24,6 +24,9 @@ class FoodLogController extends ChangeNotifier {
   bool didBump = false;
   FoodItem? highlightedFood;
 
+  final Set<String> loadingFoodIds = <String>{};
+  String? uiMessage;
+
   Timer? _debounce;
 
   MealDraft get currentDraft => MealDraft(mealType: selectedMealType, entries: _draftByType[selectedMealType] ?? []);
@@ -52,15 +55,64 @@ class FoodLogController extends ChangeNotifier {
       if (query.trim().isEmpty) {
         results = [];
       } else {
-        results = await _repository.searchFoods(query);
+        try {
+          final hasKey = _repository.hasUsdaApiKey;
+          results = await _repository.searchFoods(query);
+          if (!hasKey) {
+            setUiMessage('Falta USDA_API_KEY. Mostrando catálogo local.');
+          }
+        } catch (e) {
+          results = await _repository.searchLocalFoods(query);
+          setUiMessage('No se pudo consultar USDA. Mostrando catálogo local.');
+        }
       }
       notifyListeners();
     });
   }
 
-  void toggleExpanded(String foodId) {
+  Future<void> toggleExpanded(String foodId) async {
     expandedFoodId = expandedFoodId == foodId ? null : foodId;
     notifyListeners();
+
+    if (expandedFoodId != foodId || !foodId.startsWith('fdc:')) return;
+
+    final idx = results.indexWhere((food) => food.id == foodId);
+    if (idx < 0) return;
+
+    final food = results[idx];
+    final hasMacros = food.macrosPer100.kcal > 0 || food.macrosPer100.protein > 0 || food.macrosPer100.carbs > 0 || food.macrosPer100.fat > 0;
+    if (hasMacros || loadingFoodIds.contains(foodId)) return;
+
+    final fdcId = int.tryParse(foodId.substring(4));
+    if (fdcId == null) return;
+
+    loadingFoodIds.add(foodId);
+    notifyListeners();
+
+    try {
+      final fullFood = await _repository.getFoodItemFromFdc(fdcId);
+      final fullIdx = results.indexWhere((item) => item.id == foodId);
+      if (fullIdx >= 0) {
+        results[fullIdx] = fullFood;
+      }
+    } catch (e) {
+      setUiMessage('Error cargando macros USDA para este alimento.');
+    } finally {
+      loadingFoodIds.remove(foodId);
+      notifyListeners();
+    }
+  }
+
+  bool isLoadingFood(String id) => loadingFoodIds.contains(id);
+
+  void setUiMessage(String msg) {
+    uiMessage = msg;
+  }
+
+  String? consumeUiMessage() {
+    final message = uiMessage;
+    uiMessage = null;
+    return message;
   }
 
   DraftEntry? entryForFood(String foodId) {

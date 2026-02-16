@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../application/food_log_controller.dart';
+import '../data/fdc_client.dart';
 import '../data/food_repository.dart';
+import '../data/nutrition_api_config.dart';
 import '../domain/models.dart';
 import 'create_food_item_sheet.dart';
 import 'meal_draft_sheet.dart';
@@ -22,27 +24,35 @@ class FoodLogScreen extends StatefulWidget {
 
 class _FoodLogScreenState extends State<FoodLogScreen> {
   late final FoodLogController controller;
+  late final FoodRepository repository;
   final searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    controller = FoodLogController(repository: FoodRepository())..addListener(_refresh);
+    final fdcClient = FdcClient(apiKey: NutritionApiConfig.usdaApiKey);
+    repository = FoodRepository(fdc: fdcClient);
+    controller = FoodLogController(repository: repository)..addListener(_refresh);
   }
 
   void _refresh() {
     if (!mounted) return;
+    final uiMessage = controller.consumeUiMessage();
     if (searchController.text != controller.query) {
       searchController.text = controller.query;
       searchController.selection = TextSelection.collapsed(offset: searchController.text.length);
     }
     setState(() {});
+    if (uiMessage != null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(uiMessage)));
+    }
   }
 
   @override
   void dispose() {
     controller.removeListener(_refresh);
     controller.dispose();
+    repository.dispose();
     searchController.dispose();
     super.dispose();
   }
@@ -88,6 +98,7 @@ class _FoodLogScreenState extends State<FoodLogScreen> {
                           expanded: controller.expandedFoodId == food.id,
                           draftEntry: controller.entryForFood(food.id),
                           isPro: controller.isPro,
+                          loading: controller.isLoadingFood(food.id),
                           onTap: () => controller.toggleExpanded(food.id),
                           onPaywallTap: () => PaywallSheet.show(context),
                           onSave: (entry) {

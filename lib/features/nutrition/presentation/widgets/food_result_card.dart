@@ -10,6 +10,7 @@ class FoodResultCard extends StatefulWidget {
     required this.expanded,
     required this.draftEntry,
     required this.isPro,
+    required this.loading,
     required this.onTap,
     required this.onSave,
     required this.onPaywallTap,
@@ -19,6 +20,7 @@ class FoodResultCard extends StatefulWidget {
   final bool expanded;
   final DraftEntry? draftEntry;
   final bool isPro;
+  final bool loading;
   final VoidCallback onTap;
   final ValueChanged<DraftEntry> onSave;
   final VoidCallback onPaywallTap;
@@ -82,6 +84,17 @@ class _FoodResultCardState extends State<FoodResultCard> {
   Widget _expanded(MacroValues macros) {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       const SizedBox(height: 12),
+      if (widget.loading)
+        const Padding(
+          padding: EdgeInsets.only(bottom: 8),
+          child: Row(
+            children: [
+              SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+              SizedBox(width: 8),
+              Text('Cargando macros...'),
+            ],
+          ),
+        ),
       Row(children: [
         const Text('Cantidad'),
         const Spacer(),

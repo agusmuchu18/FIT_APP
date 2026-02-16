@@ -18,7 +18,7 @@ class FdcClient {
     String query, {
     int pageSize = 25,
     int pageNumber = 1,
-    List<String> dataTypes = const ['Foundation', 'SR Legacy'],
+    List<String> dataTypes = const ['Foundation', 'SR Legacy', 'Branded', 'Survey (FNDDS)'],
   }) async {
     final q = query.trim();
     if (q.isEmpty) return const [];
@@ -128,4 +128,3 @@ class FdcSearchItem {
     );
   }
 }
-
