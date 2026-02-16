@@ -18,7 +18,20 @@ class FoodRepository {
   }
 
   Future<List<FoodItem>> getSuggestedFoods(MealType mealType) async {
-    return _foods.where((f) => f.searchKeywords.contains(mealType.name)).take(8).toList();
+    final mealKeyword = mealType.name.toLowerCase();
+    final prioritized = <FoodItem>[];
+    final rest = <FoodItem>[];
+
+    for (final food in _foods) {
+      final matchesMeal = food.searchKeywords.any((keyword) => keyword.toLowerCase() == mealKeyword);
+      if (matchesMeal) {
+        prioritized.add(food);
+      } else {
+        rest.add(food);
+      }
+    }
+
+    return [...prioritized, ...rest];
   }
 
   Future<void> createCustomFood(FoodItem item) async {

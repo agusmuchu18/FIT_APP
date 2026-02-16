@@ -20,7 +20,7 @@ class MealDraftBottomBar extends StatelessWidget {
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.border)),
         child: Row(children: [
-          Expanded(child: Text('Borrador: ${draft.itemCount} items · ${totals.kcal.round()} kcal · ${totals.protein.round()} P', maxLines: 1, overflow: TextOverflow.ellipsis)),
+          Expanded(child: Text('${draft.itemCount} items · ${totals.kcal.round()} kcal · ${totals.protein.round()} P', maxLines: 1, overflow: TextOverflow.ellipsis)),
           FilledButton(onPressed: onTap, child: const Text('Ver / Editar')),
         ]),
       ),
