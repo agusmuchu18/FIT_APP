@@ -8,6 +8,7 @@ import '../../common/widgets/summary_card.dart';
 import '../../home/domain/home_activity_utils.dart';
 import '../../home/domain/goal_insight_service.dart';
 import '../../nutrition/data/food_repository.dart';
+import '../../nutrition/domain/models.dart' as nutrition_models;
 import '../../sleep/domain/sleep_time_utils.dart';
 import 'activity_day_screen.dart';
 import 'widgets/activity_calendar_sheet.dart';
@@ -108,23 +109,22 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
       final entryDate = _dateOnly(_safeParseDate(meal.id));
       if (entryDate != selectedDay) continue;
 
-      final matchingFood = catalog.firstWhere(
-        (item) =>
-            item.name.toLowerCase() == meal.title.toLowerCase() ||
-            meal.title.toLowerCase().contains(item.name.toLowerCase()),
-        orElse: () => FoodItem(
-          name: meal.title,
-          caloriesPer100g: meal.calories,
-          macros: meal.macros,
-        ),
-      );
+      final matchingFood = catalog
+          .cast<nutrition_models.FoodItem?>()
+          .firstWhere(
+            (item) =>
+                item != null &&
+                (item.name.toLowerCase() == meal.title.toLowerCase() ||
+                    meal.title.toLowerCase().contains(item.name.toLowerCase())),
+            orElse: () => null,
+          );
 
       final calories =
-          meal.calories > 0 ? meal.calories : matchingFood.caloriesPer100g;
+          meal.calories > 0 ? meal.calories : (matchingFood?.caloriesPer100g ?? 0);
       final macros = meal.macros.carbs + meal.macros.protein + meal.macros.fat >
               0
           ? meal.macros
-          : matchingFood.macros;
+          : (matchingFood?.macros ?? const Macros(carbs: 0, protein: 0, fat: 0));
 
       caloriesToday += calories;
       macrosToday = Macros(
