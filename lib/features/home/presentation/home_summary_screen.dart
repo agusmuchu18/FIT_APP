@@ -7,7 +7,9 @@ import '../../common/theme/app_colors.dart';
 import '../../common/widgets/summary_card.dart';
 import '../../home/domain/home_activity_utils.dart';
 import '../../home/domain/goal_insight_service.dart';
+import '../../nutrition/data/fdc_client.dart';
 import '../../nutrition/data/food_repository.dart';
+import '../../nutrition/data/nutrition_api_config.dart';
 import '../../nutrition/domain/models.dart' as nutrition_models;
 import '../../sleep/domain/sleep_time_utils.dart';
 import 'activity_day_screen.dart';
@@ -22,13 +24,21 @@ class HomeSummaryScreen extends StatefulWidget {
 }
 
 class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
-  final FoodRepository _foodRepository = FoodRepository();
+  final FoodRepository _foodRepository = FoodRepository(
+    fdc: FdcClient(apiKey: NutritionApiConfig.usdaApiKey),
+  );
   late Future<_HomeSummaryData> _summaryFuture;
 
   @override
   void initState() {
     super.initState();
     _summaryFuture = _loadSummaryData();
+  }
+
+  @override
+  void dispose() {
+    _foodRepository.dispose();
+    super.dispose();
   }
 
   Future<_HomeSummaryData> _loadSummaryData() async {
