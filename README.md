@@ -17,14 +17,23 @@ samples, guidance on mobile development, and a full API reference.
 
 ## USDA FoodData Central API key
 
-Para habilitar búsquedas USDA en nutrición, corré la app con:
+Para habilitar búsquedas USDA en nutrición:
 
 ```bash
-flutter run --dart-define=USDA_API_KEY=tu_api_key
+flutter run --dart-define=USDA_API_KEY=TU_KEY
+flutter run -d chrome --dart-define=USDA_API_KEY=TU_KEY
 ```
 
-Y en build:
+Para build local:
 
 ```bash
-flutter build apk --dart-define=USDA_API_KEY=tu_api_key
+flutter build apk --dart-define=USDA_API_KEY=TU_KEY
+flutter build web --dart-define=USDA_API_KEY=TU_KEY
 ```
+
+Para GitHub Pages (GitHub Actions), crear el secret del repositorio:
+
+1. `Settings` → `Secrets and variables` → `Actions`
+2. `New repository secret`
+3. Name: `USDA_API_KEY`
+4. Value: `<tu key>`

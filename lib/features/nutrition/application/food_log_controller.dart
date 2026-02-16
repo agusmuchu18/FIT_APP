@@ -56,11 +56,7 @@ class FoodLogController extends ChangeNotifier {
         results = [];
       } else {
         try {
-          final hasKey = _repository.hasUsdaApiKey;
           results = await _repository.searchFoods(query);
-          if (!hasKey) {
-            setUiMessage('Falta USDA_API_KEY. Mostrando catálogo local.');
-          }
         } catch (e) {
           results = await _repository.searchLocalFoods(query);
           setUiMessage('No se pudo consultar USDA. Mostrando catálogo local.');

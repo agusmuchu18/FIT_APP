@@ -30,7 +30,8 @@ jobs:
         run: flutter pub get
 
       - name: Build web
-        run: flutter build web --release --base-href "/FIT_APP/"
+        # TODO(security): En Flutter Web esta key queda expuesta en el bundle; migrar a proxy/backend.
+        run: flutter build web --release --base-href "/FIT_APP/" --dart-define=USDA_API_KEY=${{ secrets.USDA_API_KEY }}
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
