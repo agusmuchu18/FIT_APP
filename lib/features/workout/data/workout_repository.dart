@@ -10,6 +10,18 @@ class WorkoutRepository {
   static const sessionsKey = 'workout_in_progress_v2_sessions';
   static const legacySessionsKey = 'pro_workout_sessions';
 
+  Future<DateTime?> loadDraftStartTime() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(draftKey);
+    if (raw == null) return null;
+    try {
+      final json = jsonDecode(raw) as Map<String, dynamic>;
+      return DateTime.tryParse(json['sessionStart'] as String? ?? '');
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<List<ExerciseInSession>?> loadDraftExercises() async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(draftKey);
@@ -24,11 +36,20 @@ class WorkoutRepository {
   }
 
   Future<void> persistDraft(List<ExerciseInSession> exercises) async {
+    final startTime = await loadDraftStartTime() ?? DateTime.now();
+    await persistDraftWithStartTime(exercises, startTime: startTime);
+  }
+
+  Future<void> persistDraftWithStartTime(
+    List<ExerciseInSession> exercises, {
+    required DateTime startTime,
+  }) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(
       draftKey,
       jsonEncode({
         'updatedAt': DateTime.now().toIso8601String(),
+        'sessionStart': startTime.toIso8601String(),
         'exercises': exercises.map((e) => e.toJson()).toList(),
       }),
     );
@@ -66,6 +87,27 @@ class WorkoutRepository {
     stored.insert(0, jsonEncode(session));
     await prefs.setStringList(sessionsKey, stored.take(100).toList());
     await clearDraft();
+  }
+
+
+  Future<List<ExerciseInSession>?> loadLatestCompletedSessionExercises() async {
+    final prefs = await SharedPreferences.getInstance();
+    final values = prefs.getStringList(sessionsKey) ?? [];
+    if (values.isEmpty) return null;
+
+    for (final raw in values) {
+      try {
+        final json = jsonDecode(raw) as Map<String, dynamic>;
+        final serialized = json['exercises'] as List<dynamic>? ?? [];
+        return serialized
+            .map((item) => ExerciseInSession.fromJson(Map<String, dynamic>.from(item as Map)))
+            .toList();
+      } catch (_) {
+        continue;
+      }
+    }
+
+    return null;
   }
 
   Future<List<WorkoutSession>> listSessions() async {
