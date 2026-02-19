@@ -7,6 +7,19 @@ import 'package:intl/intl.dart';
 import '../../domain/workout_live_metrics.dart';
 import 'radar_chart_painter.dart';
 
+String formatVolume(num value) {
+  if (value < 10000) {
+    return NumberFormat('#,###', 'en_US').format(value.round());
+  }
+  if (value < 100000) {
+    return '${(value / 1000).toStringAsFixed(1)}K';
+  }
+  if (value < 1000000) {
+    return '${(value / 1000).round()}K';
+  }
+  return '${(value / 1000000).toStringAsFixed(1)}M';
+}
+
 class WorkoutInProgressHeader extends StatefulWidget {
   const WorkoutInProgressHeader({
     super.key,
@@ -73,7 +86,7 @@ class _WorkoutInProgressHeaderState extends State<WorkoutInProgressHeader> {
     final theme = Theme.of(context);
     final accent = theme.colorScheme.primary;
     final progress = widget.totalSets == 0 ? 0.0 : (widget.completedSets / widget.totalSets).clamp(0.0, 1.0);
-    final formattedVolume = NumberFormat.decimalPattern(Localizations.localeOf(context).toLanguageTag()).format(widget.totalVolume.round());
+    final formattedVolume = formatVolume(widget.totalVolume);
     final currentValues = WorkoutLiveMetrics.radarMuscles
         .map((muscle) => (widget.currentDistribution[muscle] ?? 0).clamp(0, 1).toDouble())
         .toList();
@@ -133,7 +146,6 @@ class _WorkoutInProgressHeaderState extends State<WorkoutInProgressHeader> {
                 child: Row(
                   children: [
                     Expanded(
-                      flex: 5,
                       child: ValueListenableBuilder<Duration>(
                         valueListenable: _elapsedNotifier,
                         builder: (context, elapsed, _) {
@@ -153,7 +165,6 @@ class _WorkoutInProgressHeaderState extends State<WorkoutInProgressHeader> {
                     ),
                     const SizedBox(width: 8),
                     Expanded(
-                      flex: 4,
                       child: _MetricColumn(
                         label: 'Volumen',
                         labelColor: theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
@@ -165,7 +176,7 @@ class _WorkoutInProgressHeaderState extends State<WorkoutInProgressHeader> {
                             '$formattedVolume kg',
                             key: ValueKey(formattedVolume),
                             maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                            softWrap: false,
                             style: theme.textTheme.headlineSmall?.copyWith(
                               fontWeight: FontWeight.w700,
                               fontSize: lerpDouble(28, 18, collapse),
@@ -174,16 +185,17 @@ class _WorkoutInProgressHeaderState extends State<WorkoutInProgressHeader> {
                         ),
                       ),
                     ),
-                    AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 250),
-                      switchInCurve: Curves.easeOut,
-                      switchOutCurve: Curves.easeOut,
-                      child: collapse > 0.55
-                          ? const SizedBox.shrink()
-                          : SizedBox(
-                              key: const ValueKey('radar'),
-                              width: 130,
-                              child: Column(
+                    const SizedBox(width: 12),
+                    SizedBox(
+                      width: 130,
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 250),
+                        switchInCurve: Curves.easeOut,
+                        switchOutCurve: Curves.easeOut,
+                        child: collapse > 0.55
+                            ? const SizedBox.shrink()
+                            : Column(
+                                key: const ValueKey('radar'),
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
                                   Expanded(
@@ -214,7 +226,7 @@ class _WorkoutInProgressHeaderState extends State<WorkoutInProgressHeader> {
                                   ),
                                 ],
                               ),
-                            ),
+                      ),
                     ),
                   ],
                 ),
