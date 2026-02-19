@@ -72,10 +72,19 @@ class TrainingHomeController extends ChangeNotifier {
 
   bool get initialized => _initialized;
   List<WorkoutTemplate> get routines => _sortedRoutines();
+  List<RoutineFolder> get sortedFolders {
+    final items = [..._folders];
+    items.sort((a, b) {
+      final byOrder = a.sortOrder.compareTo(b.sortOrder);
+      if (byOrder != 0) return byOrder;
+      return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+    });
+    return List.unmodifiable(items);
+  }
   bool get hasRoutines => _routines.isNotEmpty;
   bool get hasDraft => _draftRaw != null;
   RoutineSortOption get sortOption => _sortOption;
-  List<RoutineFolder> get folders => List.unmodifiable(_folders);
+  List<RoutineFolder> get folders => sortedFolders;
   List<WorkoutSession> get sessions => List.unmodifiable(_sessions);
 
   DateTime? get draftStart {
@@ -205,13 +214,27 @@ class TrainingHomeController extends ChangeNotifier {
 
 
   Future<void> createFolder(String name) async {
-    _folders = [..._folders, RoutineFolder(id: _uuid.v4(), name: name)];
+    final nextSortOrder = _folders.isEmpty
+        ? 0
+        : _folders.map((folder) => folder.sortOrder).reduce((a, b) => a > b ? a : b) + 1;
+    _folders = [..._folders, RoutineFolder(id: _uuid.v4(), name: name, sortOrder: nextSortOrder)];
     await _persistFolders();
     notifyListeners();
   }
 
   Future<void> renameFolder(String folderId, String name) async {
-    _folders = _folders.map((f) => f.id == folderId ? RoutineFolder(id: f.id, name: name) : f).toList();
+    _folders = _folders
+        .map((f) =>
+            f.id == folderId
+                ? RoutineFolder(
+                    id: f.id,
+                    name: name,
+                    sortOrder: f.sortOrder,
+                    color: f.color,
+                    icon: f.icon,
+                  )
+                : f)
+        .toList();
     await _persistFolders();
     notifyListeners();
   }

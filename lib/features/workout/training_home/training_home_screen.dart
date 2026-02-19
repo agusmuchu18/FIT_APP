@@ -3,7 +3,9 @@ import 'package:provider/provider.dart';
 
 import '../../common/theme/app_colors.dart';
 import '../pro/models/workout_models.dart';
+import 'folder_routines_screen.dart';
 import 'routine_preview_screen.dart';
+import 'start_routine_flow.dart';
 import 'training_home_controller.dart';
 import 'training_home_widgets.dart';
 
@@ -27,7 +29,7 @@ class _TrainingHomeView extends StatefulWidget {
 }
 
 class _TrainingHomeViewState extends State<_TrainingHomeView> {
-  final Set<String?> _expandedFolders = <String?>{null};
+  int _routinesViewIndex = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -97,26 +99,28 @@ class _TrainingHomeViewState extends State<_TrainingHomeView> {
                 children: [
                   Text('Mis rutinas', style: Theme.of(context).textTheme.titleMedium),
                   const Spacer(),
+                  IconButton(
+                    onPressed: () => _showCreateFolderSheet(context, controller),
+                    icon: const Icon(Icons.create_new_folder_outlined),
+                    tooltip: 'Crear carpeta',
+                  ),
                   TextButton.icon(onPressed: () => _showSortSheet(context, controller), icon: const Icon(Icons.sort), label: const Text('Ordenar')),
                 ],
               ),
-              const SizedBox(height: 4),
-              if (controller.folders.isNotEmpty)
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton.icon(
-                    onPressed: () => _manageFolders(context, controller),
-                    icon: const Icon(Icons.folder_open),
-                    label: const Text('Administrar carpetas'),
-                  ),
-                ),
-              if (controller.folders.isEmpty)
+              const SizedBox(height: 8),
+              SegmentedButton<int>(
+                segments: const [
+                  ButtonSegment(value: 0, label: Text('Todas')),
+                  ButtonSegment(value: 1, label: Text('Carpetas')),
+                ],
+                selected: {_routinesViewIndex},
+                onSelectionChanged: (value) => setState(() => _routinesViewIndex = value.first),
+              ),
+              const SizedBox(height: 10),
+              if (_routinesViewIndex == 0)
                 _routinesGrid(controller.routines, controller)
               else
-                ...[
-                  _folderSection(controller, null, 'Sin carpeta'),
-                  for (final folder in controller.folders) _folderSection(controller, folder.id, folder.name),
-                ],
+                _foldersGrid(context, controller),
             ],
           ],
         ),
@@ -124,30 +128,36 @@ class _TrainingHomeViewState extends State<_TrainingHomeView> {
     );
   }
 
-  Widget _folderSection(TrainingHomeController controller, String? folderId, String title) {
-    final routines = controller.routinesForFolder(folderId);
-    final expanded = _expandedFolders.contains(folderId);
-    return Card(
-      margin: const EdgeInsets.only(top: 8),
-      child: ExpansionTile(
-        initiallyExpanded: expanded,
-        onExpansionChanged: (v) {
-          setState(() {
-            if (v) {
-              _expandedFolders.add(folderId);
-            } else {
-              _expandedFolders.remove(folderId);
-            }
-          });
-        },
-        title: Text('$title (${routines.length})'),
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(8),
-            child: _routinesGrid(routines, controller),
-          ),
-        ],
+  Widget _foldersGrid(BuildContext context, TrainingHomeController controller) {
+    final totalWithoutFolder = controller.routinesForFolder(null).length;
+    final sortedFolders = controller.sortedFolders;
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: sortedFolders.length + 1,
+      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 320,
+        mainAxisExtent: 125,
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 12,
       ),
+      itemBuilder: (context, index) {
+        if (index == 0) {
+          return RoutineFolderCard(
+            name: 'Sin carpeta',
+            count: totalWithoutFolder,
+            isVirtual: true,
+            onTap: () => _openFolderRoutines(context, null, 'Sin carpeta'),
+          );
+        }
+        final folder = sortedFolders[index - 1];
+        return RoutineFolderCard(
+          name: folder.name,
+          count: controller.routinesForFolder(folder.id).length,
+          onTap: () => _openFolderRoutines(context, folder.id, folder.name),
+          onMenuSelected: (value) => _handleFolderMenuAction(context, controller, folder, value),
+        );
+      },
     );
   }
 
@@ -158,7 +168,7 @@ class _TrainingHomeViewState extends State<_TrainingHomeView> {
       itemCount: routines.length,
       gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
         maxCrossAxisExtent: 420,
-        mainAxisExtent: 185,
+        mainAxisExtent: 220,
         mainAxisSpacing: 12,
         crossAxisSpacing: 12,
       ),
@@ -177,62 +187,116 @@ class _TrainingHomeViewState extends State<_TrainingHomeView> {
           lastUsed: 'Última vez: ${_daysAgoLabel(metadata.lastUsedAt)}',
           isPinned: metadata.pinned,
           onTap: () => _openRoutinePreview(context, controller, routine),
+          onStartTap: () => startRoutineFlow(context, controller, routine),
           onMenuSelected: (value) => _handleMenuAction(context, controller, routine, value),
         );
       },
     );
   }
 
-  Future<void> _manageFolders(BuildContext context, TrainingHomeController controller) async {
+  Future<void> _showCreateFolderSheet(BuildContext context, TrainingHomeController controller) async {
+    final nameController = TextEditingController();
     await showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
-      builder: (ctx) => StatefulBuilder(builder: (ctx, setModalState) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text('Carpetas', style: Theme.of(context).textTheme.titleMedium),
-                    const Spacer(),
-                    FilledButton.tonal(onPressed: () async {
-                      final c = TextEditingController();
-                      final name = await showDialog<String>(
-                        context: context,
-                        builder: (_) => AlertDialog(title: const Text('Nueva carpeta'), content: TextField(controller: c), actions: [TextButton(onPressed: ()=>Navigator.pop(context), child: const Text('Cancelar')), FilledButton(onPressed: ()=>Navigator.pop(context, c.text.trim()), child: const Text('Crear'))]),
-                      );
-                      if (name != null && name.isNotEmpty) {
-                        await controller.createFolder(name);
-                        setModalState(() {});
-                      }
-                    }, child: const Text('Crear')),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                ...controller.folders.map((folder) => ListTile(
-                      title: Text(folder.name),
-                      trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-                        IconButton(icon: const Icon(Icons.edit_outlined), onPressed: () async {
-                          final c = TextEditingController(text: folder.name);
-                          final name = await showDialog<String>(context: context, builder: (_) => AlertDialog(title: const Text('Renombrar'), content: TextField(controller: c), actions: [TextButton(onPressed: ()=>Navigator.pop(context), child: const Text('Cancelar')), FilledButton(onPressed: ()=>Navigator.pop(context, c.text.trim()), child: const Text('Guardar'))]));
-                          if (name != null && name.isNotEmpty) {
-                            await controller.renameFolder(folder.id, name);
-                            setModalState(() {});
-                          }
-                        }),
-                        IconButton(icon: const Icon(Icons.delete_outline), onPressed: () async { await controller.deleteFolder(folder.id); setModalState(() {}); }),
-                      ]),
-                    )),
-              ],
+      isScrollControlled: true,
+      builder: (_) => Padding(
+        padding: EdgeInsets.only(
+          left: 16,
+          right: 16,
+          top: 12,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Crear carpeta'),
+            const SizedBox(height: 10),
+            TextField(controller: nameController, autofocus: true, decoration: const InputDecoration(hintText: 'Nombre de carpeta')),
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerRight,
+              child: FilledButton(
+                onPressed: () async {
+                  final name = nameController.text.trim();
+                  if (name.isEmpty) return;
+                  await controller.createFolder(name);
+                  if (mounted) Navigator.of(context).pop();
+                },
+                child: const Text('Guardar'),
+              ),
             ),
-          ),
-        );
-      }),
+          ],
+        ),
+      ),
     );
+  }
+
+  Future<void> _openMoveToFolderSheet(BuildContext context, TrainingHomeController controller, WorkoutTemplate routine) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(title: const Text('Mover a carpeta'), subtitle: Text(routine.name)),
+            ListTile(
+              title: const Text('Sin carpeta'),
+              onTap: () async {
+                await controller.moveRoutineToFolder(routine, null);
+                if (mounted) Navigator.pop(context);
+              },
+            ),
+            ...controller.sortedFolders.map(
+              (folder) => ListTile(
+                title: Text(folder.name),
+                onTap: () async {
+                  await controller.moveRoutineToFolder(routine, folder.id);
+                  if (mounted) Navigator.pop(context);
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _openFolderRoutines(BuildContext context, String? folderId, String folderName) {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => FolderRoutinesScreen(folderId: folderId, folderName: folderName)),
+    );
+  }
+
+  Future<void> _handleFolderMenuAction(
+    BuildContext context,
+    TrainingHomeController controller,
+    RoutineFolder folder,
+    String action,
+  ) async {
+    if (action == 'rename') {
+      final c = TextEditingController(text: folder.name);
+      final updated = await showDialog<String>(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Renombrar carpeta'),
+          content: TextField(controller: c, autofocus: true),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancelar')),
+            FilledButton(onPressed: () => Navigator.of(context).pop(c.text.trim()), child: const Text('Guardar')),
+          ],
+        ),
+      );
+      if (updated != null && updated.isNotEmpty) {
+        await controller.renameFolder(folder.id, updated);
+      }
+      return;
+    }
+    if (action == 'delete') {
+      await controller.deleteFolder(folder.id);
+    }
   }
 
   Future<void> _showSortSheet(BuildContext context, TrainingHomeController controller) async {
@@ -281,23 +345,11 @@ class _TrainingHomeViewState extends State<_TrainingHomeView> {
         await controller.togglePinned(routine);
         break;
       case 'move':
+        await _openMoveToFolderSheet(context, controller, routine);
         break;
       case 'delete':
         await controller.deleteRoutine(routine);
         break;
-    }
-    if (action == 'move' && mounted && controller.folders.isNotEmpty) {
-      await showModalBottomSheet<void>(
-        context: context,
-        showDragHandle: true,
-        builder: (_) => SafeArea(
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            ListTile(title: const Text('Mover a carpeta'), subtitle: Text(routine.name)),
-            ListTile(title: const Text('Sin carpeta'), onTap: () async { await controller.moveRoutineToFolder(routine, null); if (mounted) Navigator.pop(context); }),
-            ...controller.folders.map((folder) => ListTile(title: Text(folder.name), onTap: () async { await controller.moveRoutineToFolder(routine, folder.id); if (mounted) Navigator.pop(context); })),
-          ]),
-        ),
-      );
     }
   }
 

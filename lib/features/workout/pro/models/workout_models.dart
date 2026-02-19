@@ -267,17 +267,35 @@ class WorkoutTemplate {
 }
 
 class RoutineFolder {
-  const RoutineFolder({required this.id, required this.name});
+  const RoutineFolder({
+    required this.id,
+    required this.name,
+    required this.sortOrder,
+    this.color,
+    this.icon,
+  });
 
   final String id;
   final String name;
+  final int sortOrder;
+  final int? color;
+  final String? icon;
 
-  Map<String, dynamic> toJson() => {'id': id, 'name': name};
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'name': name,
+        'sortOrder': sortOrder,
+        'color': color,
+        'icon': icon,
+      };
 
   factory RoutineFolder.fromJson(Map<String, dynamic> json) {
     return RoutineFolder(
       id: json['id'] as String,
       name: json['name'] as String,
+      sortOrder: json['sortOrder'] as int? ?? 0,
+      color: json['color'] as int?,
+      icon: json['icon'] as String?,
     );
   }
 }
