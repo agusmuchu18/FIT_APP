@@ -43,6 +43,8 @@ class WorkoutRepository {
   Future<void> persistDraftWithStartTime(
     List<ExerciseInSession> exercises, {
     required DateTime startTime,
+    String? workoutId,
+    String? routineName,
   }) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(
@@ -50,6 +52,8 @@ class WorkoutRepository {
       jsonEncode({
         'updatedAt': DateTime.now().toIso8601String(),
         'sessionStart': startTime.toIso8601String(),
+        'workoutId': workoutId,
+        'routineName': routineName,
         'exercises': exercises.map((e) => e.toJson()).toList(),
       }),
     );

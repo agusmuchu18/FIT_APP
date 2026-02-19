@@ -15,6 +15,7 @@ class WorkoutSessionController extends ChangeNotifier {
 
   final WorkoutRepository _repository;
   final Uuid _uuid = const Uuid();
+  final String _sessionId = const Uuid().v4();
 
   List<ExerciseInSession> _exercises = [];
   String? _expandedExerciseId;
@@ -78,7 +79,12 @@ class WorkoutSessionController extends ChangeNotifier {
             .toList();
       }
     }
-    await _repository.persistDraftWithStartTime(_exercises, startTime: _sessionStart);
+    await _repository.persistDraftWithStartTime(
+      _exercises,
+      startTime: _sessionStart,
+      workoutId: _sessionId,
+      routineName: _routineName,
+    );
     notifyListeners();
   }
 
@@ -252,7 +258,12 @@ class WorkoutSessionController extends ChangeNotifier {
   void _scheduleAutosave() {
     _autosaveTimer?.cancel();
     _autosaveTimer = Timer(const Duration(milliseconds: 300), () {
-      _repository.persistDraftWithStartTime(_exercises, startTime: _sessionStart);
+      _repository.persistDraftWithStartTime(
+        _exercises,
+        startTime: _sessionStart,
+        workoutId: _sessionId,
+        routineName: _routineName,
+      );
     });
   }
 

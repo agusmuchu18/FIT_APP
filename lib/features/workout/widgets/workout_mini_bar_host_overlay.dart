@@ -106,7 +106,7 @@ class WorkoutMiniBarHostOverlay extends StatelessWidget {
                                       draft: draft,
                                       onContinue: () => appNavigatorKey.currentState?.pushNamed('/workout/session'),
                                       onPauseResume: () => draft.isPaused
-                                          ? WorkoutInProgressController.instance.resume()
+                                          ? WorkoutInProgressController.instance.resumePausedWorkout()
                                           : WorkoutInProgressController.instance.pause(),
                                       onDiscard: _confirmDiscardDraft,
                                     ),
