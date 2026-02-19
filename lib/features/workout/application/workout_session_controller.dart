@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 
 import '../data/workout_repository.dart';
 import '../domain/session_models.dart';
+import '../domain/workout_live_metrics.dart';
 import '../pro/models/workout_models.dart';
 import '../training_home/routines_repository.dart';
 
@@ -21,9 +22,14 @@ class WorkoutSessionController extends ChangeNotifier {
   String? _routineId;
   String? _routineName;
   DateTime _sessionStart = DateTime.now();
+  Map<String, double>? _previousMuscleDistribution;
 
   List<ExerciseInSession> get exercises => _exercises;
   String? get expandedExerciseId => _expandedExerciseId;
+  DateTime get sessionStart => _sessionStart;
+  double get totalVolume => WorkoutLiveMetrics.computeTotalVolume(_exercises);
+  Map<String, double> get currentMuscleDistribution => WorkoutLiveMetrics.computeCurrentMuscleDistribution(_exercises);
+  Map<String, double>? get previousMuscleDistribution => _previousMuscleDistribution;
 
   Future<void> initialize({List<ExerciseInSession>? initialExercises, String? templateId}) async {
     _routineId = templateId;
@@ -38,6 +44,8 @@ class WorkoutSessionController extends ChangeNotifier {
       }
       if (routine != null) _routineName = routine.name;
     }
+    _sessionStart = await _repository.loadDraftStartTime() ?? DateTime.now();
+
     final draft = await _repository.loadDraftExercises();
     if (draft != null && draft.isNotEmpty) {
       _exercises = draft;
@@ -46,6 +54,11 @@ class WorkoutSessionController extends ChangeNotifier {
       _expandedExerciseId = initialExercises.first.id;
       _scheduleAutosave();
     }
+    final previousExercises = await _repository.loadLatestCompletedSessionExercises();
+    if (previousExercises != null && previousExercises.isNotEmpty) {
+      _previousMuscleDistribution = WorkoutLiveMetrics.computeCurrentMuscleDistribution(previousExercises);
+    }
+
     if (_exercises.isEmpty && templateId != null) {
       final routines = await RoutinesRepository().getAllRoutines();
       WorkoutTemplate? routine;
@@ -65,6 +78,7 @@ class WorkoutSessionController extends ChangeNotifier {
             .toList();
       }
     }
+    await _repository.persistDraftWithStartTime(_exercises, startTime: _sessionStart);
     notifyListeners();
   }
 
@@ -238,7 +252,7 @@ class WorkoutSessionController extends ChangeNotifier {
   void _scheduleAutosave() {
     _autosaveTimer?.cancel();
     _autosaveTimer = Timer(const Duration(milliseconds: 300), () {
-      _repository.persistDraft(_exercises);
+      _repository.persistDraftWithStartTime(_exercises, startTime: _sessionStart);
     });
   }
 

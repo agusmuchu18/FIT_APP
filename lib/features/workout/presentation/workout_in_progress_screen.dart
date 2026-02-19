@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../application/workout_session_controller.dart';
 import '../pro/data/exercise_library.dart';
 import 'widgets/exercise_card.dart';
+import 'widgets/workout_in_progress_header.dart';
 
 class WorkoutInProgressScreen extends StatefulWidget {
   const WorkoutInProgressScreen({super.key});
@@ -67,45 +68,50 @@ class _WorkoutInProgressView extends StatelessWidget {
         ],
       ),
       body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 180),
-                itemCount: controller.exercises.length,
-                itemBuilder: (context, index) {
-                  final exercise = controller.exercises[index];
-                  return ExerciseCard(
-                    exercise: exercise,
-                    isExpanded: controller.expandedExerciseId == exercise.id,
-                    onTap: () => controller.toggleExerciseExpansion(exercise.id),
-                    onNotesChanged: (value) => controller.updateExerciseNotes(exercise.id, value),
-                    onRestToggle: (value) => controller.updateExerciseRest(
-                      exercise.id,
-                      enabled: value,
-                      seconds: exercise.restSeconds ?? 90,
-                    ),
-                    onRestSecondsChanged: (seconds) => controller.updateExerciseRest(
-                      exercise.id,
-                      enabled: exercise.restEnabled,
-                      seconds: seconds,
-                    ),
-                    onSetChanged: (setId, {kg, reps, done}) => controller.updateSet(
-                      exercise.id,
-                      setId,
-                      kg: kg,
-                      reps: reps,
-                      done: done,
-                    ),
-                    onAddSet: () => controller.addSet(exercise.id),
-                    onDelete: () => controller.removeExercise(exercise.id),
-                    onMoveUp: () => controller.moveExerciseUp(exercise.id),
-                    onMoveDown: () => controller.moveExerciseDown(exercise.id),
-                  );
-                },
+        child: ListView.builder(
+          padding: const EdgeInsets.fromLTRB(0, 0, 0, 180),
+          itemCount: controller.exercises.length + 1,
+          itemBuilder: (context, index) {
+            if (index == 0) {
+              return WorkoutInProgressHeader(
+                startTime: controller.sessionStart,
+                totalVolume: controller.totalVolume,
+                currentDistribution: controller.currentMuscleDistribution,
+                previousDistribution: controller.previousMuscleDistribution,
+              );
+            }
+            final exercise = controller.exercises[index - 1];
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: ExerciseCard(
+                exercise: exercise,
+                isExpanded: controller.expandedExerciseId == exercise.id,
+                onTap: () => controller.toggleExerciseExpansion(exercise.id),
+                onNotesChanged: (value) => controller.updateExerciseNotes(exercise.id, value),
+                onRestToggle: (value) => controller.updateExerciseRest(
+                  exercise.id,
+                  enabled: value,
+                  seconds: exercise.restSeconds ?? 90,
+                ),
+                onRestSecondsChanged: (seconds) => controller.updateExerciseRest(
+                  exercise.id,
+                  enabled: exercise.restEnabled,
+                  seconds: seconds,
+                ),
+                onSetChanged: (setId, {kg, reps, done}) => controller.updateSet(
+                  exercise.id,
+                  setId,
+                  kg: kg,
+                  reps: reps,
+                  done: done,
+                ),
+                onAddSet: () => controller.addSet(exercise.id),
+                onDelete: () => controller.removeExercise(exercise.id),
+                onMoveUp: () => controller.moveExerciseUp(exercise.id),
+                onMoveDown: () => controller.moveExerciseDown(exercise.id),
               ),
-            ),
-          ],
+            );
+          },
         ),
       ),
       bottomSheet: Container(
