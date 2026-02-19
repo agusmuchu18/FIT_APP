@@ -11,6 +11,8 @@ void main() {
     Duration accumulatedPaused = Duration.zero,
   }) {
     return WorkoutInProgressDraft(
+      workoutId: 'test-id',
+      routineName: 'Rutina test',
       startTime: startTime,
       isPaused: isPaused,
       pausedAt: pausedAt,

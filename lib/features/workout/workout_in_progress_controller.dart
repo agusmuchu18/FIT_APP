@@ -5,6 +5,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class WorkoutInProgressDraft {
   const WorkoutInProgressDraft({
+    required this.workoutId,
+    required this.routineName,
     required this.startTime,
     required this.isPaused,
     required this.pausedAt,
@@ -12,6 +14,8 @@ class WorkoutInProgressDraft {
     required this.lastUpdated,
   });
 
+  final String workoutId;
+  final String routineName;
   final DateTime startTime;
   final bool isPaused;
   final DateTime? pausedAt;
@@ -19,6 +23,8 @@ class WorkoutInProgressDraft {
   final DateTime lastUpdated;
 
   WorkoutInProgressDraft copyWith({
+    String? workoutId,
+    String? routineName,
     DateTime? startTime,
     bool? isPaused,
     DateTime? pausedAt,
@@ -27,6 +33,8 @@ class WorkoutInProgressDraft {
     DateTime? lastUpdated,
   }) {
     return WorkoutInProgressDraft(
+      workoutId: workoutId ?? this.workoutId,
+      routineName: routineName ?? this.routineName,
       startTime: startTime ?? this.startTime,
       isPaused: isPaused ?? this.isPaused,
       pausedAt: clearPausedAt ? null : (pausedAt ?? this.pausedAt),
@@ -40,7 +48,11 @@ class WorkoutInProgressDraft {
     if (startTime == null) {
       throw const FormatException('Draft missing sessionStart');
     }
+    final routineName = (json['routineName'] as String?)?.trim();
+    final workoutId = (json['workoutId'] as String?)?.trim();
     return WorkoutInProgressDraft(
+      workoutId: (workoutId == null || workoutId.isEmpty) ? 'active-workout' : workoutId,
+      routineName: (routineName == null || routineName.isEmpty) ? 'Entrenamiento activo' : routineName,
       startTime: startTime,
       isPaused: json['isPaused'] as bool? ?? false,
       pausedAt: DateTime.tryParse(json['pausedAt'] as String? ?? ''),
@@ -54,13 +66,19 @@ class WorkoutInProgressController {
   WorkoutInProgressController._();
 
   static const String draftKey = 'pro_workout_draft';
+  static const String draftV2Key = 'workout_in_progress_v2_draft';
   static final WorkoutInProgressController instance = WorkoutInProgressController._();
 
   final ValueNotifier<WorkoutInProgressDraft?> _draftNotifier = ValueNotifier(null);
   SharedPreferences? _prefs;
+  VoidCallback? _resumeHandler;
 
   WorkoutInProgressDraft? get currentDraft => _draftNotifier.value;
   ValueListenable<WorkoutInProgressDraft?> watchDraft() => _draftNotifier;
+  bool get hasActiveWorkout => currentDraft != null;
+  DateTime? get startTime => currentDraft?.startTime;
+  String? get routineName => currentDraft?.routineName;
+  String? get workoutId => currentDraft?.workoutId;
 
   Future<void> initialize() async {
     _prefs ??= await SharedPreferences.getInstance();
@@ -69,7 +87,9 @@ class WorkoutInProgressController {
 
   Future<void> refresh() async {
     _prefs ??= await SharedPreferences.getInstance();
-    _setFromRaw(_prefs?.getString(draftKey));
+    _setFromRaw(
+      _prefs?.getString(draftV2Key) ?? _prefs?.getString(draftKey),
+    );
   }
 
   void syncFromRaw(String? rawDraft) {
@@ -89,7 +109,7 @@ class WorkoutInProgressController {
     _setFromRaw(encoded);
   }
 
-  Future<void> resume() async {
+  Future<void> resumePausedWorkout() async {
     final raw = _prefs?.getString(draftKey);
     if (raw == null) return;
     final json = jsonDecode(raw) as Map<String, dynamic>;
@@ -108,7 +128,16 @@ class WorkoutInProgressController {
 
   Future<void> discard() async {
     await _prefs?.remove(draftKey);
+    await _prefs?.remove(draftV2Key);
     _draftNotifier.value = null;
+  }
+
+  void registerResumeHandler(VoidCallback handler) {
+    _resumeHandler = handler;
+  }
+
+  void resume() {
+    _resumeHandler?.call();
   }
 
   void _setFromRaw(String? rawDraft) {

@@ -29,7 +29,6 @@ import 'features/workout/presentation/workout_in_progress_screen.dart';
 import 'features/workout/training_home/template_exercise_picker_screen.dart';
 import 'features/workout/training_home/training_home_screen.dart';
 import 'features/workout/workout_in_progress_controller.dart';
-import 'features/workout/widgets/workout_mini_bar_host_overlay.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -108,7 +107,6 @@ class FitApp extends StatelessWidget {
   });
 
   final FitnessRepository repository;
-  static final WorkoutMiniBarRouteObserver _miniBarRouteObserver = WorkoutMiniBarRouteObserver();
 
   @override
   Widget build(BuildContext context) {
@@ -118,17 +116,6 @@ class FitApp extends StatelessWidget {
         title: 'FIT App',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.dark,
-        navigatorKey: appNavigatorKey,
-        navigatorObservers: [_miniBarRouteObserver],
-        builder: (context, child) {
-          final app = child ?? const SizedBox.shrink();
-          return Overlay(
-            initialEntries: [
-              OverlayEntry(builder: (_) => app),
-              OverlayEntry(builder: (_) => const WorkoutMiniBarHostOverlay()),
-            ],
-          );
-        },
         routes: {
           '/': (_) => const LoginScreen(),
           '/home': (_) => const MainShell(),
