@@ -9,9 +9,9 @@ import '../../../core/domain/entities.dart';
 import '../data/habit_template_popularity_store.dart';
 import '../domain/habit_gallery_engine.dart';
 
-import '../../../ui/motion/widgets/habit_check_overlay.dart';
 import '../../common/theme/app_colors.dart';
 import '../domain/habit_models.dart';
+import '../domain/habit_progress_models.dart';
 import 'habit_create_screen.dart';
 import 'habit_gallery_sheet.dart';
 
@@ -29,8 +29,11 @@ class HabitsTrackerScreen extends StatefulWidget {
 class _HabitsTrackerScreenState extends State<HabitsTrackerScreen> {
   static const String _habitsBoxName = 'fit_habits';
 
-  final Map<String, bool> _completionState = {};
   late final Future<Box<String>> _habitsBoxFuture;
+  late final Future<Box<String>> _progressBoxFuture;
+
+  final Map<String, HabitDailyLog> _dailyLogs = {};
+  final Map<String, HabitStreak> _habitStreaks = {};
 
   late DateTime _today;
   late DateTime _selectedDay;
@@ -45,6 +48,8 @@ class _HabitsTrackerScreenState extends State<HabitsTrackerScreen> {
     _today = normalizeDay(DateTime.now());
     _selectedDay = _today;
     _habitsBoxFuture = Hive.openBox<String>(_habitsBoxName);
+    _progressBoxFuture = Hive.openBox<String>('fit_habit_progress');
+    _hydrateProgressState();
     _scheduleTimerUntilNextMidnight();
   }
 
@@ -99,6 +104,100 @@ class _HabitsTrackerScreenState extends State<HabitsTrackerScreen> {
   }
 
 
+
+  Future<void> _hydrateProgressState() async {
+    final box = await _progressBoxFuture;
+    final nextLogs = <String, HabitDailyLog>{};
+    final nextStreaks = <String, HabitStreak>{};
+    for (final key in box.keys.cast<String>()) {
+      final raw = box.get(key);
+      if (raw == null) continue;
+      try {
+        final map = (jsonDecode(raw) as Map).cast<String, Object?>();
+        if (key.startsWith('log|')) {
+          final log = HabitDailyLog.tryDecode(map);
+          if (log != null) {
+            nextLogs[key] = log;
+          }
+        } else if (key.startsWith('streak|')) {
+          final streak = HabitStreak.tryDecode(map);
+          if (streak != null) {
+            nextStreaks[streak.habitId] = streak;
+          }
+        }
+      } catch (_) {}
+    }
+    if (!mounted) return;
+    setState(() {
+      _dailyLogs
+        ..clear()
+        ..addAll(nextLogs);
+      _habitStreaks
+        ..clear()
+        ..addAll(nextStreaks);
+    });
+  }
+
+  String _dateKey(DateTime day) {
+    final normalized = normalizeDay(day);
+    final month = normalized.month.toString().padLeft(2, '0');
+    final date = normalized.day.toString().padLeft(2, '0');
+    return '${normalized.year}-$month-$date';
+  }
+
+  String _logStorageKey(String habitId, String dateKey) => 'log|$habitId|$dateKey';
+
+  HabitDailyLog _logForDay({required String habitId, required DateTime day}) {
+    final key = _logStorageKey(habitId, _dateKey(day));
+    return _dailyLogs[key] ?? HabitDailyLog(habitId: habitId, dateKey: _dateKey(day), count: 0, isCompleted: false);
+  }
+
+  Future<void> _trackHabitTap({required Box<String> progressBox, required _HabitEntry habit}) async {
+    if (!_isSameDay(_selectedDay, _today)) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Solo podés marcar hábitos del día de hoy.')));
+      return;
+    }
+    final now = DateTime.now();
+    final todayKey = _dateKey(now);
+    final yesterdayKey = _dateKey(normalizeDay(now.subtract(const Duration(days: 1))));
+    final storageKey = _logStorageKey(habit.id, todayKey);
+    final previousLog = _dailyLogs[storageKey] ?? HabitDailyLog(habitId: habit.id, dateKey: todayKey, count: 0, isCompleted: false);
+
+    HabitDailyLog nextLog = previousLog;
+    HabitStreak? nextStreak;
+
+    if (habit.isCountable) {
+      final target = (habit.targetCount ?? 1).clamp(1, 9999);
+      final nextCount = (previousLog.count + 1).clamp(0, target);
+      final isNewCompletion = !previousLog.isCompleted && nextCount >= target;
+      nextLog = previousLog.copyWith(
+        count: nextCount,
+        isCompleted: previousLog.isCompleted || isNewCompletion,
+        completedAt: isNewCompletion ? now : previousLog.completedAt,
+      );
+      if (isNewCompletion) {
+        final oldStreak = _habitStreaks[habit.id] ?? HabitStreak.empty(habit.id);
+        final streakValue = oldStreak.lastCompletedDateKey == yesterdayKey ? oldStreak.currentStreak + 1 : 1;
+        nextStreak = HabitStreak(habitId: habit.id, currentStreak: streakValue, lastCompletedDateKey: todayKey);
+      }
+    } else {
+      if (previousLog.isCompleted) return;
+      nextLog = previousLog.copyWith(count: 1, isCompleted: true, completedAt: now);
+      final oldStreak = _habitStreaks[habit.id] ?? HabitStreak.empty(habit.id);
+      final streakValue = oldStreak.lastCompletedDateKey == yesterdayKey ? oldStreak.currentStreak + 1 : 1;
+      nextStreak = HabitStreak(habitId: habit.id, currentStreak: streakValue, lastCompletedDateKey: todayKey);
+    }
+
+    setState(() {
+      _dailyLogs[storageKey] = nextLog;
+      if (nextStreak != null) _habitStreaks[habit.id] = nextStreak!;
+    });
+
+    await progressBox.put(storageKey, jsonEncode(nextLog.toJson()));
+    if (nextStreak != null) {
+      await progressBox.put('streak|${habit.id}', jsonEncode(nextStreak.toJson()));
+    }
+  }
   Future<Map<String, int>> _loadPopularityScores() async {
     final store = await HabitTemplatePopularityStore.create();
     return store.loadScores();
@@ -181,7 +280,7 @@ class _HabitsTrackerScreenState extends State<HabitsTrackerScreen> {
     return ids;
   }
 
-  void _showHabitActions(Box<String> box, _HabitEntry habit) {
+  void _showHabitActions(Box<String> box, Box<String> progressBox, _HabitEntry habit) {
     HapticFeedback.selectionClick();
     showModalBottomSheet<void>(
       context: context,
@@ -201,7 +300,10 @@ class _HabitsTrackerScreenState extends State<HabitsTrackerScreen> {
                 label: 'Resetear',
                 onTap: () {
                   Navigator.pop(context);
-                  setState(() => _completionState[habit.id] = false);
+                  final todayKey = _dateKey(DateTime.now());
+                  final key = _logStorageKey(habit.id, todayKey);
+                  setState(() => _dailyLogs[key] = HabitDailyLog(habitId: habit.id, dateKey: todayKey, count: 0, isCompleted: false));
+                  unawaited(progressBox.put(key, jsonEncode(_dailyLogs[key]!.toJson())));
                 },
               ),
               _ActionSheetItem(
@@ -219,8 +321,16 @@ class _HabitsTrackerScreenState extends State<HabitsTrackerScreen> {
                 onTap: () async {
                   Navigator.pop(context);
                   await box.delete(habit.id);
+                  await progressBox.delete('streak|${habit.id}');
+                  final toDelete = _dailyLogs.keys.where((key) => key.contains('|${habit.id}|')).toList();
+                  if (toDelete.isNotEmpty) {
+                    await progressBox.deleteAll(toDelete);
+                  }
                   if (!mounted) return;
-                  setState(() => _completionState.remove(habit.id));
+                  setState(() {
+                    _habitStreaks.remove(habit.id);
+                    _dailyLogs.removeWhere((key, _) => key.contains('|${habit.id}|'));
+                  });
                 },
               ),
             ],
@@ -285,7 +395,12 @@ class _HabitsTrackerScreenState extends State<HabitsTrackerScreen> {
           builder: (context, snapshot) {
             if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
             final box = snapshot.data!;
-            return ValueListenableBuilder<Box<String>>(
+            return FutureBuilder<Box<String>>(
+              future: _progressBoxFuture,
+              builder: (context, progressSnapshot) {
+                if (!progressSnapshot.hasData) return const Center(child: CircularProgressIndicator());
+                final progressBox = progressSnapshot.data!;
+                return ValueListenableBuilder<Box<String>>(
               valueListenable: box.listenable(),
               builder: (context, _, __) {
                 final habits = _loadHabits(box)
@@ -359,16 +474,18 @@ class _HabitsTrackerScreenState extends State<HabitsTrackerScreen> {
                             separatorBuilder: (_, __) => Divider(height: 22, color: Colors.white.withOpacity(0.06)),
                             itemBuilder: (context, index) {
                               final habit = habits[index];
-                              final completed = _completionState[habit.id] ?? false;
+                              final dayLog = _logForDay(habitId: habit.id, day: _selectedDay);
+                              final isCompletedToday = _logForDay(habitId: habit.id, day: _today).isCompleted;
+                              final streak = _habitStreaks[habit.id] ?? HabitStreak.empty(habit.id);
                               return Dismissible(
                                 key: ValueKey(habit.id),
                                 direction: DismissDirection.horizontal,
                                 confirmDismiss: (direction) async {
                                   if (direction == DismissDirection.startToEnd) {
-                                    setState(() => _completionState[habit.id] = !completed);
+                                    await _trackHabitTap(progressBox: progressBox, habit: habit);
                                     HapticFeedback.lightImpact();
                                   } else {
-                                    _showHabitActions(box, habit);
+                                    _showHabitActions(box, progressBox, habit);
                                   }
                                   return false;
                                 },
@@ -390,9 +507,10 @@ class _HabitsTrackerScreenState extends State<HabitsTrackerScreen> {
                                     color: Colors.transparent,
                                     child: InkWell(
                                       borderRadius: BorderRadius.circular(kHabitTileRadius),
-                                      onTap: () => _showHabitEditor(box: box, habit: habit),
-                                      onLongPress: () => _showHabitActions(box, habit),
-                                      child: _HabitRow(habit: habit, completed: completed),
+                                      onLongPress: () => _showHabitActions(box, progressBox, habit),
+                                      // Tap directo para marcar progreso del día; long press abre acciones.
+                                      onTap: () => _trackHabitTap(progressBox: progressBox, habit: habit),
+                                      child: _HabitRow(habit: habit, dailyLog: dayLog, isCompletedToday: isCompletedToday, streak: streak),
                                     ),
                                   ),
                                 ),
@@ -404,6 +522,8 @@ class _HabitsTrackerScreenState extends State<HabitsTrackerScreen> {
                     ],
                   ),
                 );
+              },
+            );
               },
             );
           },
@@ -541,67 +661,114 @@ class _HeaderPillButton extends StatelessWidget {
   }
 }
 
-class _HabitRow extends StatefulWidget {
-  const _HabitRow({required this.habit, required this.completed});
+class _HabitRow extends StatelessWidget {
+  const _HabitRow({
+    required this.habit,
+    required this.dailyLog,
+    required this.isCompletedToday,
+    required this.streak,
+  });
 
   final _HabitEntry habit;
-  final bool completed;
-
-  @override
-  State<_HabitRow> createState() => _HabitRowState();
-}
-
-class _HabitRowState extends State<_HabitRow> {
-  final GlobalKey<HabitCheckOverlayState> _checkKey = GlobalKey<HabitCheckOverlayState>();
-  late bool _wasCompleted;
-
-  @override
-  void initState() {
-    super.initState();
-    _wasCompleted = widget.completed;
-  }
-
-  @override
-  void didUpdateWidget(covariant _HabitRow oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (!_wasCompleted && widget.completed) _checkKey.currentState?.play();
-    _wasCompleted = widget.completed;
-  }
+  final HabitDailyLog dailyLog;
+  final bool isCompletedToday;
+  final HabitStreak streak;
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    final countLabel = widget.habit.isCountable ? '0/${widget.habit.targetCount ?? 1} Contar' : null;
-    final frequencyLabel = widget.habit.frequency.label;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: AppColors.surface.withOpacity(0.54),
-        borderRadius: BorderRadius.circular(kHabitTileRadius),
-        border: Border.all(color: Colors.white.withOpacity(0.06)),
-      ),
+    final target = (habit.targetCount ?? 1).clamp(1, 9999);
+    final progressLabel = habit.isCountable
+        ? '${dailyLog.count}/$target Contar'
+        : (dailyLog.isCompleted ? 'Hecho hoy' : 'Toque para marcar');
+    final subtitle = habit.subtitle ?? '${habit.frequency.label} · ${habit.category}';
+
+    return Material(
+      color: AppColors.surface.withOpacity(0.54),
+      borderRadius: BorderRadius.circular(kHabitTileRadius),
+      clipBehavior: Clip.antiAlias,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        child: Stack(children: [
-          Row(children: [
+        child: Row(
+          children: [
             Container(
               width: 44,
               height: 44,
-              decoration: BoxDecoration(shape: BoxShape.circle, color: Color(widget.habit.colorArgb).withOpacity(0.2)),
-              child: Icon(iconForKey(widget.habit.iconKey), color: Color(widget.habit.colorArgb), size: 22),
+              decoration: BoxDecoration(shape: BoxShape.circle, color: Color(habit.colorArgb).withOpacity(0.2)),
+              child: Icon(iconForKey(habit.iconKey), color: Color(habit.colorArgb), size: 22),
             ),
-            const SizedBox(width: 14),
+            const SizedBox(width: 12),
             Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(widget.habit.name, style: textTheme.titleMedium?.copyWith(color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
-                const SizedBox(height: 4),
-                Text(widget.habit.subtitle ?? '$frequencyLabel · ${widget.habit.category}', style: textTheme.labelMedium?.copyWith(color: AppColors.textMuted)),
-                if (countLabel != null) Text(countLabel, style: textTheme.labelSmall?.copyWith(color: AppColors.textMuted)),
-              ]),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    habit.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: textTheme.titleMedium?.copyWith(color: AppColors.textPrimary, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: textTheme.labelMedium?.copyWith(color: AppColors.textMuted),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(progressLabel, style: textTheme.labelSmall?.copyWith(color: AppColors.textSecondary)),
+                  if (streak.currentStreak > 0)
+                    Text(
+                      'Racha: ${streak.currentStreak}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: textTheme.labelSmall?.copyWith(
+                        color: isCompletedToday ? AppColors.success : AppColors.textMuted,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                ],
+              ),
             ),
-            Text(widget.completed ? '1' : '0', style: textTheme.titleLarge?.copyWith(color: AppColors.textPrimary, fontWeight: FontWeight.w700)),
-          ]),
-          Positioned.fill(child: Align(alignment: Alignment.centerRight, child: Padding(padding: const EdgeInsets.only(right: 6), child: HabitCheckOverlay(key: _checkKey)))),
-        ]),
+            const SizedBox(width: 8),
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              switchInCurve: Curves.easeOutCubic,
+              switchOutCurve: Curves.easeInCubic,
+              transitionBuilder: (child, animation) {
+                return FadeTransition(
+                  opacity: animation,
+                  child: ScaleTransition(scale: Tween<double>(begin: 0.92, end: 1).animate(animation), child: child),
+                );
+              },
+              child: dailyLog.isCompleted
+                  ? Container(
+                      key: const ValueKey('done'),
+                      width: 34,
+                      height: 34,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: AppColors.success.withOpacity(0.22),
+                        border: Border.all(color: AppColors.success.withOpacity(0.45)),
+                      ),
+                      child: const Icon(Icons.check_rounded, color: AppColors.success, size: 20),
+                    )
+                  : Container(
+                      key: const ValueKey('pending'),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(14),
+                        color: Colors.white.withOpacity(0.04),
+                        border: Border.all(color: Colors.white.withOpacity(0.08)),
+                      ),
+                      child: Text(
+                        habit.isCountable ? '${dailyLog.count}/$target' : 'Marcar',
+                        style: textTheme.labelMedium?.copyWith(color: AppColors.textSecondary, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }
