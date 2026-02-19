@@ -45,12 +45,48 @@ class _WorkoutInProgressScreenState extends State<WorkoutInProgressScreen> {
   }
 }
 
-class _WorkoutInProgressView extends StatelessWidget {
+class _WorkoutInProgressView extends StatefulWidget {
   const _WorkoutInProgressView();
+
+  @override
+  State<_WorkoutInProgressView> createState() => _WorkoutInProgressViewState();
+}
+
+class _WorkoutInProgressViewState extends State<_WorkoutInProgressView> {
+  late final ScrollController _scrollController;
+  final ValueNotifier<double> _collapseProgress = ValueNotifier<double>(0);
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController()..addListener(_handleScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController
+      ..removeListener(_handleScroll)
+      ..dispose();
+    _collapseProgress.dispose();
+    super.dispose();
+  }
+
+  void _handleScroll() {
+    const collapseDistance = 150.0;
+    final nextProgress = (_scrollController.offset / collapseDistance).clamp(0.0, 1.0);
+    if ((nextProgress - _collapseProgress.value).abs() > 0.01) {
+      _collapseProgress.value = nextProgress;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final controller = context.watch<WorkoutSessionController>();
+    final totalSets = controller.exercises.fold<int>(0, (sum, exercise) => sum + exercise.sets.length);
+    final completedSets = controller.exercises.fold<int>(
+      0,
+      (sum, exercise) => sum + exercise.sets.where((set) => set.done).length,
+    );
 
     return Scaffold(
       appBar: AppBar(
@@ -68,50 +104,67 @@ class _WorkoutInProgressView extends StatelessWidget {
         ],
       ),
       body: SafeArea(
-        child: ListView.builder(
-          padding: const EdgeInsets.fromLTRB(0, 0, 0, 180),
-          itemCount: controller.exercises.length + 1,
-          itemBuilder: (context, index) {
-            if (index == 0) {
-              return WorkoutInProgressHeader(
-                startTime: controller.sessionStart,
-                totalVolume: controller.totalVolume,
-                currentDistribution: controller.currentMuscleDistribution,
-                previousDistribution: controller.previousMuscleDistribution,
-              );
-            }
-            final exercise = controller.exercises[index - 1];
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: ExerciseCard(
-                exercise: exercise,
-                isExpanded: controller.expandedExerciseId == exercise.id,
-                onTap: () => controller.toggleExerciseExpansion(exercise.id),
-                onNotesChanged: (value) => controller.updateExerciseNotes(exercise.id, value),
-                onRestToggle: (value) => controller.updateExerciseRest(
-                  exercise.id,
-                  enabled: value,
-                  seconds: exercise.restSeconds ?? 90,
-                ),
-                onRestSecondsChanged: (seconds) => controller.updateExerciseRest(
-                  exercise.id,
-                  enabled: exercise.restEnabled,
-                  seconds: seconds,
-                ),
-                onSetChanged: (setId, {kg, reps, done}) => controller.updateSet(
-                  exercise.id,
-                  setId,
-                  kg: kg,
-                  reps: reps,
-                  done: done,
-                ),
-                onAddSet: () => controller.addSet(exercise.id),
-                onDelete: () => controller.removeExercise(exercise.id),
-                onMoveUp: () => controller.moveExerciseUp(exercise.id),
-                onMoveDown: () => controller.moveExerciseDown(exercise.id),
+        child: CustomScrollView(
+          controller: _scrollController,
+          slivers: [
+            SliverToBoxAdapter(
+              child: ValueListenableBuilder<double>(
+                valueListenable: _collapseProgress,
+                builder: (context, progress, _) {
+                  return WorkoutInProgressHeader(
+                    startTime: controller.sessionStart,
+                    totalVolume: controller.totalVolume,
+                    currentDistribution: controller.currentMuscleDistribution,
+                    previousDistribution: controller.previousMuscleDistribution,
+                    completedSets: completedSets,
+                    totalSets: totalSets,
+                    collapseProgress: progress,
+                  );
+                },
               ),
-            );
-          },
+            ),
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(0, 0, 0, 180),
+              sliver: SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    final exercise = controller.exercises[index];
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: ExerciseCard(
+                        exercise: exercise,
+                        isExpanded: controller.expandedExerciseId == exercise.id,
+                        onTap: () => controller.toggleExerciseExpansion(exercise.id),
+                        onNotesChanged: (value) => controller.updateExerciseNotes(exercise.id, value),
+                        onRestToggle: (value) => controller.updateExerciseRest(
+                          exercise.id,
+                          enabled: value,
+                          seconds: exercise.restSeconds ?? 90,
+                        ),
+                        onRestSecondsChanged: (seconds) => controller.updateExerciseRest(
+                          exercise.id,
+                          enabled: exercise.restEnabled,
+                          seconds: seconds,
+                        ),
+                        onSetChanged: (setId, {kg, reps, done}) => controller.updateSet(
+                          exercise.id,
+                          setId,
+                          kg: kg,
+                          reps: reps,
+                          done: done,
+                        ),
+                        onAddSet: () => controller.addSet(exercise.id),
+                        onDelete: () => controller.removeExercise(exercise.id),
+                        onMoveUp: () => controller.moveExerciseUp(exercise.id),
+                        onMoveDown: () => controller.moveExerciseDown(exercise.id),
+                      ),
+                    );
+                  },
+                  childCount: controller.exercises.length,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
       bottomSheet: Container(
