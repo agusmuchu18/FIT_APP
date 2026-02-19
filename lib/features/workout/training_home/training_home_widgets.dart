@@ -164,6 +164,7 @@ class RoutineMiniCard extends StatelessWidget {
     required this.lastUsed,
     required this.isPinned,
     required this.onTap,
+    required this.onStartTap,
     required this.onMenuSelected,
   });
 
@@ -176,6 +177,7 @@ class RoutineMiniCard extends StatelessWidget {
   final String lastUsed;
   final bool isPinned;
   final VoidCallback onTap;
+  final VoidCallback onStartTap;
   final ValueChanged<String> onMenuSelected;
 
   @override
@@ -278,6 +280,21 @@ class RoutineMiniCard extends StatelessWidget {
                       ],
                     ),
                   ),
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: FilledButton.icon(
+                      onPressed: onStartTap,
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        visualDensity: const VisualDensity(horizontal: -2, vertical: -2),
+                      ),
+                      icon: const Icon(Icons.play_arrow_rounded, size: 16),
+                      label: const Text('Iniciar'),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -303,6 +320,64 @@ class RoutineMiniCard extends StatelessWidget {
     if (normalized.contains('gym')) return colorScheme.primary;
     if (normalized.contains('deporte') || normalized.contains('outdoor')) return colorScheme.secondary;
     return colorScheme.outline;
+  }
+}
+
+
+
+class RoutineFolderCard extends StatelessWidget {
+  const RoutineFolderCard({
+    super.key,
+    required this.name,
+    required this.count,
+    required this.onTap,
+    this.onMenuSelected,
+    this.isVirtual = false,
+  });
+
+  final String name;
+  final int count;
+  final VoidCallback onTap;
+  final ValueChanged<String>? onMenuSelected;
+  final bool isVirtual;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: onTap,
+      child: Ink(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppColors.card,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.borderSubtle),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(isVirtual ? Icons.folder_off_outlined : Icons.folder_open_rounded, color: AppColors.accent),
+                const Spacer(),
+                if (!isVirtual && onMenuSelected != null)
+                  PopupMenuButton<String>(
+                    onSelected: onMenuSelected,
+                    itemBuilder: (context) => const [
+                      PopupMenuItem(value: 'rename', child: Text('Renombrar')),
+                      PopupMenuItem(value: 'delete', child: Text('Eliminar')),
+                    ],
+                  ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.titleSmall),
+            const SizedBox(height: 4),
+            Text('$count rutinas', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textMuted)),
+          ],
+        ),
+      ),
+    );
   }
 }
 
