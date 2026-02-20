@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../workout_in_progress_controller.dart';
@@ -11,19 +12,35 @@ class WorkoutMiniBarOverlayController {
   static const double mainShellBarHeight = 76;
   static final WorkoutMiniBarOverlayController instance = WorkoutMiniBarOverlayController._();
 
-  final ValueNotifier<bool> bottomNavVisible = ValueNotifier(false);
+  final ValueNotifier<bool> bottomNavVisible = ValueNotifier(true);
   final ValueNotifier<String?> currentRouteName = ValueNotifier(null);
 
   bool get shouldHideMiniBar => currentRouteName.value == '/workout/session';
 
   void updateFromRoute(Route<dynamic>? route) {
-    final routeName = route?.settings.name;
+    updateFromRouteName(route?.settings.name);
+  }
+
+  void updateFromRouteName(String? routeName) {
     if (currentRouteName.value != routeName) {
       currentRouteName.value = routeName;
     }
-    final showBottomNav = routeName == '/home';
+
+    // Mantener robustez ante cambios de rutas:
+    // por defecto asumimos que la bottom nav está visible, excepto en rutas full-screen.
+    const fullScreenRoutesWithoutBottomNav = <String>{
+      '/workout/session',
+    };
+    final showBottomNav = routeName == null || !fullScreenRoutesWithoutBottomNav.contains(routeName);
     if (bottomNavVisible.value != showBottomNav) {
       bottomNavVisible.value = showBottomNav;
+    }
+
+    if (kDebugMode) {
+      debugPrint(
+        '[WorkoutMiniBarOverlayController] routeName=$routeName | '
+        'bottomNavVisible=$showBottomNav | shouldHideMiniBar=$shouldHideMiniBar',
+      );
     }
   }
 }
@@ -58,10 +75,33 @@ class WorkoutMiniBarRouteObserver extends NavigatorObserver {
   }
 }
 
-class WorkoutMiniBarHostOverlay extends StatelessWidget {
+class WorkoutMiniBarHostOverlay extends StatefulWidget {
   const WorkoutMiniBarHostOverlay({super.key});
 
+  @override
+  State<WorkoutMiniBarHostOverlay> createState() => _WorkoutMiniBarHostOverlayState();
+}
+
+class _WorkoutMiniBarHostOverlayState extends State<WorkoutMiniBarHostOverlay> {
   static const _animationDuration = Duration(milliseconds: 180);
+
+  bool _didSyncInitialRoute = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_didSyncInitialRoute) {
+      return;
+    }
+    _didSyncInitialRoute = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      final routeName = ModalRoute.of(context)?.settings.name;
+      WorkoutMiniBarOverlayController.instance.updateFromRouteName(routeName);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -79,6 +119,14 @@ class WorkoutMiniBarHostOverlay extends StatelessWidget {
                 final hidden = draft == null || overlayController.shouldHideMiniBar;
                 final bottomInset = MediaQuery.of(context).padding.bottom;
                 final bottomOffset = (bottomNavVisible ? WorkoutMiniBarOverlayController.mainShellBarHeight : 0) + bottomInset + 12;
+
+                if (kDebugMode) {
+                  debugPrint(
+                    '[WorkoutMiniBarHostOverlay] routeName=${overlayController.currentRouteName.value} | '
+                    'draftNull=${draft == null} | shouldHideMiniBar=${overlayController.shouldHideMiniBar} | '
+                    'bottomNavVisible=$bottomNavVisible | bottomOffset=$bottomOffset',
+                  );
+                }
 
                 return SafeArea(
                   bottom: false,
