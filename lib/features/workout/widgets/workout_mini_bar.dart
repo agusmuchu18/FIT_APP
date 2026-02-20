@@ -148,7 +148,7 @@ class _WorkoutMiniBarState extends State<WorkoutMiniBar> {
                   IconButton(
                     visualDensity: VisualDensity.compact,
                     onPressed: widget.onDiscard,
-                    icon: const Semantics(
+                    icon: Semantics(
                       label: 'Descartar',
                       button: true,
                       child: Icon(Icons.delete_outline_rounded),
