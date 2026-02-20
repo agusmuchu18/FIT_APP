@@ -87,9 +87,13 @@ class WorkoutInProgressController {
 
   Future<void> refresh() async {
     _prefs ??= await SharedPreferences.getInstance();
-    _setFromRaw(
-      _prefs?.getString(draftV2Key) ?? _prefs?.getString(draftKey),
-    );
+    final rawV2 = _prefs?.getString(draftV2Key);
+    final rawV1 = _prefs?.getString(draftKey);
+
+    if (_trySetFromRaw(rawV2, source: draftV2Key)) {
+      return;
+    }
+    _trySetFromRaw(rawV1, source: draftKey);
   }
 
   void syncFromRaw(String? rawDraft) {
@@ -141,15 +145,24 @@ class WorkoutInProgressController {
   }
 
   void _setFromRaw(String? rawDraft) {
+    _trySetFromRaw(rawDraft);
+  }
+
+  bool _trySetFromRaw(String? rawDraft, {String? source}) {
     if (rawDraft == null) {
       _draftNotifier.value = null;
-      return;
+      return false;
     }
     try {
       final json = jsonDecode(rawDraft) as Map<String, dynamic>;
       _draftNotifier.value = WorkoutInProgressDraft.fromJson(json);
-    } catch (_) {
+      return true;
+    } catch (error) {
+      if (kDebugMode) {
+        debugPrint('[WorkoutInProgressController] Failed parsing draft from ${source ?? 'unknown'}: $error');
+      }
       _draftNotifier.value = null;
+      return false;
     }
   }
 }

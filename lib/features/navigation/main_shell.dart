@@ -5,7 +5,6 @@ import '../groups/presentation/pages/groups_list_screen.dart';
 import '../habits/presentation/habits_tracker_screen.dart';
 import '../home/presentation/home_summary_screen.dart';
 import '../profile/profile_screen.dart';
-import '../workout/widgets/now_playing_workout_chip.dart';
 import '../workout/workout_in_progress_controller.dart';
 import '../../ui/motion/controllers/motion_durations.dart';
 import '../../ui/motion/widgets/animated_plus_x_button.dart';
@@ -104,34 +103,6 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
             onWorkout: () => _navigateTo('/workout'),
             onMeal: () => _navigateTo('/nutrition'),
             onSleep: () => _navigateTo('/sleep'),
-          ),
-          Positioned(
-            left: 16,
-            right: 16,
-            bottom: _barHeight + bottomInset + 28,
-            child: ValueListenableBuilder<WorkoutInProgressDraft?>(
-              valueListenable: WorkoutInProgressController.instance.watchDraft(),
-              builder: (context, draft, _) {
-                final hidden = draft == null;
-                return AnimatedSlide(
-                  duration: const Duration(milliseconds: 180),
-                  offset: hidden ? const Offset(0, 1) : Offset.zero,
-                  child: AnimatedOpacity(
-                    duration: const Duration(milliseconds: 180),
-                    opacity: hidden ? 0 : 1,
-                    child: IgnorePointer(
-                      ignoring: hidden,
-                      child: draft == null
-                          ? const SizedBox.shrink()
-                          : NowPlayingWorkoutChip(
-                              draft: draft,
-                              onTap: WorkoutInProgressController.instance.resume,
-                            ),
-                    ),
-                  ),
-                );
-              },
-            ),
           ),
           Positioned(
             left: 0,
