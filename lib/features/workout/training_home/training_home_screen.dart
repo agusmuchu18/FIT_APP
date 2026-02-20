@@ -265,8 +265,14 @@ class _TrainingHomeViewState extends State<_TrainingHomeView> {
   }
 
   void _openFolderRoutines(BuildContext context, String? folderId, String folderName) {
+    final controller = context.read<TrainingHomeController>();
     Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => FolderRoutinesScreen(folderId: folderId, folderName: folderName)),
+      MaterialPageRoute(
+        builder: (_) => ChangeNotifierProvider<TrainingHomeController>.value(
+          value: controller,
+          child: FolderRoutinesScreen(folderId: folderId, folderName: folderName),
+        ),
+      ),
     );
   }
 
