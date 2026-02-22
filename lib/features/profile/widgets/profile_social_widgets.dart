@@ -32,14 +32,23 @@ class HighlightCard extends StatelessWidget {
         children: [
           Icon(icon, size: 18, color: AppColors.accentSecondary),
           const SizedBox(height: 8),
-          Text(title, style: const TextStyle(color: AppColors.textMuted, fontSize: 12)),
+          Text(
+            title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: AppColors.textMuted, fontSize: 12),
+          ),
           const SizedBox(height: 6),
-          Text(description,
-              maxLines: 2,
+          Flexible(
+            child: Text(
+              description,
+              maxLines: progress != null ? 1 : 2,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
+              style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600),
+            ),
+          ),
           if (progress != null) ...[
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
               child: LinearProgressIndicator(
