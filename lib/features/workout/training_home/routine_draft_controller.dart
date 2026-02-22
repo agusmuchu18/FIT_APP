@@ -35,6 +35,18 @@ class RoutineDraftController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void removeExerciseAt(int index) {
+    if (index < 0 || index >= _selectedExerciseIds.length) return;
+    _selectedExerciseIds.removeAt(index);
+    notifyListeners();
+  }
+
+  void insertExerciseAt(int index, String exerciseId) {
+    final safeIndex = index.clamp(0, _selectedExerciseIds.length) as int;
+    _selectedExerciseIds.insert(safeIndex, exerciseId);
+    notifyListeners();
+  }
+
   void reorder(int oldIndex, int newIndex) {
     if (newIndex > oldIndex) {
       newIndex -= 1;

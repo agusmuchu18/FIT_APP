@@ -15,6 +15,8 @@ class WorkoutMiniBarOverlayController {
   final ValueNotifier<bool> bottomNavVisible = ValueNotifier(true);
   final ValueNotifier<String?> currentRouteName = ValueNotifier(null);
 
+  String? _lastOverlayStateLog;
+
   bool get shouldHideMiniBar => currentRouteName.value == '/workout/session';
 
   void updateFromRoute(Route<dynamic>? route) {
@@ -37,10 +39,12 @@ class WorkoutMiniBarOverlayController {
     }
 
     if (kDebugMode) {
-      debugPrint(
-        '[WorkoutMiniBarOverlayController] routeName=$routeName | '
-        'bottomNavVisible=$showBottomNav | shouldHideMiniBar=$shouldHideMiniBar',
-      );
+      final snapshot =
+          'routeName=$routeName|bottomNavVisible=$showBottomNav|shouldHideMiniBar=$shouldHideMiniBar';
+      if (_lastOverlayStateLog != snapshot) {
+        _lastOverlayStateLog = snapshot;
+        debugPrint('[WorkoutMiniBarOverlayController] $snapshot');
+      }
     }
   }
 }
@@ -86,6 +90,7 @@ class _WorkoutMiniBarHostOverlayState extends State<WorkoutMiniBarHostOverlay> {
   static const _animationDuration = Duration(milliseconds: 180);
 
   bool _didSyncInitialRoute = false;
+  String? _lastLayoutLog;
 
   @override
   void didChangeDependencies() {
@@ -121,11 +126,12 @@ class _WorkoutMiniBarHostOverlayState extends State<WorkoutMiniBarHostOverlay> {
                 final bottomOffset = (bottomNavVisible ? WorkoutMiniBarOverlayController.mainShellBarHeight : 0) + bottomInset + 12;
 
                 if (kDebugMode) {
-                  debugPrint(
-                    '[WorkoutMiniBarHostOverlay] routeName=${overlayController.currentRouteName.value} | '
-                    'draftNull=${draft == null} | shouldHideMiniBar=${overlayController.shouldHideMiniBar} | '
-                    'bottomNavVisible=$bottomNavVisible | bottomOffset=$bottomOffset',
-                  );
+                  final snapshot =
+                      'routeName=${overlayController.currentRouteName.value}|draftNull=${draft == null}|shouldHideMiniBar=${overlayController.shouldHideMiniBar}|bottomNavVisible=$bottomNavVisible|bottomOffset=$bottomOffset';
+                  if (_lastLayoutLog != snapshot) {
+                    _lastLayoutLog = snapshot;
+                    debugPrint('[WorkoutMiniBarHostOverlay] $snapshot');
+                  }
                 }
 
                 return SafeArea(
