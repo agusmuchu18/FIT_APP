@@ -25,6 +25,9 @@ import 'features/sleep/presentation/sleep_overview_screen.dart';
 import 'features/sleep/presentation/sleep_history_screen.dart';
 import 'features/sleep/sleep_screens.dart';
 import 'features/streak/presentation/streak_screen.dart';
+import 'features/profile/profile_social_screen.dart';
+import 'features/settings/settings_screen.dart';
+import 'features/settings/screens/settings_subscreens.dart';
 import 'features/workout/presentation/workout_in_progress_screen.dart';
 import 'features/workout/training_home/template_exercise_picker_screen.dart';
 import 'features/workout/training_home/training_home_screen.dart';
@@ -148,6 +151,17 @@ class FitApp extends StatelessWidget {
           '/groups/list': (_) => const GroupsListScreen(),
           '/streak': (_) => const StreakScreen(),
           '/onboarding': (_) => const OnboardingScreen(),
+          '/profile': (_) => const ProfileSocialScreen(),
+          '/profile/progress_photos': (_) => const ProgressPhotosGalleryScreen(),
+          '/profile/activity': (_) => const ProfileActivityHistoryScreen(),
+          '/settings': (_) => const SettingsScreen(),
+          '/settings/appearance': (_) => const AppearanceSettingsScreen(),
+          '/settings/notifications': (_) => const NotificationsSettingsScreen(),
+          '/settings/privacy': (_) => const PrivacySettingsScreen(),
+          '/settings/integrations': (_) => const IntegrationsSettingsScreen(),
+          '/settings/data': (_) => const DataSettingsScreen(),
+          '/settings/accessibility': (_) => const AccessibilitySettingsScreen(),
+          '/settings/about': (_) => const AboutSettingsScreen(),
         },
       ),
     );

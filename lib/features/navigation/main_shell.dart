@@ -4,7 +4,7 @@ import '../common/theme/app_colors.dart';
 import '../groups/presentation/pages/groups_list_screen.dart';
 import '../habits/presentation/habits_tracker_screen.dart';
 import '../home/presentation/home_summary_screen.dart';
-import '../profile/profile_screen.dart';
+import '../profile/profile_social_screen.dart';
 import '../workout/workout_in_progress_controller.dart';
 import '../../ui/motion/controllers/motion_durations.dart';
 import '../../ui/motion/widgets/animated_plus_x_button.dart';
@@ -27,7 +27,7 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
     HomeSummaryScreen(),
     HabitsTrackerScreen(),
     GroupsListScreen(),
-    ProfileScreen(),
+    ProfileSocialScreen(),
   ];
 
   void _selectTab(int index) {
