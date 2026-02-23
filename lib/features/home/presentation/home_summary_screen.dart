@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../../core/domain/entities.dart';
+import '../../../core/data/home_modules_controller.dart';
 import '../../../main.dart';
 import '../../common/theme/app_colors.dart';
 import '../../common/widgets/summary_card.dart';
@@ -15,6 +16,7 @@ import '../../sleep/domain/sleep_time_utils.dart';
 import 'activity_day_screen.dart';
 import 'widgets/activity_calendar_sheet.dart';
 import 'widgets/home_date_selector_chip.dart';
+import 'widgets/home_optional_modules_section.dart';
 
 class HomeSummaryScreen extends StatefulWidget {
   const HomeSummaryScreen({super.key});
@@ -24,6 +26,7 @@ class HomeSummaryScreen extends StatefulWidget {
 }
 
 class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
+  final HomeModulesController _homeModulesController = HomeModulesController.instance;
   final FoodRepository _foodRepository = FoodRepository(
     fdc: FdcClient(apiKey: NutritionApiConfig.usdaApiKey),
   );
@@ -32,13 +35,23 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
   @override
   void initState() {
     super.initState();
+    _homeModulesController.addListener(_onModulesChanged);
+    if (!_homeModulesController.initialized) {
+      _homeModulesController.load();
+    }
     _summaryFuture = _loadSummaryData();
   }
 
   @override
   void dispose() {
+    _homeModulesController.removeListener(_onModulesChanged);
     _foodRepository.dispose();
     super.dispose();
+  }
+
+  void _onModulesChanged() {
+    if (!mounted) return;
+    setState(() {});
   }
 
   Future<_HomeSummaryData> _loadSummaryData() async {
@@ -412,6 +425,20 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
                             regularityDelta: data.regularityWeekDelta,
                             onTap: () async {
                               await Navigator.pushNamed(context, '/sleep/overview');
+                              _refreshSummary();
+                            },
+                          ),
+                          const SizedBox(height: verticalSectionSpacing),
+                          HomeOptionalModulesSection(
+                            enabledModules: _homeModulesController.enabledModules,
+                            optionalOrder: _homeModulesController.optionalOrder,
+                            onNavigate: (route) async {
+                              await Navigator.pushNamed(context, route);
+                              _refreshSummary();
+                            },
+                            onRemove: (moduleId) => _homeModulesController.removeFromHome(moduleId),
+                            onOpenSettings: () async {
+                              await Navigator.pushNamed(context, '/settings/modules');
                               _refreshSummary();
                             },
                           ),
