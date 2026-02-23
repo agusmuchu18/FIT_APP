@@ -27,6 +27,7 @@ import 'features/sleep/sleep_screens.dart';
 import 'features/streak/presentation/streak_screen.dart';
 import 'features/profile/profile_social_screen.dart';
 import 'features/settings/settings_screen.dart';
+import 'features/settings/presentation/integrations/integrations_screen.dart';
 import 'features/settings/screens/settings_subscreens.dart';
 import 'features/workout/presentation/workout_in_progress_screen.dart';
 import 'features/workout/training_home/template_exercise_picker_screen.dart';
