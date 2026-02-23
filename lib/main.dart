@@ -17,6 +17,7 @@ import 'features/analytics/analytics_overview_screen.dart';
 import 'features/auth/presentation/login_screen.dart';
 import 'features/auth/presentation/signup_screen.dart';
 import 'features/groups/presentation/pages/groups_list_screen.dart';
+import 'features/habits/presentation/habits_tracker_screen.dart';
 import 'features/navigation/main_shell.dart';
 import 'features/nutrition/nutrition_screens.dart';
 import 'features/onboarding/onboarding_screen.dart';
@@ -29,6 +30,8 @@ import 'features/profile/profile_social_screen.dart';
 import 'features/settings/settings_screen.dart';
 import 'features/settings/presentation/integrations/integrations_screen.dart';
 import 'features/settings/screens/settings_subscreens.dart';
+import 'features/modules/presentation/optional_module_placeholders.dart';
+import 'features/settings/screens/modules_settings_screen.dart';
 import 'features/workout/presentation/workout_in_progress_screen.dart';
 import 'features/workout/training_home/template_exercise_picker_screen.dart';
 import 'features/workout/training_home/training_home_screen.dart';
@@ -163,6 +166,11 @@ class FitApp extends StatelessWidget {
           '/settings/data': (_) => const DataSettingsScreen(),
           '/settings/accessibility': (_) => const AccessibilitySettingsScreen(),
           '/settings/about': (_) => const AboutSettingsScreen(),
+          '/settings/modules': (_) => const ModulesSettingsScreen(),
+          '/habits': (_) => const HabitsTrackerScreen(),
+          '/psychology': (_) => const PsychologyModuleScreen(),
+          '/lab': (_) => const LabModuleScreen(),
+          '/menstrual': (_) => const MenstrualModuleScreen(),
         },
       ),
     );

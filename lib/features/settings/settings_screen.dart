@@ -57,6 +57,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const Divider(height: 1),
             const SettingsTile(icon: Icons.flag_rounded, title: 'Objetivos', subtitle: 'Mantener constancia y mejorar composición'),
           ]),
+          const SectionHeader(title: 'PERSONALIZACIÓN HOME'),
+          SettingsCardGroup(children: [
+            SettingsTile(
+              icon: Icons.widgets_rounded,
+              title: 'Módulos',
+              subtitle: 'Activar, ordenar y quitar widgets de Home',
+              onTap: () => Navigator.of(context).pushNamed('/settings/modules'),
+            ),
+          ]),
           const SectionHeader(title: 'VISUALIZACIÓN'),
           SettingsCardGroup(children: [
             SettingsTile(
