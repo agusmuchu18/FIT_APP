@@ -1,4 +1,8 @@
+import 'dart:convert';
+
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../features/settings/presentation/integrations/integration_models.dart';
 
 enum AppAppearanceMode { classic, dark, light, pink }
 enum ProgressVisibilityMode { privateOnly, groupShared }
@@ -18,6 +22,7 @@ class AppPreferences {
   static const String _textSizeKey = 'app.accessibility.text_size';
   static const String _highContrastKey = 'app.accessibility.high_contrast';
   static const String _reduceAnimationsKey = 'app.accessibility.reduce_animations';
+  static const String _integrationsStatusKey = 'app.integrations.statuses';
 
   final SharedPreferences _prefs;
 
@@ -62,4 +67,34 @@ class AppPreferences {
 
   bool get reduceAnimations => _prefs.getBool(_reduceAnimationsKey) ?? false;
   Future<void> setReduceAnimations(bool value) => _prefs.setBool(_reduceAnimationsKey, value);
+
+  Map<IntegrationId, IntegrationStatus> get integrationStatuses {
+    final raw = _prefs.getString(_integrationsStatusKey);
+    if (raw == null || raw.isEmpty) return {};
+
+    final decoded = jsonDecode(raw);
+    if (decoded is! Map<String, dynamic>) return {};
+
+    final map = <IntegrationId, IntegrationStatus>{};
+    for (final entry in decoded.entries) {
+      IntegrationId? id;
+      for (final value in IntegrationId.values) {
+        if (value.name == entry.key) {
+          id = value;
+          break;
+        }
+      }
+      if (id == null) continue;
+      if (entry.value is! Map<String, dynamic>) continue;
+      map[id] = IntegrationStatus.fromJson(entry.value as Map<String, dynamic>);
+    }
+    return map;
+  }
+
+  Future<void> setIntegrationStatuses(Map<IntegrationId, IntegrationStatus> value) {
+    final jsonMap = <String, dynamic>{
+      for (final entry in value.entries) entry.key.name: entry.value.toJson(),
+    };
+    return _prefs.setString(_integrationsStatusKey, jsonEncode(jsonMap));
+  }
 }

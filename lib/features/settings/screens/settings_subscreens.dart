@@ -209,38 +209,6 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
   }
 }
 
-class IntegrationsSettingsScreen extends StatelessWidget {
-  const IntegrationsSettingsScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    const integrations = <_IntegrationItem>[
-      _IntegrationItem(name: 'Fitbit', connected: false),
-      _IntegrationItem(name: 'Google Fit', connected: false),
-      _IntegrationItem(name: 'Apple Health / HealthKit', connected: false),
-      _IntegrationItem(name: 'Garmin', connected: false),
-    ];
-    return Scaffold(
-      appBar: AppBar(title: const Text('Integraciones')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: integrations
-            .map((item) => Container(
-                  margin: const EdgeInsets.only(bottom: 10),
-                  decoration: BoxDecoration(color: AppColors.card, borderRadius: BorderRadius.circular(18), border: Border.all(color: Colors.white.withOpacity(0.06))),
-                  child: ListTile(
-                    leading: const Icon(Icons.link_rounded),
-                    title: Text(item.name),
-                    subtitle: Text(item.connected ? 'Conectado' : 'No conectado'),
-                    trailing: TextButton(onPressed: () {}, child: Text(item.connected ? 'Administrar' : 'Conectar')),
-                  ),
-                ))
-            .toList(),
-      ),
-    );
-  }
-}
-
 class DataSettingsScreen extends StatelessWidget {
   const DataSettingsScreen({super.key});
 
@@ -372,11 +340,4 @@ class AboutSettingsScreen extends StatelessWidget {
       ),
     );
   }
-}
-
-class _IntegrationItem {
-  const _IntegrationItem({required this.name, required this.connected});
-
-  final String name;
-  final bool connected;
 }
