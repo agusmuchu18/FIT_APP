@@ -30,6 +30,20 @@ class MacroValues {
         fat: fat * factor,
       );
 
+  Map<String, dynamic> toJson() => {
+        'kcal': kcal,
+        'protein': protein,
+        'carbs': carbs,
+        'fat': fat,
+      };
+
+  factory MacroValues.fromJson(Map<String, dynamic> json) => MacroValues(
+        kcal: (json['kcal'] as num? ?? 0).toDouble(),
+        protein: (json['protein'] as num? ?? 0).toDouble(),
+        carbs: (json['carbs'] as num? ?? 0).toDouble(),
+        fat: (json['fat'] as num? ?? 0).toDouble(),
+      );
+
   Macros toCoreMacros() => Macros(carbs: carbs.round(), protein: protein.round(), fat: fat.round());
 }
 
@@ -121,13 +135,161 @@ class MealDraft {
   MacroValues get totals => entries.fold(MacroValues.zero, (a, b) => a + b.computedMacros);
 }
 
+class TemplateItem {
+  const TemplateItem({
+    required this.name,
+    this.serving = '1 porción',
+    this.macros,
+  });
+
+  final String name;
+  final String serving;
+  final MacroValues? macros;
+
+  Map<String, dynamic> toJson() => {
+        'name': name,
+        'serving': serving,
+        'macros': macros?.toJson(),
+      };
+
+  factory TemplateItem.fromJson(Map<String, dynamic> json) => TemplateItem(
+        name: (json['name'] ?? '').toString(),
+        serving: (json['serving'] ?? '1 porción').toString(),
+        macros: json['macros'] is Map<String, dynamic> ? MacroValues.fromJson(json['macros'] as Map<String, dynamic>) : null,
+      );
+}
+
 class MealTemplate {
-  const MealTemplate({required this.id, required this.name, required this.entries, this.mealType});
+  const MealTemplate({
+    required this.id,
+    required this.name,
+    this.mealType,
+    this.folderId,
+    this.isFavorite = false,
+    this.entries = const [],
+    this.items = const [],
+    this.totals = MacroValues.zero,
+    required this.createdAt,
+    this.lastUsedAt,
+  });
 
   final String id;
   final String name;
   final MealType? mealType;
+  final String? folderId;
+  final bool isFavorite;
   final List<DraftEntry> entries;
+  final List<TemplateItem> items;
+  final MacroValues totals;
+  final DateTime createdAt;
+  final DateTime? lastUsedAt;
+
+  List<TemplateItem> get effectiveItems {
+    if (items.isNotEmpty) return items;
+    if (entries.isEmpty) return const [];
+    return entries
+        .map((entry) => TemplateItem(
+              name: entry.food.name,
+              serving: '${entry.quantity} ${entry.unit.name}',
+              macros: entry.computedMacros,
+            ))
+        .toList(growable: false);
+  }
+
+  MacroValues get effectiveTotals {
+    if (totals != MacroValues.zero || items.isNotEmpty) return totals;
+    if (entries.isEmpty) return MacroValues.zero;
+    return entries.fold(MacroValues.zero, (sum, entry) => sum + entry.computedMacros);
+  }
+
+  MealTemplate copyWith({
+    String? id,
+    String? name,
+    MealType? mealType,
+    bool clearMealType = false,
+    String? folderId,
+    bool clearFolderId = false,
+    bool? isFavorite,
+    List<TemplateItem>? items,
+    MacroValues? totals,
+    DateTime? createdAt,
+    DateTime? lastUsedAt,
+  }) {
+    return MealTemplate(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      mealType: clearMealType ? null : (mealType ?? this.mealType),
+      folderId: clearFolderId ? null : (folderId ?? this.folderId),
+      isFavorite: isFavorite ?? this.isFavorite,
+      entries: entries,
+      items: items ?? this.items,
+      totals: totals ?? this.totals,
+      createdAt: createdAt ?? this.createdAt,
+      lastUsedAt: lastUsedAt ?? this.lastUsedAt,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'name': name,
+        'mealType': mealType?.name,
+        'folderId': folderId,
+        'isFavorite': isFavorite,
+        'items': effectiveItems.map((i) => i.toJson()).toList(),
+        'totals': effectiveTotals.toJson(),
+        'createdAt': createdAt.toIso8601String(),
+        'lastUsedAt': lastUsedAt?.toIso8601String(),
+      };
+
+  factory MealTemplate.fromJson(Map<String, dynamic> json) {
+    final mealTypeName = json['mealType']?.toString();
+    return MealTemplate(
+      id: (json['id'] ?? '').toString(),
+      name: (json['name'] ?? '').toString(),
+      mealType: MealType.values.where((t) => t.name == mealTypeName).isEmpty ? null : MealType.values.firstWhere((t) => t.name == mealTypeName),
+      folderId: json['folderId']?.toString(),
+      isFavorite: (json['isFavorite'] as bool?) ?? false,
+      items: (json['items'] as List<dynamic>? ?? const [])
+          .whereType<Map>()
+          .map((raw) => TemplateItem.fromJson(Map<String, dynamic>.from(raw)))
+          .toList(growable: false),
+      totals: json['totals'] is Map<String, dynamic> ? MacroValues.fromJson(json['totals'] as Map<String, dynamic>) : MacroValues.zero,
+      createdAt: DateTime.tryParse((json['createdAt'] ?? '').toString()) ?? DateTime.now(),
+      lastUsedAt: json['lastUsedAt'] == null ? null : DateTime.tryParse(json['lastUsedAt'].toString()),
+    );
+  }
+}
+
+class TemplateFolder {
+  const TemplateFolder({
+    required this.id,
+    required this.name,
+    this.icon,
+    this.isDefault = false,
+    this.order = 0,
+  });
+
+  final String id;
+  final String name;
+  final String? icon;
+  final bool isDefault;
+  final int order;
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'name': name,
+        'icon': icon,
+        'isDefault': isDefault,
+        'order': order,
+      };
+
+  factory TemplateFolder.fromJson(Map<String, dynamic> json) => TemplateFolder(
+        id: (json['id'] ?? '').toString(),
+        name: (json['name'] ?? '').toString(),
+        icon: json['icon']?.toString(),
+        isDefault: (json['isDefault'] as bool?) ?? false,
+        order: (json['order'] as num?)?.toInt() ?? 0,
+      );
 }
 
 class LoggedMeal {
