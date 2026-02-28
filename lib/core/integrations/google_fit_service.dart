@@ -1,5 +1,6 @@
 import 'package:flutter/services.dart';
 
+import '../domain/entities.dart';
 import 'models.dart';
 import 'platform_integration_service.dart';
 
