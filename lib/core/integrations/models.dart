@@ -29,7 +29,8 @@ class ExternalFitnessSample {
   })  : type = FitnessDataType.workout,
         calories = null,
         macros = null,
-        hours = null;
+        hours = null,
+        quality = null;
 
   ExternalFitnessSample.nutrition({
     required this.externalId,
@@ -43,7 +44,8 @@ class ExternalFitnessSample {
   })  : type = FitnessDataType.nutrition,
         durationMinutes = null,
         intensity = null,
-        hours = null;
+        hours = null,
+        quality = null;
 
   ExternalFitnessSample.sleep({
     required this.externalId,
