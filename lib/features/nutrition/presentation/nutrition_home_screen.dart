@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 
@@ -65,88 +66,147 @@ class _NutritionHomeScreenState extends State<NutritionHomeScreen> {
           : RefreshIndicator(
               onRefresh: _load,
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 10, 16, 28),
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
                 children: [
-                  _HeroCard(summary: summary, dateText: 'Hoy · $date'),
-                  const SizedBox(height: 14),
+                  NutritionHeroCard(summary: summary, dateText: 'Hoy · $date'),
+                  const SizedBox(height: 20),
                   FilledButton.icon(
-                    style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(56), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18))),
-                    onPressed: () => _showQuickAddSheet(context),
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size.fromHeight(54),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                      elevation: 1,
+                      shadowColor: Colors.black.withOpacity(0.24),
+                    ),
+                    onPressed: () {
+                      HapticFeedback.lightImpact();
+                      _showQuickAddSheet(context);
+                    },
                     icon: const Icon(Icons.add),
                     label: const Text('+ Registrar comida'),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: [
+                      _ShortcutPill(
+                        icon: Icons.auto_awesome_motion_outlined,
+                        label: 'Usar plantilla',
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          Navigator.pushNamed(context, '/nutrition/templates').then((_) => _load());
+                        },
+                      ),
+                      _ShortcutPill(
+                        icon: Icons.search,
+                        label: 'Buscar alimento',
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          Navigator.push(context, MaterialPageRoute(builder: (_) => const FoodLogScreen()));
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 22),
                   SizedBox(
-                    height: 116,
+                    height: 168,
                     child: ListView.separated(
                       scrollDirection: Axis.horizontal,
                       itemBuilder: (_, i) {
                         final mealType = MealType.values[i];
                         final macros = summary.byMealType[mealType] ?? MacroValues.zero;
-                        return _MealQuickCard(
+                        return MealQuickTile(
                           mealType: mealType,
                           kcal: macros.kcal.round(),
-                          onAdd: () => _showQuickAddSheet(context, mealType: mealType),
+                          goalKcal: math.max(350, (summary.goal.kcal / MealType.values.length).round()),
+                          onTap: () {
+                            HapticFeedback.selectionClick();
+                            _showQuickAddSheet(context, mealType: mealType);
+                          },
+                          onAddTap: () {
+                            HapticFeedback.lightImpact();
+                            _showQuickAddSheet(context, mealType: mealType);
+                          },
                         );
                       },
-                      separatorBuilder: (_, __) => const SizedBox(width: 10),
+                      separatorBuilder: (_, __) => const SizedBox(width: 12),
                       itemCount: MealType.values.length,
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 24),
                   Row(
                     children: [
-                      Text('Plantillas', style: Theme.of(context).textTheme.titleLarge),
+                      Text('Plantillas', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
                       const Spacer(),
                       TextButton(onPressed: () => Navigator.pushNamed(context, '/nutrition/templates').then((_) => _load()), child: const Text('Ver todo')),
-                      IconButton(
-                        onPressed: () => Navigator.pushNamed(context, '/nutrition/template_editor').then((_) => _load()),
-                        icon: const Icon(Icons.add_circle_outline),
+                      const SizedBox(width: 4),
+                      InkWell(
+                        borderRadius: BorderRadius.circular(18),
+                        onTap: () => Navigator.pushNamed(context, '/nutrition/template_editor').then((_) => _load()),
+                        child: Ink(
+                          width: 34,
+                          height: 34,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.white.withOpacity(0.08),
+                            border: Border.all(color: Colors.white24),
+                          ),
+                          child: const Icon(Icons.add, size: 18),
+                        ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  _FolderRow(
+                  const SizedBox(height: 10),
+                  TemplateFolderChipsPremium(
                     folders: _folders,
                     selected: _selectedFolder,
-                    onSelected: (id) => setState(() => _selectedFolder = id),
+                    onSelected: (id) {
+                      HapticFeedback.selectionClick();
+                      setState(() => _selectedFolder = id);
+                    },
                     onNewFolder: _newFolder,
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 14),
                   if (templates.isEmpty)
-                    _EmptyCard(
-                      icon: Icons.auto_awesome_outlined,
-                      title: 'Todavía no tenés plantillas',
-                      action: 'Crear plantilla',
-                      onAction: () => Navigator.pushNamed(context, '/nutrition/template_editor').then((_) => _load()),
+                    PremiumEmptyState(
+                      icon: Icons.folder_copy_outlined,
+                      title: 'No hay plantillas todavía',
+                      bullets: const [
+                        'Guardá tus comidas favoritas para reutilizarlas en segundos.',
+                        'Organizalas por momento del día para registrar más rápido.',
+                      ],
+                      primaryActionLabel: 'Crear plantilla',
+                      onPrimaryAction: () => Navigator.pushNamed(context, '/nutrition/template_editor').then((_) => _load()),
+                      linkActionLabel: 'Ver ejemplos',
+                      onLinkAction: () {
+                        // TODO: Reemplazar por catálogo real de ejemplos de plantillas.
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Ejemplos próximamente')));
+                      },
                     )
                   else
-                    LayoutBuilder(
-                      builder: (context, constraints) {
-                        final crossAxisCount = constraints.maxWidth < 380 ? 1 : 2;
-                        return GridView.builder(
-                          itemCount: templates.length,
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: crossAxisCount,
-                            crossAxisSpacing: 10,
-                            mainAxisSpacing: 10,
-                            childAspectRatio: crossAxisCount == 1 ? 2.5 : 1.06,
-                          ),
-                          itemBuilder: (_, i) => _TemplateCard(
-                            template: templates[i],
-                            onAdd: () => _onAddTemplate(templates[i]),
-                            onMenu: (action) => _onTemplateAction(templates[i], action),
-                          ),
-                        );
-                      },
+                    Column(
+                      children: templates
+                          .map(
+                            (template) => Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: TemplateCard(
+                                template: template,
+                                onAdd: () => _onAddTemplate(template),
+                                onMenu: (action) => _onTemplateAction(template, action),
+                              ),
+                            ),
+                          )
+                          .toList(growable: false),
                     ),
-                  const SizedBox(height: 22),
-                  Text('Recientes', style: Theme.of(context).textTheme.titleLarge),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 24),
+                  Text('Recientes', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 10),
                   if (_recents.isEmpty)
-                    const _EmptyCard(icon: Icons.history_toggle_off, title: 'Sin recientes por ahora', subtitle: 'Cuando repitas comidas aparecerán acá.')
+                    const PremiumEmptyState(
+                      icon: Icons.history_toggle_off,
+                      title: 'Sin recientes por ahora',
+                      bullets: ['Cuando repitas comidas aparecerán acá.', 'Podrás agregar con un toque usando “Repetir”.'],
+                    )
                   else
                     ..._recents.take(5).map(
                           (item) => ListTile(
@@ -156,6 +216,7 @@ class _NutritionHomeScreenState extends State<NutritionHomeScreen> {
                             subtitle: Text('${mealTypeLabel(item.mealType)} · ${NutritionFormatters.formatKcal(item.kcal)}'),
                             trailing: TextButton(
                               onPressed: () async {
+                                HapticFeedback.selectionClick();
                                 await _dayRepository.duplicateRecent(item);
                                 await _load();
                               },
@@ -330,73 +391,549 @@ class _NutritionHomeScreenState extends State<NutritionHomeScreen> {
   }
 }
 
-class _HeroCard extends StatelessWidget {
-  const _HeroCard({required this.summary, required this.dateText});
+class NutritionHeroCard extends StatelessWidget {
+  const NutritionHeroCard({required this.summary, required this.dateText, super.key});
 
   final NutritionDaySummary summary;
   final String dateText;
 
   @override
   Widget build(BuildContext context) {
+    final consumed = summary.consumed.kcal.round();
+    final goal = summary.goal.kcal.round();
     final remaining = summary.remainingKcal;
-    final hasMeals = summary.consumed.kcal > 0;
 
     return ClipRRect(
-      borderRadius: BorderRadius.circular(26),
+      borderRadius: BorderRadius.circular(28),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
         child: Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(26),
-            gradient: const LinearGradient(colors: [Color(0xFF1D2838), Color(0xFF141B26)]),
-            border: Border.all(color: Colors.white.withOpacity(0.08)),
-          ),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('Alimentación', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
-            const SizedBox(height: 4),
-            Text(dateText),
-            const SizedBox(height: 18),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerLeft,
-              child: Text(
-                '${NutritionFormatters.formatNumberCompact(summary.consumed.kcal.round())} / ${NutritionFormatters.formatNumberCompact(summary.goal.kcal.round())} kcal',
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 34, fontWeight: FontWeight.bold),
-              ),
+            borderRadius: BorderRadius.circular(28),
+            gradient: const RadialGradient(
+              center: Alignment(-0.55, -0.65),
+              radius: 1.35,
+              colors: [Color(0xFF2A3A52), Color(0xFF172131), Color(0xFF121A27)],
             ),
-            const SizedBox(height: 4),
-            Text(remaining >= 0 ? 'Restan ${NutritionFormatters.formatNumberCompact(remaining)}' : 'Excedido ${NutritionFormatters.formatNumberCompact(remaining.abs())}'),
-            if (!hasMeals) ...[
-              const SizedBox(height: 10),
-              const Text('Empezá registrando tu primera comida'),
+            border: Border.all(color: Colors.white.withOpacity(0.14), width: 1),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withOpacity(0.22), blurRadius: 24, offset: const Offset(0, 12)),
             ],
-            const SizedBox(height: 16),
-            _MacroBar(label: 'Proteínas', value: summary.consumed.protein, total: summary.goal.protein),
-            const SizedBox(height: 8),
-            _MacroBar(label: 'Carbs', value: summary.consumed.carbs, total: summary.goal.carbs),
-            const SizedBox(height: 8),
-            _MacroBar(label: 'Grasas', value: summary.consumed.fat, total: summary.goal.fat),
-            const SizedBox(height: 12),
-            const _MiniRadarPlaceholder(),
-          ]),
+          ),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Resumen de hoy', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                        const SizedBox(height: 2),
+                        Text(dateText, style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 13)),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => HapticFeedback.selectionClick(),
+                    icon: Icon(Icons.more_horiz, color: Colors.white.withOpacity(0.85)),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 240),
+                            transitionBuilder: (child, animation) => FadeTransition(opacity: animation, child: child),
+                            child: Text(
+                              NutritionFormatters.formatNumberCompact(consumed),
+                              key: ValueKey(consumed),
+                              style: Theme.of(context).textTheme.displaySmall?.copyWith(fontWeight: FontWeight.w800, fontSize: 38, height: 1),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'de ${NutritionFormatters.formatNumberCompact(goal)} kcal',
+                          style: TextStyle(fontSize: 14, color: Colors.white.withOpacity(0.72)),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  _HeroVisualPlaceholder(hasData: consumed > 0),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(color: Colors.white.withOpacity(0.16)),
+                  ),
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 220),
+                    child: Text(
+                      remaining >= 0
+                          ? 'Restan ${NutritionFormatters.formatNumberCompact(remaining)}'
+                          : 'Excedido ${NutritionFormatters.formatNumberCompact(remaining.abs())}',
+                      key: ValueKey(remaining),
+                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: MacroTile(
+                      icon: Icons.fitness_center,
+                      label: 'Proteínas',
+                      value: summary.consumed.protein,
+                      total: summary.goal.protein,
+                      gradient: const [Color(0xFF87E7FF), Color(0xFF4FC3F7)],
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: MacroTile(
+                      icon: Icons.grain,
+                      label: 'Carbs',
+                      value: summary.consumed.carbs,
+                      total: summary.goal.carbs,
+                      gradient: const [Color(0xFFFFE082), Color(0xFFFFB74D)],
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: MacroTile(
+                      icon: Icons.opacity,
+                      label: 'Grasas',
+                      value: summary.consumed.fat,
+                      total: summary.goal.fat,
+                      gradient: const [Color(0xFFF8BBD0), Color(0xFFF48FB1)],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _MiniRadarPlaceholder extends StatelessWidget {
-  const _MiniRadarPlaceholder();
+class MacroTile extends StatelessWidget {
+  const MacroTile({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.total,
+    required this.gradient,
+    super.key,
+  });
+
+  final IconData icon;
+  final String label;
+  final double value;
+  final double total;
+  final List<Color> gradient;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 64,
-      child: CustomPaint(
-        painter: _RadarPainter(),
-        child: const SizedBox.expand(),
+    final pct = total <= 0 ? 0.0 : (value / total).clamp(0.0, 1.0);
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        color: Colors.white.withOpacity(0.06),
+        border: Border.all(color: Colors.white.withOpacity(0.1)),
       ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 16, color: Colors.white.withOpacity(0.9)),
+          const SizedBox(height: 6),
+          Text(label, style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.76))),
+          const SizedBox(height: 2),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              '${NutritionFormatters.formatNumberCompact(value.round())}/${NutritionFormatters.formatNumberCompact(total.round())} g',
+              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5),
+            ),
+          ),
+          const SizedBox(height: 8),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: Stack(
+              children: [
+                Container(height: 6, color: Colors.white.withOpacity(0.12)),
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 350),
+                  curve: Curves.easeOut,
+                  height: 6,
+                  width: 72 * pct,
+                  decoration: BoxDecoration(gradient: LinearGradient(colors: gradient)),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class MealQuickTile extends StatelessWidget {
+  const MealQuickTile({
+    required this.mealType,
+    required this.kcal,
+    required this.goalKcal,
+    required this.onTap,
+    required this.onAddTap,
+    super.key,
+  });
+
+  final MealType mealType;
+  final int kcal;
+  final int goalKcal;
+  final VoidCallback onTap;
+  final VoidCallback onAddTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final pct = goalKcal <= 0 ? 0.0 : (kcal / goalKcal).clamp(0.0, 1.0);
+    final isLoaded = kcal > 0;
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(22),
+      onTap: onTap,
+      child: Ink(
+        width: 168,
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(22),
+          color: Colors.white.withOpacity(0.05),
+          border: Border.all(color: isLoaded ? Colors.white.withOpacity(0.22) : Colors.white.withOpacity(0.1)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(_mealIcon(mealType), size: 24, color: Colors.white.withOpacity(0.9)),
+                const Spacer(),
+                GestureDetector(
+                  onTap: onAddTap,
+                  child: ClipOval(
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                      child: Container(
+                        width: 28,
+                        height: 28,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white.withOpacity(0.14),
+                          border: Border.all(color: Colors.white.withOpacity(0.2)),
+                          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 8)],
+                        ),
+                        child: const Icon(Icons.add, size: 16),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text(mealTypeLabel(mealType), style: const TextStyle(fontWeight: FontWeight.w700)),
+            const SizedBox(height: 2),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text('${NutritionFormatters.formatNumberCompact(kcal)} kcal', style: const TextStyle(fontSize: 13)),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              isLoaded ? 'Cargado' : 'Vacío',
+              style: TextStyle(fontSize: 12, color: isLoaded ? Colors.greenAccent.shade100 : Colors.white70),
+            ),
+            const Spacer(),
+            if (isLoaded)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(999),
+                child: Stack(
+                  children: [
+                    Container(height: 5, color: Colors.white.withOpacity(0.12)),
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 250),
+                      height: 5,
+                      width: 140 * pct,
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(colors: [Color(0xFF80D8FF), Color(0xFF00E5FF)]),
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else
+              const SizedBox(height: 5),
+          ],
+        ),
+      ),
+    );
+  }
+
+  IconData _mealIcon(MealType type) {
+    switch (type) {
+      case MealType.breakfast:
+        return Icons.wb_sunny_outlined;
+      case MealType.lunch:
+        return Icons.lunch_dining_outlined;
+      case MealType.snack:
+        return Icons.coffee_outlined;
+      case MealType.dinner:
+        return Icons.dinner_dining_outlined;
+      case MealType.supper:
+        return Icons.icecream_outlined;
+    }
+  }
+}
+
+class TemplateFolderChipsPremium extends StatelessWidget {
+  const TemplateFolderChipsPremium({
+    required this.folders,
+    required this.selected,
+    required this.onSelected,
+    required this.onNewFolder,
+    super.key,
+  });
+
+  final List<TemplateFolder> folders;
+  final String selected;
+  final ValueChanged<String> onSelected;
+  final VoidCallback onNewFolder;
+
+  @override
+  Widget build(BuildContext context) {
+    final chips = <_ChipMeta>[
+      const _ChipMeta(id: 'all', label: 'Todas', icon: Icons.apps),
+      const _ChipMeta(id: 'favorite', label: '⭐ Favoritos', icon: Icons.star_border),
+      ...folders.map((f) => _ChipMeta(id: f.id, label: f.name, icon: Icons.folder_open)),
+      const _ChipMeta(id: 'new', label: '+ Nueva', icon: Icons.add_circle_outline),
+    ];
+
+    return SizedBox(
+      height: 46,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemBuilder: (_, i) {
+          final chip = chips[i];
+          final isSelected = chip.id == selected;
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOut,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(isSelected ? 16 : 14),
+              color: isSelected ? Colors.white.withOpacity(0.16) : Colors.white.withOpacity(0.06),
+              border: Border.all(color: isSelected ? Colors.white.withOpacity(0.35) : Colors.white.withOpacity(0.14)),
+            ),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: chip.id == 'new' ? onNewFolder : () => onSelected(chip.id),
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: isSelected ? 14 : 12, vertical: 10),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(chip.icon, size: 15, color: Colors.white.withOpacity(0.86)),
+                    const SizedBox(width: 6),
+                    Text(chip.label, style: const TextStyle(fontSize: 13)),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemCount: chips.length,
+      ),
+    );
+  }
+}
+
+class TemplateCard extends StatelessWidget {
+  const TemplateCard({required this.template, required this.onAdd, required this.onMenu, super.key});
+
+  final MealTemplate template;
+  final VoidCallback onAdd;
+  final ValueChanged<String> onMenu;
+
+  @override
+  Widget build(BuildContext context) {
+    final totals = template.effectiveTotals;
+    final previewItems = template.effectiveItems.take(3).map((e) => '• ${e.name}').toList(growable: false);
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        color: Colors.white.withOpacity(0.05),
+        border: Border.all(color: Colors.white.withOpacity(0.12)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(template.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+              ),
+              PopupMenuButton<String>(
+                onSelected: onMenu,
+                itemBuilder: (_) => const [
+                  PopupMenuItem(value: 'move', child: Text('Mover a carpeta')),
+                  PopupMenuItem(value: 'rename', child: Text('Renombrar')),
+                  PopupMenuItem(value: 'duplicate', child: Text('Duplicar')),
+                  PopupMenuItem(value: 'delete', child: Text('Eliminar')),
+                  PopupMenuItem(value: 'favorite', child: Text('Marcar favorito')),
+                ],
+              ),
+            ],
+          ),
+          Text('${NutritionFormatters.formatNumberCompact(totals.kcal.round())} kcal', style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 13)),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              _macroPill('P ${totals.protein.round()}g'),
+              _macroPill('C ${totals.carbs.round()}g'),
+              _macroPill('G ${totals.fat.round()}g'),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ...previewItems.map((item) => Padding(
+                padding: const EdgeInsets.only(bottom: 2),
+                child: Text(item, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 12)),
+              )),
+          if (previewItems.isEmpty)
+            Text('• Sin alimentos definidos', style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 12)),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              FilledButton(
+                onPressed: onAdd,
+                style: FilledButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999))),
+                child: const Text('Agregar'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _macroPill(String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(color: Colors.white.withOpacity(0.08), borderRadius: BorderRadius.circular(999)),
+      child: Text(text, style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600)),
+    );
+  }
+}
+
+class PremiumEmptyState extends StatelessWidget {
+  const PremiumEmptyState({
+    required this.icon,
+    required this.title,
+    required this.bullets,
+    this.primaryActionLabel,
+    this.onPrimaryAction,
+    this.linkActionLabel,
+    this.onLinkAction,
+    super.key,
+  });
+
+  final IconData icon;
+  final String title;
+  final List<String> bullets;
+  final String? primaryActionLabel;
+  final VoidCallback? onPrimaryAction;
+  final String? linkActionLabel;
+  final VoidCallback? onLinkAction;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        color: Colors.white.withOpacity(0.05),
+        border: Border.all(color: Colors.white.withOpacity(0.12)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 24, color: Colors.white.withOpacity(0.82)),
+          const SizedBox(height: 8),
+          Text(title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+          const SizedBox(height: 10),
+          ...bullets.map((bullet) => Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('• ', style: TextStyle(color: Colors.white.withOpacity(0.72))),
+                    Expanded(child: Text(bullet, style: TextStyle(fontSize: 12.5, color: Colors.white.withOpacity(0.74)))),
+                  ],
+                ),
+              )),
+          if (primaryActionLabel != null && onPrimaryAction != null) ...[
+            const SizedBox(height: 8),
+            FilledButton(onPressed: onPrimaryAction, child: Text(primaryActionLabel!)),
+          ],
+          if (linkActionLabel != null && onLinkAction != null)
+            TextButton(onPressed: onLinkAction, child: Text(linkActionLabel!)),
+        ],
+      ),
+    );
+  }
+}
+
+class _HeroVisualPlaceholder extends StatelessWidget {
+  const _HeroVisualPlaceholder({required this.hasData});
+
+  final bool hasData;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 88,
+      height: 88,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: Colors.white.withOpacity(0.06),
+        border: Border.all(color: Colors.white.withOpacity(0.14)),
+      ),
+      child: hasData
+          ? CustomPaint(painter: _RadarPainter(), child: const SizedBox.expand())
+          : Icon(Icons.insights_outlined, color: Colors.white.withOpacity(0.74)),
     );
   }
 }
@@ -412,7 +949,7 @@ class _RadarPainter extends CustomPainter {
       ..strokeWidth = 1;
     final fill = Paint()
       ..style = PaintingStyle.fill
-      ..color = Colors.tealAccent.withOpacity(0.16);
+      ..color = Colors.tealAccent.withOpacity(0.18);
 
     final path = Path();
     for (var i = 0; i < 3; i++) {
@@ -446,173 +983,45 @@ class _RadarPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-class _MacroBar extends StatelessWidget {
-  const _MacroBar({required this.label, required this.value, required this.total});
+class _ShortcutPill extends StatelessWidget {
+  const _ShortcutPill({required this.icon, required this.label, required this.onTap});
 
+  final IconData icon;
   final String label;
-  final double value;
-  final double total;
-
-  @override
-  Widget build(BuildContext context) {
-    final pct = total <= 0 ? 0.0 : (value / total).clamp(0.0, 1.0);
-    return Column(
-      children: [
-        Row(
-          children: [
-            Expanded(child: Text(label, style: const TextStyle(fontSize: 12))),
-            Text('${value.round()}/${total.round()} g', style: const TextStyle(fontSize: 12)),
-          ],
-        ),
-        const SizedBox(height: 4),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(999),
-          child: LinearProgressIndicator(value: pct, minHeight: 7, backgroundColor: Colors.white12),
-        ),
-      ],
-    );
-  }
-}
-
-class _MealQuickCard extends StatelessWidget {
-  const _MealQuickCard({required this.mealType, required this.kcal, required this.onAdd});
-
-  final MealType mealType;
-  final int kcal;
-  final VoidCallback onAdd;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: onAdd,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(999),
+        onTap: onTap,
         child: Ink(
-          width: 150,
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
-            color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.55),
-            border: Border.all(color: Colors.white12),
+            color: Colors.white.withOpacity(0.07),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: Colors.white.withOpacity(0.14)),
           ),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(mealTypeLabel(mealType), style: const TextStyle(fontWeight: FontWeight.w600)),
-            const Spacer(),
-            Text('${NutritionFormatters.formatNumberCompact(kcal)} kcal'),
-            Text(kcal == 0 ? 'Vacío' : 'Cargado', style: TextStyle(color: kcal == 0 ? Colors.orangeAccent : Colors.greenAccent, fontSize: 12)),
-            const SizedBox(height: 4),
-            Align(
-              alignment: Alignment.bottomRight,
-              child: CircleAvatar(radius: 13, child: Icon(Icons.add, size: 16, color: Theme.of(context).colorScheme.onPrimaryContainer)),
-            ),
-          ]),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 16),
+              const SizedBox(width: 8),
+              Text(label),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _FolderRow extends StatelessWidget {
-  const _FolderRow({
-    required this.folders,
-    required this.selected,
-    required this.onSelected,
-    required this.onNewFolder,
-  });
+class _ChipMeta {
+  const _ChipMeta({required this.id, required this.label, required this.icon});
 
-  final List<TemplateFolder> folders;
-  final String selected;
-  final ValueChanged<String> onSelected;
-  final VoidCallback onNewFolder;
-
-  @override
-  Widget build(BuildContext context) {
-    final chips = <Widget>[
-      ChoiceChip(label: const Text('Todas'), selected: selected == 'all', onSelected: (_) => onSelected('all')),
-      ChoiceChip(label: const Text('⭐ Favoritos'), selected: selected == 'favorite', onSelected: (_) => onSelected('favorite')),
-      ...folders.map((f) => ChoiceChip(label: Text(f.name), selected: selected == f.id, onSelected: (_) => onSelected(f.id))),
-      ActionChip(label: const Text('Nueva carpeta'), avatar: const Icon(Icons.create_new_folder_outlined, size: 16), onPressed: onNewFolder),
-    ];
-    return SizedBox(
-      height: 40,
-      child: ListView.separated(scrollDirection: Axis.horizontal, itemBuilder: (_, i) => chips[i], separatorBuilder: (_, __) => const SizedBox(width: 8), itemCount: chips.length),
-    );
-  }
-}
-
-class _TemplateCard extends StatelessWidget {
-  const _TemplateCard({required this.template, required this.onAdd, required this.onMenu});
-
-  final MealTemplate template;
-  final VoidCallback onAdd;
-  final ValueChanged<String> onMenu;
-
-  @override
-  Widget build(BuildContext context) {
-    final totals = template.effectiveTotals;
-    final preview = template.effectiveItems.take(3).map((e) => e.name).join(' · ');
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.48),
-        border: Border.all(color: Colors.white10),
-      ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(
-          children: [
-            Expanded(child: Text(template.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700))),
-            PopupMenuButton<String>(
-              onSelected: onMenu,
-              itemBuilder: (_) => const [
-                PopupMenuItem(value: 'move', child: Text('Mover a carpeta')),
-                PopupMenuItem(value: 'rename', child: Text('Renombrar')),
-                PopupMenuItem(value: 'duplicate', child: Text('Duplicar')),
-                PopupMenuItem(value: 'delete', child: Text('Eliminar')),
-                PopupMenuItem(value: 'favorite', child: Text('Marcar favorito')),
-              ],
-            ),
-          ],
-        ),
-        const SizedBox(height: 4),
-        Text('${totals.kcal.round()} kcal · P ${totals.protein.round()} C ${totals.carbs.round()} G ${totals.fat.round()}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12)),
-        const SizedBox(height: 8),
-        Text(preview.isEmpty ? 'Sin alimentos definidos' : preview, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12)),
-        const Spacer(),
-        FilledButton(onPressed: onAdd, child: const Text('Agregar')),
-      ]),
-    );
-  }
-}
-
-class _EmptyCard extends StatelessWidget {
-  const _EmptyCard({required this.icon, required this.title, this.subtitle, this.action, this.onAction});
-
+  final String id;
+  final String label;
   final IconData icon;
-  final String title;
-  final String? subtitle;
-  final String? action;
-  final VoidCallback? onAction;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(color: Colors.white.withOpacity(0.04), borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.white10)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: Colors.white70),
-          const SizedBox(height: 8),
-          Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-          if (subtitle != null) ...[const SizedBox(height: 4), Text(subtitle!, style: const TextStyle(fontSize: 12))],
-          if (action != null && onAction != null) ...[
-            const SizedBox(height: 10),
-            FilledButton.tonal(onPressed: onAction, child: Text(action!)),
-          ],
-        ],
-      ),
-    );
-  }
 }
