@@ -20,6 +20,10 @@ import 'features/groups/presentation/pages/groups_list_screen.dart';
 import 'features/habits/presentation/habits_tracker_screen.dart';
 import 'features/navigation/main_shell.dart';
 import 'features/nutrition/nutrition_screens.dart';
+import 'features/nutrition/presentation/food_log_screen.dart';
+import 'features/nutrition/presentation/template_editor_screen.dart';
+import 'features/nutrition/presentation/templates_screen.dart';
+import 'features/nutrition/presentation/quick_add_placeholder_screen.dart';
 import 'features/onboarding/onboarding_screen.dart';
 import 'features/sleep/presentation/sleep_regularity_screen.dart';
 import 'features/sleep/presentation/sleep_overview_screen.dart';
@@ -147,6 +151,10 @@ class FitApp extends StatelessWidget {
           '/workout/routines/new': (_) => const TemplateExercisePickerScreen(),
           '/workout/routines/search': (_) => const WorkoutRoutineSearchPlaceholderScreen(),
           '/nutrition': (_) => const NutritionProScreen(),
+          '/nutrition/home': (_) => const NutritionProScreen(),
+          '/nutrition/templates': (_) => const TemplatesScreen(),
+          '/nutrition/template_editor': (_) => const TemplateEditorScreen(),
+          '/nutrition/quick_add': (_) => const NutritionQuickAddPlaceholderScreen(),
           '/sleep': (_) => const SleepProScreen(),
           '/sleep/overview': (_) => const SleepOverviewScreen(),
           '/sleep/history': (_) => const SleepHistoryScreen(),

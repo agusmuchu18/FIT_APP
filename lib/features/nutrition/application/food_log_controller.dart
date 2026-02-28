@@ -165,7 +165,7 @@ class FoodLogController extends ChangeNotifier {
 
   Future<void> saveTemplate(String name) async {
     if (name.trim().isEmpty || currentDraft.entries.isEmpty) return;
-    await _repository.saveTemplate(MealTemplate(id: DateTime.now().microsecondsSinceEpoch.toString(), name: name.trim(), mealType: selectedMealType, entries: currentDraft.entries));
+    await _repository.saveTemplate(MealTemplate(id: DateTime.now().microsecondsSinceEpoch.toString(), name: name.trim(), mealType: selectedMealType, entries: currentDraft.entries, createdAt: DateTime.now()));
     templates = await _repository.getTemplates();
     notifyListeners();
   }

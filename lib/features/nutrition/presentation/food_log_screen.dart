@@ -17,7 +17,9 @@ import 'widgets/meal_draft_bottom_bar.dart';
 import 'widgets/meal_type_wheel.dart';
 
 class FoodLogScreen extends StatefulWidget {
-  const FoodLogScreen({super.key});
+  const FoodLogScreen({super.key, this.initialMealType});
+
+  final MealType? initialMealType;
 
   @override
   State<FoodLogScreen> createState() => _FoodLogScreenState();
@@ -37,6 +39,9 @@ class _FoodLogScreenState extends State<FoodLogScreen> {
     final fdcClient = FdcClient(apiKey: NutritionApiConfig.usdaApiKey);
     repository = FoodRepository(fdc: fdcClient);
     controller = FoodLogController(repository: repository)..addListener(_refresh);
+    if (widget.initialMealType != null) {
+      controller.setMealType(widget.initialMealType!);
+    }
 
     if (!NutritionApiConfig.hasUsdaKey) {
       controller.setUiMessage('Falta USDA_API_KEY. Mostrando catálogo local.');
