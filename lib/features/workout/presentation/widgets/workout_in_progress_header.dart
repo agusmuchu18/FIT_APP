@@ -24,6 +24,9 @@ class WorkoutInProgressHeader extends StatefulWidget {
   const WorkoutInProgressHeader({
     super.key,
     required this.startTime,
+    this.isPaused = false,
+    this.pausedAt,
+    this.accumulatedPaused = Duration.zero,
     required this.totalVolume,
     required this.currentDistribution,
     this.previousDistribution,
@@ -33,6 +36,9 @@ class WorkoutInProgressHeader extends StatefulWidget {
   });
 
   final DateTime startTime;
+  final bool isPaused;
+  final DateTime? pausedAt;
+  final Duration accumulatedPaused;
   final double totalVolume;
   final Map<String, double> currentDistribution;
   final Map<String, double>? previousDistribution;
@@ -41,30 +47,47 @@ class WorkoutInProgressHeader extends StatefulWidget {
   final double collapseProgress;
 
   @override
-  State<WorkoutInProgressHeader> createState() => _WorkoutInProgressHeaderState();
+  State<WorkoutInProgressHeader> createState() =>
+      _WorkoutInProgressHeaderState();
 }
 
-class _WorkoutInProgressHeaderState extends State<WorkoutInProgressHeader> {
+class _WorkoutInProgressHeaderState extends State<WorkoutInProgressHeader>
+    with WidgetsBindingObserver {
   late final ValueNotifier<Duration> _elapsedNotifier;
   Timer? _timer;
-  bool _showGlow = true;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _elapsedNotifier = ValueNotifier(_computeElapsed());
+    _startClock();
+  }
+
+  void _startClock() {
+    _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       _elapsedNotifier.value = _computeElapsed();
-      if (_elapsedNotifier.value.inSeconds.isEven) {
-        setState(() => _showGlow = !_showGlow);
-      }
     });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _elapsedNotifier.value = _computeElapsed();
+      _startClock();
+    } else {
+      _timer?.cancel();
+    }
   }
 
   @override
   void didUpdateWidget(covariant WorkoutInProgressHeader oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.startTime != widget.startTime) {
+    if (oldWidget.startTime != widget.startTime ||
+        oldWidget.isPaused != widget.isPaused ||
+        oldWidget.pausedAt != widget.pausedAt ||
+        oldWidget.accumulatedPaused != widget.accumulatedPaused) {
       _elapsedNotifier.value = _computeElapsed();
     }
   }
@@ -72,12 +95,16 @@ class _WorkoutInProgressHeaderState extends State<WorkoutInProgressHeader> {
   @override
   void dispose() {
     _timer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
     _elapsedNotifier.dispose();
     super.dispose();
   }
 
   Duration _computeElapsed() {
-    final diff = DateTime.now().difference(widget.startTime);
+    final end = widget.isPaused
+        ? (widget.pausedAt ?? DateTime.now())
+        : DateTime.now();
+    final diff = end.difference(widget.startTime) - widget.accumulatedPaused;
     return diff.isNegative ? Duration.zero : diff;
   }
 
@@ -85,21 +112,77 @@ class _WorkoutInProgressHeaderState extends State<WorkoutInProgressHeader> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final accent = theme.colorScheme.primary;
-    final progress = widget.totalSets == 0 ? 0.0 : (widget.completedSets / widget.totalSets).clamp(0.0, 1.0);
+    final progress = widget.totalSets == 0
+        ? 0.0
+        : (widget.completedSets / widget.totalSets).clamp(0.0, 1.0);
     final formattedVolume = formatVolume(widget.totalVolume);
     final currentValues = WorkoutLiveMetrics.radarMuscles
-        .map((muscle) => (widget.currentDistribution[muscle] ?? 0).clamp(0, 1).toDouble())
+        .map(
+          (muscle) =>
+              (widget.currentDistribution[muscle] ?? 0).clamp(0, 1).toDouble(),
+        )
         .toList();
     final previousValues = widget.previousDistribution == null
         ? null
         : WorkoutLiveMetrics.radarMuscles
-            .map((muscle) => (widget.previousDistribution![muscle] ?? 0).clamp(0, 1).toDouble())
-            .toList();
-    final collapse = Curves.easeOut.transform(widget.collapseProgress.clamp(0, 1));
+              .map(
+                (muscle) => (widget.previousDistribution![muscle] ?? 0)
+                    .clamp(0, 1)
+                    .toDouble(),
+              )
+              .toList();
+    final collapse = Curves.easeOut.transform(
+      widget.collapseProgress.clamp(0, 1),
+    );
     final heroHeight = lerpDouble(234, 134, collapse)!;
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
+    if (MediaQuery.sizeOf(context).width < 400 ||
+        MediaQuery.textScalerOf(context).scale(16) > 20) {
+      return Card(
+        margin: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ValueListenableBuilder<Duration>(
+                valueListenable: _elapsedNotifier,
+                builder: (_, elapsed, _) => Text(
+                  '${widget.isPaused ? 'En pausa' : 'Tiempo activo'} · ${_formatElapsed(elapsed)}',
+                  style: theme.textTheme.titleLarge,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text('Carga externa · $formattedVolume kg'),
+              const SizedBox(height: 12),
+              Text(
+                '${widget.completedSets} de ${widget.totalSets} series completadas',
+              ),
+              const SizedBox(height: 12),
+              LinearProgressIndicator(
+                value: progress,
+                semanticsLabel: 'Progreso de series',
+              ),
+              if (collapse < .55) ...[
+                const SizedBox(height: 12),
+                Center(
+                  child: _radar(context, currentValues, previousValues, accent),
+                ),
+                const Text(
+                  'Distribución estimada; no mide activación muscular.',
+                  style: TextStyle(fontSize: 12),
+                ),
+              ],
+            ],
+          ),
+        ),
+      );
+    }
 
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 240),
+      duration: reduceMotion
+          ? Duration.zero
+          : const Duration(milliseconds: 240),
       curve: Curves.easeOut,
       height: heroHeight,
       margin: const EdgeInsets.fromLTRB(16, 12, 16, 12),
@@ -110,15 +193,19 @@ class _WorkoutInProgressHeaderState extends State<WorkoutInProgressHeader> {
           center: Alignment.topLeft,
           radius: 1.25,
           colors: [
-            accent.withOpacity(0.22),
-            theme.colorScheme.surface.withOpacity(0.9),
-            theme.colorScheme.surfaceContainerHighest.withOpacity(0.76),
+            accent.withValues(alpha: 0.22),
+            theme.colorScheme.surface.withValues(alpha: 0.9),
+            theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.76),
           ],
           stops: const [0.02, 0.52, 1],
         ),
-        border: Border.all(color: Colors.white.withOpacity(0.12)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 20, offset: const Offset(0, 10)),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.15),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
         ],
       ),
       child: Stack(
@@ -127,14 +214,17 @@ class _WorkoutInProgressHeaderState extends State<WorkoutInProgressHeader> {
           IgnorePointer(
             child: AnimatedOpacity(
               duration: const Duration(milliseconds: 1800),
-              opacity: _showGlow ? 0.3 : 0.15,
+              opacity: 0.25,
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(20),
                   gradient: RadialGradient(
                     center: const Alignment(0.8, -0.8),
                     radius: 1.1,
-                    colors: [accent.withOpacity(0.24), Colors.transparent],
+                    colors: [
+                      accent.withValues(alpha: 0.24),
+                      Colors.transparent,
+                    ],
                   ),
                 ),
               ),
@@ -157,7 +247,8 @@ class _WorkoutInProgressHeaderState extends State<WorkoutInProgressHeader> {
                               fontSize: lerpDouble(40, 24, collapse),
                               height: 1,
                             ),
-                            labelColor: theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
+                            labelColor: theme.colorScheme.onSurfaceVariant
+                                .withValues(alpha: 0.7),
                             spacing: 6,
                           );
                         },
@@ -166,12 +257,16 @@ class _WorkoutInProgressHeaderState extends State<WorkoutInProgressHeader> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: _MetricColumn(
-                        label: 'Volumen',
-                        labelColor: theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
+                        label: 'Carga externa',
+                        labelColor: theme.colorScheme.onSurfaceVariant
+                            .withValues(alpha: 0.7),
                         spacing: 6,
                         valueWidget: AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 280),
-                          transitionBuilder: (child, animation) => FadeTransition(opacity: animation, child: child),
+                          duration: reduceMotion
+                              ? Duration.zero
+                              : const Duration(milliseconds: 280),
+                          transitionBuilder: (child, animation) =>
+                              FadeTransition(opacity: animation, child: child),
                           child: Text(
                             '$formattedVolume kg',
                             key: ValueKey(formattedVolume),
@@ -189,7 +284,9 @@ class _WorkoutInProgressHeaderState extends State<WorkoutInProgressHeader> {
                     SizedBox(
                       width: 130,
                       child: AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 250),
+                        duration: reduceMotion
+                            ? Duration.zero
+                            : const Duration(milliseconds: 250),
                         switchInCurve: Curves.easeOut,
                         switchOutCurve: Curves.easeOut,
                         child: collapse > 0.55
@@ -200,29 +297,42 @@ class _WorkoutInProgressHeaderState extends State<WorkoutInProgressHeader> {
                                 children: [
                                   Expanded(
                                     child: TweenAnimationBuilder<double>(
-                                      duration: const Duration(milliseconds: 300),
+                                      duration: reduceMotion
+                                          ? Duration.zero
+                                          : const Duration(milliseconds: 300),
                                       curve: Curves.easeOut,
                                       tween: Tween<double>(begin: 0, end: 1),
                                       builder: (context, value, _) {
-                                        final animatedCurrent = currentValues.map((point) => point * value).toList();
-                                        final animatedPrevious = previousValues?.map((point) => point * value).toList();
-                                        return CustomPaint(
-                                          painter: RadarChartPainter(
-                                            labels: WorkoutLiveMetrics.radarMuscles,
-                                            currentValues: animatedCurrent,
-                                            previousValues: animatedPrevious,
-                                            accentColor: accent,
+                                        final animatedCurrent = currentValues
+                                            .map((point) => point * value)
+                                            .toList();
+                                        final animatedPrevious = previousValues
+                                            ?.map((point) => point * value)
+                                            .toList();
+                                        return RepaintBoundary(
+                                          child: CustomPaint(
+                                            painter: RadarChartPainter(
+                                              labels: WorkoutLiveMetrics
+                                                  .radarMuscles,
+                                              currentValues: animatedCurrent,
+                                              previousValues: animatedPrevious,
+                                              accentColor: accent,
+                                            ),
+                                            child: const SizedBox.expand(),
                                           ),
-                                          child: const SizedBox.expand(),
                                         );
                                       },
                                     ),
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    previousValues == null ? 'Actual' : 'Actual / Anterior',
+                                    previousValues == null
+                                        ? 'Estimado · actual'
+                                        : 'Estimado · actual / previo',
                                     textAlign: TextAlign.center,
-                                    style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      color: theme.colorScheme.onSurfaceVariant,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -238,7 +348,9 @@ class _WorkoutInProgressHeaderState extends State<WorkoutInProgressHeader> {
                   child: Text(
                     '${widget.completedSets} de ${widget.totalSets} series completadas',
                     style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant.withOpacity(0.85),
+                      color: theme.colorScheme.onSurfaceVariant.withValues(
+                        alpha: 0.85,
+                      ),
                     ),
                   ),
                 ),
@@ -248,8 +360,11 @@ class _WorkoutInProgressHeaderState extends State<WorkoutInProgressHeader> {
                   child: LinearProgressIndicator(
                     value: progress,
                     minHeight: 8,
-                    backgroundColor: theme.colorScheme.surfaceContainerHighest.withOpacity(0.75),
-                    valueColor: AlwaysStoppedAnimation<Color>(accent.withOpacity(0.92)),
+                    backgroundColor: theme.colorScheme.surfaceContainerHighest
+                        .withValues(alpha: 0.75),
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      accent.withValues(alpha: 0.92),
+                    ),
                   ),
                 ),
               ],
@@ -268,6 +383,37 @@ class _WorkoutInProgressHeaderState extends State<WorkoutInProgressHeader> {
       return '${hours.toString().padLeft(2, '0')}:$minutes:$seconds';
     }
     return '$minutes:$seconds';
+  }
+
+  Widget _radar(
+    BuildContext context,
+    List<double> current,
+    List<double>? previous,
+    Color accent,
+  ) {
+    final label = WorkoutLiveMetrics.radarMuscles
+        .map(
+          (muscle) =>
+              '$muscle: ${((widget.currentDistribution[muscle] ?? 0) * 100).round()}%',
+        )
+        .join(', ');
+    return Semantics(
+      label: 'Distribución muscular estimada. $label',
+      child: RepaintBoundary(
+        child: SizedBox(
+          width: 190,
+          height: 170,
+          child: CustomPaint(
+            painter: RadarChartPainter(
+              labels: WorkoutLiveMetrics.radarMuscles,
+              currentValues: current,
+              previousValues: previous,
+              accentColor: accent,
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -295,14 +441,21 @@ class _MetricColumn extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Text(label, style: theme.textTheme.bodySmall?.copyWith(color: labelColor)),
+        Text(
+          label,
+          style: theme.textTheme.bodySmall?.copyWith(color: labelColor),
+        ),
         SizedBox(height: spacing),
         valueWidget ??
             Text(
               value ?? '',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: valueStyle ?? theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+              style:
+                  valueStyle ??
+                  theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
             ),
       ],
     );

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../common/theme/app_layout.dart';
+
 class WorkoutBottomBar extends StatelessWidget {
   const WorkoutBottomBar({
     super.key,
@@ -13,79 +15,79 @@ class WorkoutBottomBar extends StatelessWidget {
     this.canSaveDraft = true,
     this.canFinish = true,
     this.validationHint,
+    this.isSaving = false,
+    this.completionPending = false,
+    this.paused = false,
+    this.onPause,
   });
-
-  final int exerciseCount;
-  final int setCount;
+  final int exerciseCount, setCount;
   final String durationLabel;
-  final VoidCallback? onAddExercise;
-  final VoidCallback onSave;
-  final VoidCallback onFinish;
-  final bool showAddExercise;
-  final bool canSaveDraft;
-  final bool canFinish;
+  final VoidCallback? onAddExercise, onPause;
+  final VoidCallback onSave, onFinish;
+  final bool showAddExercise,
+      canSaveDraft,
+      canFinish,
+      isSaving,
+      completionPending,
+      paused;
   final String? validationHint;
-
   @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.black.withOpacity(0.35),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('$exerciseCount ejercicios · $setCount series',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700)),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Duración $durationLabel',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                    if (validationHint != null)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 6),
-                        child: Text(
-                          validationHint!,
-                          style: Theme.of(context)
-                              .textTheme
-                              .labelSmall
-                              ?.copyWith(color: Theme.of(context).colorScheme.outline),
-                        ),
-                      ),
-                  ],
+  Widget build(BuildContext context) => Material(
+    color: Theme.of(context).colorScheme.surface,
+    child: SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.lg,
+          vertical: AppSpacing.md,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              '$exerciseCount ejercicios · $setCount series · ${paused ? 'En pausa' : 'Duración'} $durationLabel',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            if (validationHint != null)
+              Text(
+                validationHint!,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            const SizedBox(height: AppSpacing.sm),
+            FilledButton(
+              onPressed: canFinish ? onFinish : null,
+              child: Text(
+                isSaving
+                    ? 'Guardando entrenamiento…'
+                    : completionPending
+                    ? 'Reintentar guardado'
+                    : 'Finalizar entrenamiento',
+              ),
+            ),
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: AppSpacing.sm,
+              children: [
+                if (showAddExercise)
+                  TextButton(
+                    onPressed: onAddExercise,
+                    child: const Text('Agregar ejercicio'),
+                  ),
+                TextButton(
+                  onPressed: canSaveDraft ? onSave : null,
+                  child: const Text('Guardar borrador'),
                 ),
-              ),
-              Wrap(
-                spacing: 8,
-                children: [
-                  if (showAddExercise)
-                    FilledButton.icon(
-                      onPressed: onAddExercise,
-                      icon: const Icon(Icons.add),
-                      label: const Text('Agregar ejercicio'),
-                    ),
-                  OutlinedButton(
-                    onPressed: canSaveDraft ? onSave : null,
-                    child: const Text('Guardar borrador'),
+                if (onPause != null)
+                  TextButton(
+                    onPressed: canSaveDraft ? onPause : null,
+                    child: Text(paused ? 'Reanudar' : 'Pausar sesión'),
                   ),
-                  FilledButton.icon(
-                    onPressed: canFinish ? onFinish : null,
-                    icon: const Icon(Icons.flag_outlined),
-                    label: const Text('Finalizar sesión'),
-                  ),
-                ],
-              ),
-            ],
-          ),
+              ],
+            ),
+          ],
         ),
       ),
-    );
-  }
+    ),
+  );
 }

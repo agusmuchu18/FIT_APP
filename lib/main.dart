@@ -13,6 +13,8 @@ import 'core/data/repositories.dart';
 import 'core/data/statistics_service.dart';
 import 'core/domain/entities.dart';
 import 'core/data/hive_sync_queue_store.dart';
+import 'core/data/account_storage_scope.dart';
+import 'core/data/account_session_gate.dart';
 
 import 'features/analytics/analytics_overview_screen.dart';
 import 'features/auth/presentation/login_screen.dart';
@@ -21,7 +23,6 @@ import 'features/groups/presentation/pages/groups_list_screen.dart';
 import 'features/habits/presentation/habits_tracker_screen.dart';
 import 'features/navigation/main_shell.dart';
 import 'features/nutrition/nutrition_screens.dart';
-import 'features/nutrition/presentation/food_log_screen.dart';
 import 'features/nutrition/presentation/template_editor_screen.dart';
 import 'features/nutrition/presentation/templates_screen.dart';
 import 'features/nutrition/presentation/quick_add_placeholder_screen.dart';
@@ -38,7 +39,14 @@ import 'features/settings/screens/settings_subscreens.dart';
 import 'features/modules/presentation/optional_module_placeholders.dart';
 import 'features/settings/screens/modules_settings_screen.dart';
 import 'features/workout/presentation/workout_in_progress_screen.dart';
+import 'features/workout/pro/workout_pro_screen.dart';
+import 'features/workout/data/workout_repository.dart';
+import 'features/workout/application/workout_completion_recovery.dart';
 import 'features/workout/training_home/template_exercise_picker_screen.dart';
+import 'features/workout/training_home/routine_search_screen.dart';
+import 'features/workout/training_home/workout_history_screen.dart';
+import 'features/workout/presentation/workout_summary_screen.dart';
+import 'features/workout/training_home/workout_settings_screen.dart';
 import 'features/workout/training_home/training_home_screen.dart';
 import 'features/workout/workout_in_progress_controller.dart';
 import 'features/workout/widgets/workout_mini_bar_host_overlay.dart';
@@ -47,29 +55,62 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('es');
 
-  // 1) Firebase primero
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-
-  // 2) Login anónimo (para que Firestore tenga un uid real)
-  // Más adelante lo reemplazamos por tu LoginScreen (email/pass, Google, etc).
-  if (FirebaseAuth.instance.currentUser == null) {
-    await FirebaseAuth.instance.signInAnonymously();
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } on Object catch (error, stackTrace) {
+    FlutterError.reportError(
+      FlutterErrorDetails(
+        exception: error,
+        stack: stackTrace,
+        library: 'app bootstrap',
+        context: ErrorDescription(
+          'initializing Firebase; continuing in local-only mode',
+        ),
+      ),
+    );
   }
 
-  // 3) Hive (storage local)
+  // Hive mantiene la aplicación utilizable aun si el backend no está disponible.
   await Hive.initFlutter();
 
-  // --- Services (local + remote sync) ---
-  final local = await LocalStorageService.create();
-  final statistics = StatisticsService();
-  final syncQueue = await HiveSyncQueueStore.create();
+  final accounts = Firebase.apps.isEmpty
+      ? Stream<String?>.value(null)
+      : FirebaseAuth.instance.authStateChanges().map(
+          (user) => user == null || user.isAnonymous ? null : user.uid,
+        );
+  runApp(
+    AccountSessionGate<FitnessRepository>(
+      theme: AppTheme.dark,
+      accounts: accounts,
+      restore: _createAccountRepository,
+      builder: (repository) => FitApp(repository: repository),
+    ),
+  );
+}
 
-  // 🔥 REAL: Firestore + sesión FirebaseAuth
+Future<FitnessRepository> _createAccountRepository(
+  String? userId,
+  String scope,
+) async {
+  if (AccountStorageScope.current == scope) {
+    WorkoutInProgressController.instance.resetSession();
+  }
+
+  // --- Services (local + remote sync) ---
+  final local = await LocalStorageService.create(scope: scope);
+  await Hive.openBox<String>(
+    AccountStorageScope.boxName(WorkoutRepository.richSessionsBoxName, scope),
+  );
+  final statistics = StatisticsService();
+  final syncQueue = await HiveSyncQueueStore.create(scope: scope);
+
   final remote = RemoteSyncService(
-    transport: FirestoreRemoteSyncTransport(),
-    session: FirebaseAuthSyncSession(FirebaseAuth.instance),
+    transport: userId == null
+        ? NoopRemoteSyncTransport()
+        : FirestoreRemoteSyncTransport(),
+    session: StaticSyncSession(userId: userId ?? 'local-only'),
     network: const AlwaysOnlineNetworkStatus(),
     queue: syncQueue,
     policy: const SyncPolicy(),
@@ -103,25 +144,29 @@ Future<void> main() async {
     ),
   );
 
-  await WorkoutInProgressController.instance.initialize();
-
   final repository = FitnessRepository(
     local: local,
     remote: remote,
     statistics: statistics,
   );
 
-  runApp(FitApp(repository: repository));
+  // Capture this scope before any awaits; a previous account can finish a write safely.
+  if (AccountStorageScope.current == scope) {
+    final sessions = WorkoutRepository();
+    await recoverCompletedWorkouts(sessions, repository);
+    if (AccountStorageScope.current == scope) {
+      await WorkoutInProgressController.instance.refresh();
+    }
+  }
+  return repository;
 }
 
 class FitApp extends StatelessWidget {
-  const FitApp({
-    super.key,
-    required this.repository,
-  });
+  const FitApp({super.key, required this.repository});
 
   final FitnessRepository repository;
-  static final WorkoutMiniBarRouteObserver _workoutMiniBarRouteObserver = WorkoutMiniBarRouteObserver();
+  static final WorkoutMiniBarRouteObserver _workoutMiniBarRouteObserver =
+      WorkoutMiniBarRouteObserver();
 
   @override
   Widget build(BuildContext context) {
@@ -133,30 +178,42 @@ class FitApp extends StatelessWidget {
         title: 'FIT App',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.dark,
-        builder: (context, child) {
-          return Stack(
-            children: [
-              if (child != null) child,
-              const Positioned.fill(child: WorkoutMiniBarHostOverlay()),
-            ],
-          );
-        },
+        builder: workoutMiniBarAppBuilder,
         routes: {
-          '/': (_) => const LoginScreen(),
+          '/': (_) {
+            final user = Firebase.apps.isEmpty
+                ? null
+                : FirebaseAuth.instance.currentUser;
+            return user != null ? const MainShell() : const LoginScreen();
+          },
           '/home': (_) => const MainShell(),
           '/auth/login': (_) => const LoginScreen(),
           '/auth/signup': (_) => const SignupScreen(),
           '/workout': (_) => const TrainingHomeScreen(),
-          '/workout/session': (_) => const WorkoutInProgressScreen(),
-          '/workout/history': (_) => const WorkoutHistoryPlaceholderScreen(),
-          '/workout/settings': (_) => const WorkoutSettingsPlaceholderScreen(),
+          '/workout/session': (_) =>
+              WorkoutInProgressController.instance.isLegacyDraftActive
+              ? WorkoutProScreen(fitnessRepository: repository)
+              : WorkoutInProgressScreen(fitnessRepository: repository),
+          '/workout/history': (_) => const WorkoutHistoryScreen(),
+          '/workout/summary': (context) {
+            final args = ModalRoute.of(context)?.settings.arguments;
+            return WorkoutSummaryScreen(sessionId: args is String ? args : '');
+          },
+          '/workout/detail': (context) {
+            final args = ModalRoute.of(context)?.settings.arguments;
+            return WorkoutHistoryDetailScreen(
+              sessionId: args is String ? args : '',
+            );
+          },
+          '/workout/settings': (_) => const WorkoutSettingsScreen(),
           '/workout/routines/new': (_) => const TemplateExercisePickerScreen(),
-          '/workout/routines/search': (_) => const WorkoutRoutineSearchPlaceholderScreen(),
+          '/workout/routines/search': (_) => const WorkoutRoutineSearchScreen(),
           '/nutrition': (_) => const NutritionProScreen(),
           '/nutrition/home': (_) => const NutritionProScreen(),
           '/nutrition/templates': (_) => const TemplatesScreen(),
           '/nutrition/template_editor': (_) => const TemplateEditorScreen(),
-          '/nutrition/quick_add': (_) => const NutritionQuickAddPlaceholderScreen(),
+          '/nutrition/quick_add': (_) =>
+              const NutritionQuickAddPlaceholderScreen(),
           '/sleep': (_) => const SleepProScreen(),
           '/sleep/overview': (_) => const SleepOverviewScreen(),
           '/sleep/history': (_) => const SleepHistoryScreen(),
@@ -166,7 +223,8 @@ class FitApp extends StatelessWidget {
           '/streak': (_) => const StreakScreen(),
           '/onboarding': (_) => const OnboardingScreen(),
           '/profile': (_) => const ProfileSocialScreen(),
-          '/profile/progress_photos': (_) => const ProgressPhotosGalleryScreen(),
+          '/profile/progress_photos': (_) =>
+              const ProgressPhotosGalleryScreen(),
           '/profile/activity': (_) => const ProfileActivityHistoryScreen(),
           '/settings': (_) => const SettingsScreen(),
           '/settings/appearance': (_) => const AppearanceSettingsScreen(),

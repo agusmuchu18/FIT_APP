@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import 'local_storage_service.dart';
 import 'remote_sync_service.dart';
 import 'statistics_service.dart';
@@ -5,19 +7,19 @@ import '../domain/entities.dart';
 
 class FitnessRepository {
   FitnessRepository({
-    required LocalStorageService local,
-    required RemoteSyncService remote,
-    required StatisticsService statistics,
-  })  : _local = local,
-        _remote = remote,
-        _statistics = statistics;
+    required this._local,
+    required this._remote,
+    required this._statistics,
+  });
 
   final LocalStorageService _local;
   final RemoteSyncService _remote;
   final StatisticsService _statistics;
+  final ValueNotifier<int> workoutsRevision = ValueNotifier<int>(0);
 
   Future<void> saveWorkout(WorkoutEntry entry, {bool sync = false}) async {
     await _local.saveWorkout(entry);
+    workoutsRevision.value++;
     if (sync) await _remote.syncWorkout(entry);
   }
 
@@ -38,7 +40,10 @@ class FitnessRepository {
 
   Future<List<SleepEntry>> getSleep() => _local.fetchSleep();
 
-  Future<void> savePreferences(UserPreferences preferences, {bool sync = false}) async {
+  Future<void> savePreferences(
+    UserPreferences preferences, {
+    bool sync = false,
+  }) async {
     await _local.savePreferences(preferences);
     if (sync) await _remote.syncPreferences(preferences);
   }
@@ -51,7 +56,11 @@ class FitnessRepository {
     required Macros macros,
   }) async {
     await _statistics.recordNutritionMetrics(
-      NutritionMetrics(date: date, totalCalories: totalCalories, macros: macros),
+      NutritionMetrics(
+        date: date,
+        totalCalories: totalCalories,
+        macros: macros,
+      ),
     );
   }
 
@@ -74,21 +83,20 @@ class FitnessRepository {
   Future<Map<DateTime, int>> getWorkoutDurationByDay({int days = 7}) async {
     final workouts = await _local.fetchWorkouts();
     final now = DateTime.now();
-    final startDate = DateTime(now.year, now.month, now.day)
-        .subtract(Duration(days: days - 1));
+    final startDate = DateTime(
+      now.year,
+      now.month,
+      now.day,
+    ).subtract(Duration(days: days - 1));
 
     final Map<DateTime, int> minutesByDay = {};
     for (final workout in workouts) {
-      final date = _safeParseDate(workout.id);
+      final date = workoutEntryDate(workout);
       if (date.isBefore(startDate) || date.isAfter(now)) continue;
       final day = DateTime(date.year, date.month, date.day);
       minutesByDay[day] = (minutesByDay[day] ?? 0) + workout.durationMinutes;
     }
 
     return minutesByDay;
-  }
-
-  DateTime _safeParseDate(String raw) {
-    return DateTime.tryParse(raw) ?? DateTime.now();
   }
 }

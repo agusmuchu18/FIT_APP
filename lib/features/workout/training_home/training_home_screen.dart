@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../common/theme/app_colors.dart';
+import '../../common/widgets/fit_glyph.dart';
 import '../pro/models/workout_models.dart';
 import 'folder_routines_screen.dart';
 import 'routine_preview_screen.dart';
@@ -30,20 +31,57 @@ class _TrainingHomeView extends StatefulWidget {
 
 class _TrainingHomeViewState extends State<_TrainingHomeView> {
   int _routinesViewIndex = 0;
+  bool _navigating = false;
 
   @override
   Widget build(BuildContext context) {
     final controller = context.watch<TrainingHomeController>();
-    if (!controller.initialized) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    if (!controller.initialized) {
+      if (controller.loadError != null) {
+        return Scaffold(
+          appBar: AppBar(title: const Text('Entrenamiento')),
+          body: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'No se pudieron cargar tus entrenamientos. Tus datos se conservan.',
+                  ),
+                  FilledButton(
+                    onPressed: controller.initialize,
+                    child: const Text('Reintentar'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      }
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
 
-    final todayStatus = controller.hasSessionToday ? 'Hoy: sesión registrada' : 'Hoy: sin sesión registrada';
+    final todayStatus = controller.hasSessionToday
+        ? 'Hoy: sesión registrada'
+        : 'Hoy: sin sesión registrada';
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Entrenamiento'),
         actions: [
-          IconButton(onPressed: () => Navigator.of(context).pushNamed('/workout/history'), icon: const Icon(Icons.history)),
-          IconButton(onPressed: () => Navigator.of(context).pushNamed('/workout/settings'), icon: const Icon(Icons.tune)),
+          IconButton(
+            onPressed: () =>
+                Navigator.of(context).pushNamed('/workout/history'),
+            icon: const FitGlyph(kind: FitGlyphKind.history),
+            tooltip: 'Historial',
+          ),
+          IconButton(
+            onPressed: () =>
+                Navigator.of(context).pushNamed('/workout/settings'),
+            icon: const FitGlyph(kind: FitGlyphKind.settings),
+            tooltip: 'Ajustes de entrenamiento',
+          ),
         ],
       ),
       body: RefreshIndicator(
@@ -51,32 +89,52 @@ class _TrainingHomeViewState extends State<_TrainingHomeView> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            Text(todayStatus, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textMuted)),
+            if (controller.loadError != null)
+              TextButton(
+                onPressed: controller.refresh,
+                child: const Text('No se pudo actualizar. Reintentar'),
+              ),
+            Text(
+              todayStatus,
+              style: Theme.of(context).textTheme.bodySmall
+                  ?.copyWith(color: AppColors.textMuted),
+            ),
             if (controller.latestSession != null)
               Padding(
                 padding: const EdgeInsets.only(top: 4),
                 child: Text(
                   'Última sesión: ${_lastSessionLabel(controller.latestSession!)} · ${_daysAgoLabel(controller.latestSession!.date)}',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
+                  style: Theme.of(context).textTheme.bodySmall
+                      ?.copyWith(color: AppColors.textMuted),
                 ),
               ),
             const SizedBox(height: 14),
             PrimaryStartWorkoutCard(
-              onTap: () => Navigator.of(context).pushNamed('/workout/session', arguments: {'trainingContext': 'Gym'}),
+              onTap: () => _goAndRefresh(
+                context,
+                controller,
+                '/workout/session',
+                arguments: {'trainingContext': 'Gym'},
+              ),
             ),
             const SizedBox(height: 20),
             Text('Rutinas', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 12),
             SizedBox(
-              height: 160,
+              height: 184 * (MediaQuery.textScalerOf(context).scale(16) / 16),
               child: Row(
                 children: [
                   Expanded(
                     child: RoutineActionTile(
                       title: 'Nueva rutina',
                       subtitle: 'Crear desde cero o duplicar',
-                      icon: Icons.description_outlined,
-                      onTap: () => _goAndRefresh(context, controller, '/workout/routines/new'),
+                      glyph: FitGlyphKind.routine,
+                      imageAsset: 'assets/images/workout/routine_builder.webp',
+                      onTap: () => _goAndRefresh(
+                        context,
+                        controller,
+                        '/workout/routines/new',
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -84,8 +142,13 @@ class _TrainingHomeViewState extends State<_TrainingHomeView> {
                     child: RoutineActionTile(
                       title: 'Buscar rutinas',
                       subtitle: 'Explorar plantillas',
-                      icon: Icons.search,
-                      onTap: () => _goAndRefresh(context, controller, '/workout/routines/search'),
+                      glyph: FitGlyphKind.discover,
+                      imageAsset: 'assets/images/workout/equipment_detail.webp',
+                      onTap: () => _goAndRefresh(
+                        context,
+                        controller,
+                        '/workout/routines/search',
+                      ),
                     ),
                   ),
                 ],
@@ -95,16 +158,26 @@ class _TrainingHomeViewState extends State<_TrainingHomeView> {
             if (!controller.hasRoutines)
               const EmptyRoutinesInfoCard()
             else ...[
-              Row(
+              Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 8,
                 children: [
-                  Text('Mis rutinas', style: Theme.of(context).textTheme.titleMedium),
-                  const Spacer(),
+                  Text(
+                    'Mis rutinas',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
                   IconButton(
-                    onPressed: () => _showCreateFolderSheet(context, controller),
+                    onPressed: () =>
+                        _showCreateFolderSheet(context, controller),
                     icon: const Icon(Icons.create_new_folder_outlined),
                     tooltip: 'Crear carpeta',
                   ),
-                  TextButton.icon(onPressed: () => _showSortSheet(context, controller), icon: const Icon(Icons.sort), label: const Text('Ordenar')),
+                  TextButton.icon(
+                    onPressed: () => _showSortSheet(context, controller),
+                    icon: const Icon(Icons.sort),
+                    label: const Text('Ordenar'),
+                  ),
                 ],
               ),
               const SizedBox(height: 8),
@@ -114,7 +187,8 @@ class _TrainingHomeViewState extends State<_TrainingHomeView> {
                   ButtonSegment(value: 1, label: Text('Carpetas')),
                 ],
                 selected: {_routinesViewIndex},
-                onSelectionChanged: (value) => setState(() => _routinesViewIndex = value.first),
+                onSelectionChanged: (value) =>
+                    setState(() => _routinesViewIndex = value.first),
               ),
               const SizedBox(height: 10),
               if (_routinesViewIndex == 0)
@@ -135,9 +209,9 @@ class _TrainingHomeViewState extends State<_TrainingHomeView> {
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       itemCount: sortedFolders.length + 1,
-      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+      gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
         maxCrossAxisExtent: 320,
-        mainAxisExtent: 125,
+        mainAxisExtent: 125 * (MediaQuery.textScalerOf(context).scale(16) / 16),
         mainAxisSpacing: 12,
         crossAxisSpacing: 12,
       ),
@@ -155,20 +229,24 @@ class _TrainingHomeViewState extends State<_TrainingHomeView> {
           name: folder.name,
           count: controller.routinesForFolder(folder.id).length,
           onTap: () => _openFolderRoutines(context, folder.id, folder.name),
-          onMenuSelected: (value) => _handleFolderMenuAction(context, controller, folder, value),
+          onMenuSelected: (value) =>
+              _handleFolderMenuAction(context, controller, folder, value),
         );
       },
     );
   }
 
-  Widget _routinesGrid(List<WorkoutTemplate> routines, TrainingHomeController controller) {
+  Widget _routinesGrid(
+    List<WorkoutTemplate> routines,
+    TrainingHomeController controller,
+  ) {
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       itemCount: routines.length,
-      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+      gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
         maxCrossAxisExtent: 420,
-        mainAxisExtent: 220,
+        mainAxisExtent: 220 * (MediaQuery.textScalerOf(context).scale(16) / 16),
         mainAxisSpacing: 12,
         crossAxisSpacing: 12,
       ),
@@ -176,7 +254,10 @@ class _TrainingHomeViewState extends State<_TrainingHomeView> {
         final routine = routines[index];
         final metadata = controller.metadataFor(routine.id);
         final typeLabel = _typeLabel(routine.type);
-        final previewExercises = routine.exercises.map((exercise) => exercise.name).where((name) => name.trim().isNotEmpty).toList(growable: false);
+        final previewExercises = routine.exercises
+            .map((exercise) => exercise.name)
+            .where((name) => name.trim().isNotEmpty)
+            .toList(growable: false);
         return RoutineMiniCard(
           title: routine.name,
           typeTag: typeLabel,
@@ -188,13 +269,17 @@ class _TrainingHomeViewState extends State<_TrainingHomeView> {
           isPinned: metadata.pinned,
           onTap: () => _openRoutinePreview(context, controller, routine),
           onStartTap: () => startRoutineFlow(context, controller, routine),
-          onMenuSelected: (value) => _handleMenuAction(context, controller, routine, value),
+          onMenuSelected: (value) =>
+              _handleMenuAction(context, controller, routine, value),
         );
       },
     );
   }
 
-  Future<void> _showCreateFolderSheet(BuildContext context, TrainingHomeController controller) async {
+  Future<void> _showCreateFolderSheet(
+    BuildContext context,
+    TrainingHomeController controller,
+  ) async {
     final nameController = TextEditingController();
     await showModalBottomSheet<void>(
       context: context,
@@ -213,7 +298,11 @@ class _TrainingHomeViewState extends State<_TrainingHomeView> {
           children: [
             const Text('Crear carpeta'),
             const SizedBox(height: 10),
-            TextField(controller: nameController, autofocus: true, decoration: const InputDecoration(hintText: 'Nombre de carpeta')),
+            TextField(
+              controller: nameController,
+              autofocus: true,
+              decoration: const InputDecoration(hintText: 'Nombre de carpeta'),
+            ),
             const SizedBox(height: 12),
             Align(
               alignment: Alignment.centerRight,
@@ -222,7 +311,8 @@ class _TrainingHomeViewState extends State<_TrainingHomeView> {
                   final name = nameController.text.trim();
                   if (name.isEmpty) return;
                   await controller.createFolder(name);
-                  if (mounted) Navigator.of(context).pop();
+                  if (!context.mounted) return;
+                  Navigator.of(context).pop();
                 },
                 child: const Text('Guardar'),
               ),
@@ -233,7 +323,11 @@ class _TrainingHomeViewState extends State<_TrainingHomeView> {
     );
   }
 
-  Future<void> _openMoveToFolderSheet(BuildContext context, TrainingHomeController controller, WorkoutTemplate routine) async {
+  Future<void> _openMoveToFolderSheet(
+    BuildContext context,
+    TrainingHomeController controller,
+    WorkoutTemplate routine,
+  ) async {
     await showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
@@ -241,12 +335,16 @@ class _TrainingHomeViewState extends State<_TrainingHomeView> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            ListTile(title: const Text('Mover a carpeta'), subtitle: Text(routine.name)),
+            ListTile(
+              title: const Text('Mover a carpeta'),
+              subtitle: Text(routine.name),
+            ),
             ListTile(
               title: const Text('Sin carpeta'),
               onTap: () async {
                 await controller.moveRoutineToFolder(routine, null);
-                if (mounted) Navigator.pop(context);
+                if (!context.mounted) return;
+                Navigator.pop(context);
               },
             ),
             ...controller.sortedFolders.map(
@@ -254,7 +352,8 @@ class _TrainingHomeViewState extends State<_TrainingHomeView> {
                 title: Text(folder.name),
                 onTap: () async {
                   await controller.moveRoutineToFolder(routine, folder.id);
-                  if (mounted) Navigator.pop(context);
+                  if (!context.mounted) return;
+                  Navigator.pop(context);
                 },
               ),
             ),
@@ -264,13 +363,20 @@ class _TrainingHomeViewState extends State<_TrainingHomeView> {
     );
   }
 
-  void _openFolderRoutines(BuildContext context, String? folderId, String folderName) {
+  void _openFolderRoutines(
+    BuildContext context,
+    String? folderId,
+    String folderName,
+  ) {
     final controller = context.read<TrainingHomeController>();
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => ChangeNotifierProvider<TrainingHomeController>.value(
           value: controller,
-          child: FolderRoutinesScreen(folderId: folderId, folderName: folderName),
+          child: FolderRoutinesScreen(
+            folderId: folderId,
+            folderName: folderName,
+          ),
         ),
       ),
     );
@@ -290,8 +396,14 @@ class _TrainingHomeViewState extends State<_TrainingHomeView> {
           title: const Text('Renombrar carpeta'),
           content: TextField(controller: c, autofocus: true),
           actions: [
-            TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancelar')),
-            FilledButton(onPressed: () => Navigator.of(context).pop(c.text.trim()), child: const Text('Guardar')),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(c.text.trim()),
+              child: const Text('Guardar'),
+            ),
           ],
         ),
       );
@@ -305,28 +417,40 @@ class _TrainingHomeViewState extends State<_TrainingHomeView> {
     }
   }
 
-  Future<void> _showSortSheet(BuildContext context, TrainingHomeController controller) async {
+  Future<void> _showSortSheet(
+    BuildContext context,
+    TrainingHomeController controller,
+  ) async {
     final selected = await showModalBottomSheet<RoutineSortOption>(
       context: context,
       showDragHandle: true,
       builder: (_) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: RoutineSortOption.values
-              .map((option) => RadioListTile<RoutineSortOption>(
+        child: RadioGroup<RoutineSortOption>(
+          groupValue: controller.sortOption,
+          onChanged: (value) => Navigator.of(context).pop(value),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: RoutineSortOption.values
+                .map(
+                  (option) => RadioListTile<RoutineSortOption>(
                     value: option,
-                    groupValue: controller.sortOption,
-                    onChanged: (value) => Navigator.of(context).pop(value),
                     title: Text(_sortLabel(option)),
-                  ))
-              .toList(),
+                  ),
+                )
+                .toList(),
+          ),
         ),
       ),
     );
     if (selected != null) await controller.setSortOption(selected);
   }
 
-  Future<void> _handleMenuAction(BuildContext context, TrainingHomeController controller, WorkoutTemplate routine, String action) async {
+  Future<void> _handleMenuAction(
+    BuildContext context,
+    TrainingHomeController controller,
+    WorkoutTemplate routine,
+    String action,
+  ) async {
     if (action == 'menu') return;
     switch (action) {
       case 'edit':
@@ -337,12 +461,21 @@ class _TrainingHomeViewState extends State<_TrainingHomeView> {
             title: const Text('Editar rutina'),
             content: TextField(controller: controllerName, autofocus: true),
             actions: [
-              TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancelar')),
-              FilledButton(onPressed: () => Navigator.of(context).pop(controllerName.text.trim()), child: const Text('Guardar')),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancelar'),
+              ),
+              FilledButton(
+                onPressed: () =>
+                    Navigator.of(context).pop(controllerName.text.trim()),
+                child: const Text('Guardar'),
+              ),
             ],
           ),
         );
-        if (updated != null && updated.isNotEmpty) await controller.renameRoutine(routine, updated);
+        if (updated != null && updated.isNotEmpty) {
+          await controller.renameRoutine(routine, updated);
+        }
         break;
       case 'duplicate':
         await controller.duplicateRoutine(routine);
@@ -359,7 +492,11 @@ class _TrainingHomeViewState extends State<_TrainingHomeView> {
     }
   }
 
-  Future<void> _openRoutinePreview(BuildContext context, TrainingHomeController controller, WorkoutTemplate routine) async {
+  Future<void> _openRoutinePreview(
+    BuildContext context,
+    TrainingHomeController controller,
+    WorkoutTemplate routine,
+  ) async {
     final metadata = controller.metadataFor(routine.id);
     final typeLabel = _typeLabel(routine.type);
     await Navigator.of(context).push(
@@ -374,9 +511,21 @@ class _TrainingHomeViewState extends State<_TrainingHomeView> {
     );
   }
 
-  Future<void> _goAndRefresh(BuildContext context, TrainingHomeController controller, String route) async {
-    await Navigator.of(context).pushNamed(route);
-    await controller.refresh();
+  Future<void> _goAndRefresh(
+    BuildContext context,
+    TrainingHomeController controller,
+    String route, {
+    Object? arguments,
+  }) async {
+    if (_navigating) return;
+    _navigating = true;
+    try {
+      await Navigator.of(context).pushNamed(route, arguments: arguments);
+      if (!context.mounted) return;
+      await controller.refresh();
+    } finally {
+      _navigating = false;
+    }
   }
 
   String _daysAgoLabel(DateTime? date) {
@@ -388,7 +537,9 @@ class _TrainingHomeViewState extends State<_TrainingHomeView> {
   }
 
   String _lastSessionLabel(WorkoutSession session) {
-    return session.templateName ?? session.activityName ?? _typeLabel(session.type);
+    return session.templateName ??
+        session.activityName ??
+        _typeLabel(session.type);
   }
 
   String _typeLabel(WorkoutType type) {
@@ -417,88 +568,5 @@ class _TrainingHomeViewState extends State<_TrainingHomeView> {
       case RoutineSortOption.alphabetical:
         return 'Alfabético';
     }
-  }
-}
-
-class WorkoutHistoryPlaceholderScreen extends StatelessWidget {
-  const WorkoutHistoryPlaceholderScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => TrainingHomeController()..initialize(),
-      child: Consumer<TrainingHomeController>(
-        builder: (context, c, _) {
-          if (!c.initialized) return const Scaffold(body: Center(child: CircularProgressIndicator()));
-          final sessions = c.sessions;
-          return Scaffold(
-            appBar: AppBar(title: const Text('Historial de entrenamientos')),
-            body: sessions.isEmpty
-                ? const Center(child: Text('Aún no hay sesiones registradas.'))
-                : ListView(
-                    padding: const EdgeInsets.all(16),
-                    children: [
-                      for (final session in sessions.reversed)
-                        Card(
-                          child: ListTile(
-                            title: Text(session.templateName ?? session.activityName ?? 'Entrenamiento'),
-                            subtitle: Text('${session.date.day}/${session.date.month}/${session.date.year} · ${session.exercises.length} ejercicios'),
-                          ),
-                        ),
-                    ],
-                  ),
-          );
-        },
-      ),
-    );
-  }
-}
-
-class WorkoutSettingsPlaceholderScreen extends StatelessWidget {
-  const WorkoutSettingsPlaceholderScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const _PlaceholderScaffold(title: 'Ajustes de entrenamiento', message: 'TODO: configurar preferencias del módulo.');
-  }
-}
-
-class WorkoutRoutineSearchPlaceholderScreen extends StatelessWidget {
-  const WorkoutRoutineSearchPlaceholderScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Buscar rutinas')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: const [
-          TextField(decoration: InputDecoration(hintText: 'Buscar por nombre', prefixIcon: Icon(Icons.search))),
-          SizedBox(height: 16),
-          Text('TODO: conectar biblioteca de plantillas real.'),
-        ],
-      ),
-    );
-  }
-}
-
-class WorkoutRoutineCreatePlaceholderScreen extends StatelessWidget {
-  const WorkoutRoutineCreatePlaceholderScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const _PlaceholderScaffold(title: 'Nueva rutina', message: 'TODO: conectar editor completo de rutinas.');
-  }
-}
-
-class _PlaceholderScaffold extends StatelessWidget {
-  const _PlaceholderScaffold({required this.title, required this.message});
-
-  final String title;
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(appBar: AppBar(title: Text(title)), body: Center(child: Text(message)));
   }
 }

@@ -39,7 +39,10 @@ class FolderRoutinesScreen extends StatelessWidget {
             itemBuilder: (context, index) {
               final routine = routines[index];
               final metadata = controller.metadataFor(routine.id);
-              final previewExercises = routine.exercises.map((exercise) => exercise.name).where((name) => name.trim().isNotEmpty).toList(growable: false);
+              final previewExercises = routine.exercises
+                  .map((exercise) => exercise.name)
+                  .where((name) => name.trim().isNotEmpty)
+                  .toList(growable: false);
               return RoutineMiniCard(
                 title: routine.name,
                 typeTag: _typeLabel(routine.type),
@@ -59,7 +62,8 @@ class FolderRoutinesScreen extends StatelessWidget {
                     ),
                   ),
                 ),
-                onStartTap: () => startRoutineFlow(context, controller, routine),
+                onStartTap: () =>
+                    startRoutineFlow(context, controller, routine),
                 onMenuSelected: (_) {},
               );
             },

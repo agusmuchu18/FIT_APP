@@ -1,19 +1,8 @@
 import 'dart:convert';
 
-enum WorkoutType {
-  strength,
-  cardio,
-  functional,
-  sport,
-  custom,
-}
+enum WorkoutType { strength, cardio, functional, sport, custom }
 
-enum RoutineExerciseLoadType {
-  bodyweight,
-  weightedKg,
-  assistedKg,
-  machineKg,
-}
+enum RoutineExerciseLoadType { bodyweight, weightedKg, assistedKg, machineKg }
 
 class SetEntry {
   SetEntry({
@@ -22,12 +11,14 @@ class SetEntry {
     this.durationSeconds,
     this.rir,
     this.restSeconds,
+    this.done,
 
     // NEW (load components)
     this.externalLoadKg, // barra/mancuerna/lastre
     this.assistanceKg, // asistencia (dominadas asistidas)
     this.bodyweightKg, // snapshot del peso del usuario
     this.bodyweightFactor, // factor (lagartijas)
+    this.loadIsAmbiguous = false,
   });
 
   final String id;
@@ -36,11 +27,15 @@ class SetEntry {
   final int? durationSeconds;
   final int? rir;
   final int? restSeconds;
+  final bool? done;
 
   final double? externalLoadKg;
   final double? assistanceKg;
   final double? bodyweightKg;
   final double? bodyweightFactor;
+
+  /// Legacy `weight` is preserved but cannot be classified as external load.
+  final bool loadIsAmbiguous;
 
   SetEntry copyWith({
     String? id,
@@ -48,10 +43,12 @@ class SetEntry {
     int? durationSeconds,
     int? rir,
     int? restSeconds,
+    bool? done,
     double? externalLoadKg,
     double? assistanceKg,
     double? bodyweightKg,
     double? bodyweightFactor,
+    bool? loadIsAmbiguous,
   }) {
     return SetEntry(
       id: id ?? this.id,
@@ -59,24 +56,28 @@ class SetEntry {
       durationSeconds: durationSeconds ?? this.durationSeconds,
       rir: rir ?? this.rir,
       restSeconds: restSeconds ?? this.restSeconds,
+      done: done ?? this.done,
       externalLoadKg: externalLoadKg ?? this.externalLoadKg,
       assistanceKg: assistanceKg ?? this.assistanceKg,
       bodyweightKg: bodyweightKg ?? this.bodyweightKg,
       bodyweightFactor: bodyweightFactor ?? this.bodyweightFactor,
+      loadIsAmbiguous: loadIsAmbiguous ?? this.loadIsAmbiguous,
     );
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'reps': reps,
-        'durationSeconds': durationSeconds,
-        'rir': rir,
-        'restSeconds': restSeconds,
-        'externalLoadKg': externalLoadKg,
-        'assistanceKg': assistanceKg,
-        'bodyweightKg': bodyweightKg,
-        'bodyweightFactor': bodyweightFactor,
-      };
+    'id': id,
+    'reps': reps,
+    'durationSeconds': durationSeconds,
+    'rir': rir,
+    'restSeconds': restSeconds,
+    'done': done,
+    'externalLoadKg': externalLoadKg,
+    'assistanceKg': assistanceKg,
+    'bodyweightKg': bodyweightKg,
+    'bodyweightFactor': bodyweightFactor,
+    'loadIsAmbiguous': loadIsAmbiguous,
+  };
 
   factory SetEntry.fromJson(Map<String, dynamic> json) {
     final legacyWeight = (json['weight'] as num?)?.toDouble();
@@ -87,10 +88,15 @@ class SetEntry {
       durationSeconds: json['durationSeconds'] as int?,
       rir: json['rir'] as int?,
       restSeconds: json['restSeconds'] as int?,
-      externalLoadKg: (json['externalLoadKg'] as num?)?.toDouble() ?? legacyWeight,
+      done: json['done'] as bool?,
+      externalLoadKg:
+          (json['externalLoadKg'] as num?)?.toDouble() ?? legacyWeight,
       assistanceKg: (json['assistanceKg'] as num?)?.toDouble(),
       bodyweightKg: (json['bodyweightKg'] as num?)?.toDouble(),
       bodyweightFactor: (json['bodyweightFactor'] as num?)?.toDouble(),
+      loadIsAmbiguous:
+          json['loadIsAmbiguous'] as bool? ??
+          (json['externalLoadKg'] == null && legacyWeight != null),
     );
   }
 }
@@ -105,6 +111,7 @@ class WorkoutExercise {
     this.notes,
     this.targetSets = 3,
     this.targetReps,
+    this.targetDurationSeconds,
     this.targetRepsMin = 8,
     this.targetRepsMax = 12,
     this.targetLoadType = RoutineExerciseLoadType.bodyweight,
@@ -112,6 +119,7 @@ class WorkoutExercise {
     this.restSeconds,
     this.rir,
     List<SetEntry>? sets,
+    this.restEnabled,
   }) : sets = sets ?? [];
 
   final String id;
@@ -122,6 +130,11 @@ class WorkoutExercise {
   final String? notes;
   final int targetSets;
   final int? targetReps;
+  final int? targetDurationSeconds;
+  bool get isTimed =>
+      measurement == 'time' ||
+      measurement == 'seconds' ||
+      targetDurationSeconds != null;
   final int? targetRepsMin;
   final int? targetRepsMax;
   final RoutineExerciseLoadType targetLoadType;
@@ -129,8 +142,10 @@ class WorkoutExercise {
   final int? restSeconds;
   final int? rir;
   final List<SetEntry> sets;
+  final bool? restEnabled;
 
   WorkoutExercise copyWith({
+    bool? restEnabled,
     String? id,
     String? name,
     String? muscleGroup,
@@ -139,15 +154,21 @@ class WorkoutExercise {
     String? notes,
     int? targetSets,
     int? targetReps,
+    bool clearTargetReps = false,
+    int? targetDurationSeconds,
+    bool clearTargetDuration = false,
     int? targetRepsMin,
     int? targetRepsMax,
     RoutineExerciseLoadType? targetLoadType,
     double? targetWeightKg,
+    bool clearTargetWeightKg = false,
     int? restSeconds,
+    bool clearRestSeconds = false,
     int? rir,
     List<SetEntry>? sets,
   }) {
     return WorkoutExercise(
+      restEnabled: restEnabled ?? this.restEnabled,
       id: id ?? this.id,
       name: name ?? this.name,
       muscleGroup: muscleGroup ?? this.muscleGroup,
@@ -155,34 +176,41 @@ class WorkoutExercise {
       measurement: measurement ?? this.measurement,
       notes: notes ?? this.notes,
       targetSets: targetSets ?? this.targetSets,
-      targetReps: targetReps ?? this.targetReps,
+      targetReps: clearTargetReps ? null : (targetReps ?? this.targetReps),
+      targetDurationSeconds: clearTargetDuration
+          ? null
+          : (targetDurationSeconds ?? this.targetDurationSeconds),
       targetRepsMin: targetRepsMin ?? this.targetRepsMin,
       targetRepsMax: targetRepsMax ?? this.targetRepsMax,
       targetLoadType: targetLoadType ?? this.targetLoadType,
-      targetWeightKg: targetWeightKg ?? this.targetWeightKg,
-      restSeconds: restSeconds ?? this.restSeconds,
+      targetWeightKg: clearTargetWeightKg
+          ? null
+          : (targetWeightKg ?? this.targetWeightKg),
+      restSeconds: clearRestSeconds ? null : (restSeconds ?? this.restSeconds),
       rir: rir ?? this.rir,
       sets: sets ?? List<SetEntry>.from(this.sets),
     );
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'muscleGroup': muscleGroup,
-        'equipment': equipment,
-        'measurement': measurement,
-        'notes': notes,
-        'targetSets': targetSets,
-        'targetReps': targetReps,
-        'targetRepsMin': targetRepsMin,
-        'targetRepsMax': targetRepsMax,
-        'targetLoadType': targetLoadType.name,
-        'targetWeightKg': targetWeightKg,
-        'restSeconds': restSeconds,
-        'rir': rir,
-        'sets': sets.map((e) => e.toJson()).toList(),
-      };
+    'id': id,
+    'name': name,
+    'muscleGroup': muscleGroup,
+    'equipment': equipment,
+    'measurement': measurement,
+    'notes': notes,
+    'targetSets': targetSets,
+    'restEnabled': restEnabled,
+    'targetReps': targetReps,
+    'targetDurationSeconds': targetDurationSeconds,
+    'targetRepsMin': targetRepsMin,
+    'targetRepsMax': targetRepsMax,
+    'targetLoadType': targetLoadType.name,
+    'targetWeightKg': targetWeightKg,
+    'restSeconds': restSeconds,
+    'rir': rir,
+    'sets': sets.map((e) => e.toJson()).toList(),
+  };
 
   factory WorkoutExercise.fromJson(Map<String, dynamic> json) {
     final serializedSets = (json['sets'] as List<dynamic>? ?? [])
@@ -205,11 +233,15 @@ class WorkoutExercise {
       id: json['id'] as String,
       name: json['name'] as String,
       muscleGroup: json['muscleGroup'] as String?,
+      restEnabled: json['restEnabled'] as bool?,
       equipment: json['equipment'] as String?,
       measurement: json['measurement'] as String?,
       notes: json['notes'] as String?,
-      targetSets: (json['targetSets'] as int?) ?? (serializedSets.isEmpty ? 3 : serializedSets.length),
+      targetSets:
+          (json['targetSets'] as int?) ??
+          (serializedSets.isEmpty ? 3 : serializedSets.length),
       targetReps: json['targetReps'] as int?,
+      targetDurationSeconds: json['targetDurationSeconds'] as int?,
       targetRepsMin: (json['targetRepsMin'] as int?) ?? 8,
       targetRepsMax: (json['targetRepsMax'] as int?) ?? 12,
       targetLoadType: targetLoadType,
@@ -241,23 +273,26 @@ class WorkoutTemplate {
   final List<WorkoutExercise> exercises;
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'type': type.name,
-        'origin': origin.name,
-        'activityName': activityName,
-        'folderId': folderId,
-        'exercises': exercises.map((e) => e.toJson()).toList(),
-      };
+    'id': id,
+    'name': name,
+    'type': type.name,
+    'origin': origin.name,
+    'activityName': activityName,
+    'folderId': folderId,
+    'exercises': exercises.map((e) => e.toJson()).toList(),
+  };
 
-  factory WorkoutTemplate.fromJson(Map<String, dynamic> json) => WorkoutTemplate(
+  factory WorkoutTemplate.fromJson(Map<String, dynamic> json) =>
+      WorkoutTemplate(
         id: json['id'] as String,
         name: json['name'] as String,
-        type: WorkoutType.values
-            .firstWhere((element) => element.name == json['type']),
-        origin: TemplateOrigin.values
-            .firstWhere((element) => element.name == json['origin'],
-                orElse: () => TemplateOrigin.custom),
+        type: WorkoutType.values.firstWhere(
+          (element) => element.name == json['type'],
+        ),
+        origin: TemplateOrigin.values.firstWhere(
+          (element) => element.name == json['origin'],
+          orElse: () => TemplateOrigin.custom,
+        ),
         activityName: json['activityName'] as String?,
         folderId: json['folderId'] as String?,
         exercises: (json['exercises'] as List<dynamic>? ?? [])
@@ -282,12 +317,12 @@ class RoutineFolder {
   final String? icon;
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'sortOrder': sortOrder,
-        'color': color,
-        'icon': icon,
-      };
+    'id': id,
+    'name': name,
+    'sortOrder': sortOrder,
+    'color': color,
+    'icon': icon,
+  };
 
   factory RoutineFolder.fromJson(Map<String, dynamic> json) {
     return RoutineFolder(
@@ -312,6 +347,11 @@ class WorkoutSession {
     this.templateName,
     this.activityName,
     this.durationMinutes,
+    this.durationSeconds,
+    this.durationIsActive,
+    this.totalDurationSeconds,
+    this.startedAt,
+    this.sourceSessionId,
     this.distanceKm,
     this.pace,
     this.rpe,
@@ -332,6 +372,13 @@ class WorkoutSession {
   final String? templateName;
   final String? activityName;
   final int? durationMinutes;
+  final int? durationSeconds;
+
+  /// True excludes pauses, but includes rest. Null means legacy semantics unknown.
+  final bool? durationIsActive;
+  final int? totalDurationSeconds;
+  final DateTime? startedAt;
+  final String? sourceSessionId;
   final double? distanceKm;
   final String? pace;
   final int? rpe;
@@ -344,49 +391,60 @@ class WorkoutSession {
   final String? finalNotes;
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'type': type.name,
-        'customTypeName': customTypeName,
-        'templateId': templateId,
-        'templateName': templateName,
-        'date': date.toIso8601String(),
-        'activityName': activityName,
-        'durationMinutes': durationMinutes,
-        'distanceKm': distanceKm,
-        'pace': pace,
-        'rpe': rpe,
-        'fatigue': fatigue,
-        'notes': notes,
-        'exercises': exercises.map((e) => e.toJson()).toList(),
-        'closingDuration': closingDuration,
-        'closingFatigue': closingFatigue,
-        'closingPerformance': closingPerformance,
-        'finalNotes': finalNotes,
-      };
+    'id': id,
+    'type': type.name,
+    'customTypeName': customTypeName,
+    'templateId': templateId,
+    'templateName': templateName,
+    'date': date.toIso8601String(),
+    'activityName': activityName,
+    'durationMinutes': durationMinutes,
+    'durationSeconds': durationSeconds,
+    'durationIsActive': durationIsActive,
+    'totalDurationSeconds': totalDurationSeconds,
+    'startedAt': startedAt?.toUtc().toIso8601String(),
+    'sourceSessionId': sourceSessionId,
+    'distanceKm': distanceKm,
+    'pace': pace,
+    'rpe': rpe,
+    'fatigue': fatigue,
+    'notes': notes,
+    'exercises': exercises.map((e) => e.toJson()).toList(),
+    'closingDuration': closingDuration,
+    'closingFatigue': closingFatigue,
+    'closingPerformance': closingPerformance,
+    'finalNotes': finalNotes,
+  };
 
   factory WorkoutSession.fromJson(Map<String, dynamic> json) => WorkoutSession(
-        id: json['id'] as String,
-        type: WorkoutType.values
-            .firstWhere((element) => element.name == json['type']),
-        customTypeName: json['customTypeName'] as String?,
-        templateId: json['templateId'] as String?,
-        templateName: json['templateName'] as String?,
-        date: DateTime.tryParse(json['date'] as String? ?? '') ?? DateTime.now(),
-        activityName: json['activityName'] as String?,
-        durationMinutes: json['durationMinutes'] as int?,
-        distanceKm: (json['distanceKm'] as num?)?.toDouble(),
-        pace: json['pace'] as String?,
-        rpe: json['rpe'] as int?,
-        fatigue: json['fatigue'] as int?,
-        notes: json['notes'] as String?,
-        exercises: (json['exercises'] as List<dynamic>? ?? [])
-            .map((e) => WorkoutExercise.fromJson(e as Map<String, dynamic>))
-            .toList(),
-        closingDuration: json['closingDuration'] as int?,
-        closingFatigue: json['closingFatigue'] as int?,
-        closingPerformance: json['closingPerformance'] as int?,
-        finalNotes: json['finalNotes'] as String?,
-      );
+    id: json['id'] as String,
+    type: WorkoutType.values.firstWhere(
+      (element) => element.name == json['type'],
+    ),
+    customTypeName: json['customTypeName'] as String?,
+    templateId: json['templateId'] as String?,
+    templateName: json['templateName'] as String?,
+    date: DateTime.parse(json['date'] as String),
+    activityName: json['activityName'] as String?,
+    durationMinutes: json['durationMinutes'] as int?,
+    durationSeconds: json['durationSeconds'] as int?,
+    durationIsActive: json['durationIsActive'] as bool?,
+    totalDurationSeconds: json['totalDurationSeconds'] as int?,
+    startedAt: DateTime.tryParse(json['startedAt'] as String? ?? ''),
+    sourceSessionId: json['sourceSessionId'] as String?,
+    distanceKm: (json['distanceKm'] as num?)?.toDouble(),
+    pace: json['pace'] as String?,
+    rpe: json['rpe'] as int?,
+    fatigue: json['fatigue'] as int?,
+    notes: json['notes'] as String?,
+    exercises: (json['exercises'] as List<dynamic>? ?? [])
+        .map((e) => WorkoutExercise.fromJson(e as Map<String, dynamic>))
+        .toList(),
+    closingDuration: json['closingDuration'] as int?,
+    closingFatigue: json['closingFatigue'] as int?,
+    closingPerformance: json['closingPerformance'] as int?,
+    finalNotes: json['finalNotes'] as String?,
+  );
 
   String toJsonString() => jsonEncode(toJson());
 }

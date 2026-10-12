@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../domain/session_models.dart';
+import '../../../common/widgets/fit_glyph.dart';
 import 'set_row.dart';
+import 'workout_rest_selector.dart';
 
 class ExerciseCard extends StatelessWidget {
   const ExerciseCard({
@@ -17,6 +19,8 @@ class ExerciseCard extends StatelessWidget {
     required this.onDelete,
     required this.onMoveUp,
     required this.onMoveDown,
+    this.onDurationChanged,
+    this.onDeleteSet,
   });
 
   final ExerciseInSession exercise;
@@ -25,11 +29,21 @@ class ExerciseCard extends StatelessWidget {
   final ValueChanged<String> onNotesChanged;
   final ValueChanged<bool> onRestToggle;
   final ValueChanged<int?> onRestSecondsChanged;
-  final void Function(String setId, {double? kg, int? reps, bool? done}) onSetChanged;
+  final void Function(
+    String setId, {
+    double? kg,
+    bool? clearKg,
+    int? reps,
+    bool? clearReps,
+    bool? done,
+  })
+  onSetChanged;
   final VoidCallback onAddSet;
   final VoidCallback onDelete;
   final VoidCallback onMoveUp;
   final VoidCallback onMoveDown;
+  final void Function(String, int?)? onDurationChanged;
+  final ValueChanged<String>? onDeleteSet;
 
   @override
   Widget build(BuildContext context) {
@@ -46,15 +60,21 @@ class ExerciseCard extends StatelessWidget {
               child: Row(
                 children: [
                   Expanded(
-                    child: Text(
-                      exercise.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.titleMedium,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          exercise.name,
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        Text(
+                          progress,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(width: 10),
-                  Text(progress, style: Theme.of(context).textTheme.bodySmall),
                   PopupMenuButton<String>(
                     onSelected: (value) {
                       if (value == 'delete') onDelete();
@@ -64,7 +84,10 @@ class ExerciseCard extends StatelessWidget {
                     itemBuilder: (context) => const [
                       PopupMenuItem(value: 'up', child: Text('Mover arriba')),
                       PopupMenuItem(value: 'down', child: Text('Mover abajo')),
-                      PopupMenuItem(value: 'delete', child: Text('Eliminar ejercicio')),
+                      PopupMenuItem(
+                        value: 'delete',
+                        child: Text('Eliminar ejercicio'),
+                      ),
                     ],
                   ),
                 ],
@@ -87,52 +110,39 @@ class ExerciseCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      const Text('Descanso'),
-                      const SizedBox(width: 8),
-                      Switch(
-                        value: exercise.restEnabled,
-                        onChanged: onRestToggle,
-                      ),
-                      Text(exercise.restEnabled ? '${exercise.restSeconds ?? 90}s' : 'APAGADO'),
-                      const SizedBox(width: 8),
-                      if (exercise.restEnabled)
-                        SizedBox(
-                          width: 72,
-                          child: TextField(
-                            keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(isDense: true, hintText: 'seg'),
-                            onChanged: (value) => onRestSecondsChanged(int.tryParse(value)),
-                          ),
-                        ),
-                    ],
+                  WorkoutRestSelector(
+                    enabled: exercise.restEnabled,
+                    seconds: exercise.restSeconds ?? 90,
+                    onToggle: onRestToggle,
+                    onChanged: onRestSecondsChanged,
                   ),
                   const SizedBox(height: 8),
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 8),
-                    child: Row(
-                      children: [
-                        SizedBox(width: 36, child: Text('Serie')),
-                        SizedBox(width: 72, child: Text('Anterior')),
-                        Expanded(child: Text('Kg')),
-                        SizedBox(width: 8),
-                        Expanded(child: Text('Reps')),
-                        SizedBox(width: 48, child: Text('Check')),
-                      ],
-                    ),
-                  ),
                   const SizedBox(height: 6),
                   for (final set in exercise.sets)
                     SetRow(
                       key: ValueKey(set.id),
                       set: set,
-                      onChanged: ({kg, reps, done}) => onSetChanged(set.id, kg: kg, reps: reps, done: done),
+                      isTimed: exercise.isTimed,
+                      isAssisted: exercise.isAssisted,
+                      onDurationChanged: (seconds) =>
+                          onDurationChanged?.call(set.id, seconds),
+                      onDelete: onDeleteSet == null
+                          ? null
+                          : () => onDeleteSet!(set.id),
+                      onChanged: ({kg, clearKg, reps, clearReps, done}) =>
+                          onSetChanged(
+                            set.id,
+                            kg: kg,
+                            clearKg: clearKg ?? false,
+                            reps: reps,
+                            clearReps: clearReps ?? false,
+                            done: done,
+                          ),
                     ),
                   TextButton.icon(
                     onPressed: onAddSet,
-                    icon: const Icon(Icons.add),
-                    label: const Text('+ Agregar serie'),
+                    icon: const FitGlyph(kind: FitGlyphKind.add),
+                    label: const Text('Agregar serie'),
                   ),
                 ],
               ),

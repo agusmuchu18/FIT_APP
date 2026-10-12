@@ -11,7 +11,8 @@ class RoutineDraftController extends ChangeNotifier {
   TemplateWorkoutType workoutType;
   final List<String> _selectedExerciseIds;
 
-  List<String> get selectedExerciseIds => List<String>.unmodifiable(_selectedExerciseIds);
+  List<String> get selectedExerciseIds =>
+      List<String>.unmodifiable(_selectedExerciseIds);
   int get selectedCount => _selectedExerciseIds.length;
 
   void setWorkoutType(TemplateWorkoutType type) {
@@ -42,15 +43,12 @@ class RoutineDraftController extends ChangeNotifier {
   }
 
   void insertExerciseAt(int index, String exerciseId) {
-    final safeIndex = index.clamp(0, _selectedExerciseIds.length) as int;
+    final safeIndex = index.clamp(0, _selectedExerciseIds.length);
     _selectedExerciseIds.insert(safeIndex, exerciseId);
     notifyListeners();
   }
 
   void reorder(int oldIndex, int newIndex) {
-    if (newIndex > oldIndex) {
-      newIndex -= 1;
-    }
     final moved = _selectedExerciseIds.removeAt(oldIndex);
     _selectedExerciseIds.insert(newIndex, moved);
     notifyListeners();

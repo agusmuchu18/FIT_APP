@@ -6,6 +6,8 @@ import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../core/data/statistics_service.dart';
+import '../../../core/data/repositories.dart';
+import '../presentation/workout_summary_screen.dart';
 import '../../common/theme/app_colors.dart';
 import '../../common/widgets/summary_card.dart';
 import 'data/exercise_definition.dart';
@@ -22,22 +24,26 @@ class WorkoutProScreen extends StatelessWidget {
     super.key,
     this.initialTemplateId,
     this.trainingContext,
+    this.fitnessRepository,
   });
 
   final String? initialTemplateId;
   final String? trainingContext;
+  final FitnessRepository? fitnessRepository;
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
       create: (_) {
-        final provider = WorkoutProProvider();
+        final provider = WorkoutProProvider(
+          fitnessRepository: fitnessRepository,
+        );
         provider.initialize().then(
-              (_) => provider.applyEntryArgs(
-                templateId: initialTemplateId,
-                trainingContext: trainingContext,
-              ),
-            );
+          (_) => provider.applyEntryArgs(
+            templateId: initialTemplateId,
+            trainingContext: trainingContext,
+          ),
+        );
         return provider;
       },
       child: const _WorkoutProContent(),
@@ -88,111 +94,149 @@ class _WorkoutProContentState extends State<_WorkoutProContent> {
   void _startElapsedTimer(DateTime start) {
     _elapsedTimer?.cancel();
     _lastSessionStart = start;
-    _elapsedSeconds.value = DateTime.now().difference(start).inSeconds;
+    _elapsedSeconds.value = _provider.elapsed.inSeconds;
     _elapsedTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      _elapsedSeconds.value = DateTime.now().difference(_lastSessionStart!).inSeconds;
+      _elapsedSeconds.value = _provider.elapsed.inSeconds;
     });
   }
 
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<WorkoutProProvider>();
+    if (!provider.initialized && provider.initializationError != null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Tu sesión Pro')),
+        body: Center(
+          child: TextButton(
+            onPressed: provider.initialize,
+            child: const Text(
+              'No se pudo abrir la sesión. Tus datos se conservan. Reintentar',
+            ),
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       body: provider.initialized
-          ? Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Color(0xFF0F1826),
-                    Color(0xFF0C1220),
-                  ],
+          ? AbsorbPointer(
+              absorbing: provider.isSaving || provider.completionPending,
+              child: Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFF0F1826), Color(0xFF0C1220)],
+                  ),
                 ),
-              ),
-              child: SafeArea(
-                child: CustomScrollView(
-                  controller: _scrollController,
-                  slivers: [
-                    SliverAppBar(
-                      pinned: true,
-                      titleSpacing: 0,
-                      backgroundColor: Colors.transparent,
-                      title: _AppBarTitle(
-                        dateLabel: StatisticsService.formatShortDate(DateTime.now()),
+                child: SafeArea(
+                  child: CustomScrollView(
+                    controller: _scrollController,
+                    slivers: [
+                      SliverAppBar(
+                        pinned: true,
+                        titleSpacing: 0,
+                        backgroundColor: Colors.transparent,
+                        title: _AppBarTitle(
+                          dateLabel: StatisticsService.formatShortDate(
+                            DateTime.now(),
+                          ),
+                        ),
+                        actions: [
+                          IconButton(
+                            onPressed: _scrollToConfiguration,
+                            icon: const Icon(Icons.tune, size: 20),
+                            tooltip: 'Ajustes rápidos',
+                          ),
+                          PopupMenuButton<String>(
+                            onSelected: (value) =>
+                                _handleMenuAction(context, provider, value),
+                            itemBuilder: (context) => const [
+                              PopupMenuItem(
+                                value: 'save_template',
+                                child: Text('Guardar como plantilla'),
+                              ),
+                              PopupMenuItem(
+                                value: 'load_template',
+                                child: Text('Cargar plantilla'),
+                              ),
+                              PopupMenuItem(
+                                value: 'reset',
+                                child: Text('Reiniciar entrenamiento'),
+                              ),
+                              PopupMenuItem(
+                                value: 'export',
+                                child: Text('Exportar JSON (debug)'),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
-                      actions: [
-                        IconButton(
-                          onPressed: _scrollToConfiguration,
-                          icon: const Icon(Icons.tune, size: 20),
-                          tooltip: 'Ajustes rápidos',
-                        ),
-                        PopupMenuButton<String>(
-                          onSelected: (value) => _handleMenuAction(context, provider, value),
-                          itemBuilder: (context) => const [
-                            PopupMenuItem(
-                              value: 'save_template',
-                              child: Text('Guardar como plantilla'),
-                            ),
-                            PopupMenuItem(
-                              value: 'load_template',
-                              child: Text('Cargar plantilla'),
-                            ),
-                            PopupMenuItem(
-                              value: 'reset',
-                              child: Text('Reiniciar entrenamiento'),
-                            ),
-                            PopupMenuItem(
-                              value: 'export',
-                              child: Text('Exportar JSON (debug)'),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _SessionHeroCard(
-                              provider: provider,
-                              onConfigure: _scrollToConfiguration,
-                              elapsedSeconds: _elapsedSeconds,
-                            ),
-                            const SizedBox(height: 24),
-                            _ConfigurationCard(
-                              key: _configKey,
-                              provider: provider,
-                              onConfirmTypeChange: _confirmDialog,
-                            ),
-                            const SizedBox(height: 24),
-                          ],
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _SessionHeroCard(
+                                provider: provider,
+                                onConfigure: _scrollToConfiguration,
+                                elapsedSeconds: _elapsedSeconds,
+                              ),
+                              const SizedBox(height: 24),
+                              _ConfigurationCard(
+                                key: _configKey,
+                                provider: provider,
+                                onConfirmTypeChange: _confirmDialog,
+                              ),
+                              const SizedBox(height: 24),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                    _buildDynamicSection(provider),
-                    const SliverToBoxAdapter(child: SizedBox(height: 120)),
-                  ],
+                      _buildDynamicSection(provider),
+                      const SliverToBoxAdapter(child: SizedBox(height: 120)),
+                    ],
+                  ),
                 ),
               ),
             )
           : const Center(child: CircularProgressIndicator()),
       bottomNavigationBar: ValueListenableBuilder<int>(
         valueListenable: _elapsedSeconds,
-        builder: (_, elapsed, __) {
+        builder: (_, elapsed, _) {
           final isStrength = provider.selectedType == WorkoutType.strength;
           return WorkoutBottomBar(
             exerciseCount: isStrength ? provider.totalExercises : 0,
             setCount: isStrength ? provider.totalSets : 0,
             durationLabel: provider.getDurationLabel(elapsedSeconds: elapsed),
-            onSave: () => _saveSession(context, provider, finalize: false),
+            onSave: () => _saveDraft(context, provider),
             onFinish: () => _showFinishSheet(context, provider),
             canSaveDraft: provider.canSaveDraft,
             canFinish: provider.canFinish,
-            validationHint: provider.canSaveDraft ? null : provider.validationHint,
+            isSaving: provider.isSaving,
+            completionPending: provider.completionPending,
+            paused: provider.isPaused,
+            onPause: () async {
+              try {
+                if (provider.isPaused) {
+                  await provider.resumeWorkout();
+                } else {
+                  await provider.pauseWorkout();
+                }
+              } catch (_) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('No se pudo guardar la pausa. Reintentá.'),
+                    ),
+                  );
+                }
+              }
+            },
+            validationHint: provider.canSaveDraft
+                ? null
+                : provider.validationHint,
           );
         },
       ),
@@ -229,7 +273,8 @@ class _WorkoutProContentState extends State<_WorkoutProContent> {
             child: StrengthSection(
               provider: provider,
               exerciseIndex: _exerciseIndex,
-              onAddExercise: () => _openAddExercise(context, provider, _exerciseIndex),
+              onAddExercise: () =>
+                  _openAddExercise(context, provider, _exerciseIndex),
             ),
           ),
         );
@@ -237,50 +282,50 @@ class _WorkoutProContentState extends State<_WorkoutProContent> {
         return SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: SimpleWorkoutSection(
-              provider: provider,
-              title: 'Cardio',
-            ),
+            child: SimpleWorkoutSection(provider: provider, title: 'Cardio'),
           ),
         );
       case WorkoutType.functional:
         return SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: SimpleWorkoutSection(
-              provider: provider,
-              title: 'Funcional',
-            ),
+            child: SimpleWorkoutSection(provider: provider, title: 'Funcional'),
           ),
         );
       case WorkoutType.sport:
         return SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: SimpleWorkoutSection(
-              provider: provider,
-              title: 'Deporte',
-            ),
+            child: SimpleWorkoutSection(provider: provider, title: 'Deporte'),
           ),
         );
       case WorkoutType.custom:
         return SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: SimpleWorkoutSection(
-              provider: provider,
-              title: 'Otro',
-            ),
+            child: SimpleWorkoutSection(provider: provider, title: 'Otro'),
           ),
         );
     }
   }
 
-  Future<void> _showFinishSheet(BuildContext context, WorkoutProProvider provider) async {
+  Future<void> _showFinishSheet(
+    BuildContext context,
+    WorkoutProProvider provider,
+  ) async {
+    if (provider.completionPending) {
+      await _saveSession(context, provider);
+      return;
+    }
     final durationController = TextEditingController(
-      text: provider.closingDuration?.toString() ?? provider.durationMinutes?.toString() ?? '',
+      text:
+          provider.closingDuration?.toString() ??
+          provider.durationMinutes?.toString() ??
+          '',
     );
-    final notesController = TextEditingController(text: provider.finalNotes ?? '');
+    final notesController = TextEditingController(
+      text: provider.finalNotes ?? '',
+    );
     int? fatigue = provider.closingFatigue;
     int? performance = provider.closingPerformance;
 
@@ -302,12 +347,15 @@ class _WorkoutProContentState extends State<_WorkoutProContent> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Registrar cierre', style: Theme.of(context).textTheme.titleMedium),
+                  Text(
+                    'Registrar cierre',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
                   const SizedBox(height: 12),
                   TextField(
                     controller: durationController,
                     decoration: const InputDecoration(
-                      labelText: 'Duración total (min)',
+                      labelText: 'Duración declarada (min, opcional)',
                       prefixIcon: Icon(Icons.timer_outlined),
                       isDense: true,
                     ),
@@ -320,25 +368,25 @@ class _WorkoutProContentState extends State<_WorkoutProContent> {
                     children: [
                       Expanded(
                         child: DropdownButtonFormField<int?>(
-                          value: fatigue,
+                          initialValue: fatigue,
                           decoration: const InputDecoration(
                             labelText: 'Fatiga general (1-5)',
                             isDense: true,
                           ),
-                          items: List.generate(
-                            5,
-                            (index) => DropdownMenuItem(
-                              value: index + 1,
-                              child: Text('${index + 1}'),
-                            ),
-                          )
-                            ..insert(
-                              0,
-                              const DropdownMenuItem<int?>(
-                                value: null,
-                                child: Text('Sin dato'),
+                          items:
+                              List.generate(
+                                5,
+                                (index) => DropdownMenuItem(
+                                  value: index + 1,
+                                  child: Text('${index + 1}'),
+                                ),
+                              )..insert(
+                                0,
+                                const DropdownMenuItem<int?>(
+                                  value: null,
+                                  child: Text('Sin dato'),
+                                ),
                               ),
-                            ),
                           onChanged: (v) {
                             setState(() => fatigue = v);
                             provider.setClosingFatigue(v);
@@ -348,25 +396,25 @@ class _WorkoutProContentState extends State<_WorkoutProContent> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: DropdownButtonFormField<int?>(
-                          value: performance,
+                          initialValue: performance,
                           decoration: const InputDecoration(
                             labelText: 'Performance (1-5)',
                             isDense: true,
                           ),
-                          items: List.generate(
-                            5,
-                            (index) => DropdownMenuItem(
-                              value: index + 1,
-                              child: Text('${index + 1}'),
-                            ),
-                          )
-                            ..insert(
-                              0,
-                              const DropdownMenuItem<int?>(
-                                value: null,
-                                child: Text('Sin dato'),
+                          items:
+                              List.generate(
+                                5,
+                                (index) => DropdownMenuItem(
+                                  value: index + 1,
+                                  child: Text('${index + 1}'),
+                                ),
+                              )..insert(
+                                0,
+                                const DropdownMenuItem<int?>(
+                                  value: null,
+                                  child: Text('Sin dato'),
+                                ),
                               ),
-                            ),
                           onChanged: (v) {
                             setState(() => performance = v);
                             provider.setClosingPerformance(v);
@@ -384,9 +432,8 @@ class _WorkoutProContentState extends State<_WorkoutProContent> {
                       isDense: true,
                     ),
                     maxLines: 3,
-                    onChanged: (value) => provider.setFinalNotes(
-                      value.isEmpty ? null : value,
-                    ),
+                    onChanged: (value) =>
+                        provider.setFinalNotes(value.isEmpty ? null : value),
                   ),
                   const SizedBox(height: 12),
                   Row(
@@ -400,19 +447,25 @@ class _WorkoutProContentState extends State<_WorkoutProContent> {
                         onPressed: () async {
                           provider.clearClosing();
                           Navigator.of(sheetContext).pop();
-                          await _saveSession(context, provider, finalize: true);
+                          await _saveSession(context, provider);
                         },
                         child: const Text('Saltar'),
                       ),
                       const SizedBox(width: 8),
                       FilledButton(
                         onPressed: () async {
-                          provider.setClosingDuration(int.tryParse(durationController.text));
+                          provider.setClosingDuration(
+                            int.tryParse(durationController.text),
+                          );
                           provider.setClosingFatigue(fatigue);
                           provider.setClosingPerformance(performance);
-                          provider.setFinalNotes(notesController.text.isEmpty ? null : notesController.text);
+                          provider.setFinalNotes(
+                            notesController.text.isEmpty
+                                ? null
+                                : notesController.text,
+                          );
                           Navigator.of(sheetContext).pop();
-                          await _saveSession(context, provider, finalize: true);
+                          await _saveSession(context, provider);
                         },
                         child: const Text('Finalizar'),
                       ),
@@ -430,24 +483,66 @@ class _WorkoutProContentState extends State<_WorkoutProContent> {
     notesController.dispose();
   }
 
+  Future<void> _saveDraft(
+    BuildContext context,
+    WorkoutProProvider provider,
+  ) async {
+    try {
+      await provider.saveDraft();
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Borrador guardado. Podés continuar la sesión.'),
+          ),
+        );
+      }
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No se pudo guardar el borrador. Reintentá.'),
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _saveSession(
     BuildContext context,
-    WorkoutProProvider provider, {
-    required bool finalize,
-  }) async {
-    final ok = await provider.saveSession();
-    if (!mounted) return;
-    if (!ok) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(provider.validationHint ?? 'Faltan datos mínimos para guardar.')),
-      );
-      return;
-    }
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(finalize ? 'Entrenamiento finalizado' : 'Entrenamiento guardado')),
-    );
-    if (finalize) {
-      await provider.reset();
+    WorkoutProProvider provider,
+  ) async {
+    if (provider.isSaving) return;
+    try {
+      final ok = await provider.saveSession();
+      if (!context.mounted) return;
+      if (!ok) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              provider.validationHint ?? 'Faltan datos mínimos para guardar.',
+            ),
+          ),
+        );
+        return;
+      }
+      final id = provider.lastSavedSessionId;
+      if (id != null) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute<void>(
+            builder: (_) => WorkoutSummaryScreen(sessionId: id),
+          ),
+        );
+      }
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'No se pudo completar el guardado. La sesión se conserva; reintentá Finalizar.',
+            ),
+          ),
+        );
+      }
     }
   }
 
@@ -461,10 +556,10 @@ class _WorkoutProContentState extends State<_WorkoutProContent> {
         final name = await _promptName(context, 'Nombre de la plantilla');
         if (name != null && name.isNotEmpty) {
           await provider.saveTemplate(name);
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Plantilla "$name" guardada')),
-          );
+          if (!context.mounted) return;
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Plantilla "$name" guardada')));
         }
         break;
       case 'load_template':
@@ -498,9 +593,7 @@ class _WorkoutProContentState extends State<_WorkoutProContent> {
           context: context,
           builder: (_) => AlertDialog(
             title: const Text('Export JSON'),
-            content: SingleChildScrollView(
-              child: SelectableText(json),
-            ),
+            content: SingleChildScrollView(child: SelectableText(json)),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
@@ -573,16 +666,15 @@ class _AppBarTitle extends StatelessWidget {
         Text(
           'Entrenamiento',
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-                color: AppColors.textPrimary,
-              ),
+            fontSize: 22,
+            fontWeight: FontWeight.w800,
+            color: AppColors.textPrimary,
+          ),
         ),
         Text(
           dateLabel,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppColors.textMuted,
-              ),
+          style: Theme.of(context).textTheme.bodySmall
+              ?.copyWith(color: AppColors.textMuted),
         ),
       ],
     );
@@ -618,7 +710,8 @@ class _SessionHeroCard extends StatelessWidget {
   }
 
   String _primaryDurationLabel(int seconds) {
-    final overrideMinutes = provider.closingDuration ?? provider.durationMinutes;
+    final overrideMinutes =
+        provider.closingDuration ?? provider.durationMinutes;
     if (overrideMinutes != null && overrideMinutes > 0) {
       if (overrideMinutes >= 60) {
         final hours = overrideMinutes ~/ 60;
@@ -644,13 +737,10 @@ class _SessionHeroCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final miniTextStyle = Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: AppColors.textMuted,
-        );
-    final valueStyle = Theme.of(context).textTheme.titleMedium?.copyWith(
-          color: AppColors.textPrimary,
-          fontSize: 13,
-        );
+    final miniTextStyle = Theme.of(context).textTheme.labelSmall
+        ?.copyWith(color: AppColors.textMuted);
+    final valueStyle = Theme.of(context).textTheme.titleMedium
+        ?.copyWith(color: AppColors.textPrimary, fontSize: 13);
 
     return SummaryCard(
       padding: const EdgeInsets.all(18),
@@ -666,7 +756,10 @@ class _SessionHeroCard extends StatelessWidget {
                   color: AppColors.surface,
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: const Icon(Icons.fitness_center, color: AppColors.accent),
+                child: const Icon(
+                  Icons.fitness_center,
+                  color: AppColors.accent,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -676,9 +769,9 @@ class _SessionHeroCard extends StatelessWidget {
                     Text(
                       _typeLabel(),
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.textPrimary,
-                          ),
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textPrimary,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -689,7 +782,10 @@ class _SessionHeroCard extends StatelessWidget {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.surface,
                   borderRadius: BorderRadius.circular(14),
@@ -699,7 +795,13 @@ class _SessionHeroCard extends StatelessWidget {
                   children: const [
                     Icon(Icons.circle, size: 8, color: AppColors.accent),
                     SizedBox(width: 6),
-                    Text('Borrador', style: TextStyle(color: AppColors.textPrimary, fontSize: 12)),
+                    Text(
+                      'Borrador',
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 12,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -708,17 +810,17 @@ class _SessionHeroCard extends StatelessWidget {
           const SizedBox(height: 18),
           ValueListenableBuilder<int>(
             valueListenable: elapsedSeconds,
-            builder: (_, elapsed, __) {
+            builder: (_, elapsed, _) {
               return Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
                     _primaryDurationLabel(elapsed),
                     style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                          fontWeight: FontWeight.w900,
-                          fontSize: 40,
-                          color: AppColors.textPrimary,
-                        ),
+                      fontWeight: FontWeight.w900,
+                      fontSize: 40,
+                      color: AppColors.textPrimary,
+                    ),
                   ),
                   const SizedBox(width: 10),
                   Text('activo', style: miniTextStyle),
@@ -735,9 +837,24 @@ class _SessionHeroCard extends StatelessWidget {
           const SizedBox(height: 14),
           Row(
             children: [
-              _miniMetric('Ejercicios', provider.totalExercises.toString(), valueStyle, miniTextStyle),
-              _miniMetric('Series', provider.totalSets.toString(), valueStyle, miniTextStyle),
-              _miniMetric('Volumen', '${provider.totalVolume.toStringAsFixed(0)} kg', valueStyle, miniTextStyle),
+              _miniMetric(
+                'Ejercicios',
+                provider.totalExercises.toString(),
+                valueStyle,
+                miniTextStyle,
+              ),
+              _miniMetric(
+                'Series',
+                provider.totalSets.toString(),
+                valueStyle,
+                miniTextStyle,
+              ),
+              _miniMetric(
+                'Volumen',
+                '${provider.totalVolume.toStringAsFixed(0)} kg',
+                valueStyle,
+                miniTextStyle,
+              ),
             ],
           ),
         ],
@@ -745,7 +862,12 @@ class _SessionHeroCard extends StatelessWidget {
     );
   }
 
-  Widget _miniMetric(String label, String value, TextStyle? valueStyle, TextStyle? miniStyle) {
+  Widget _miniMetric(
+    String label,
+    String value,
+    TextStyle? valueStyle,
+    TextStyle? miniStyle,
+  ) {
     return Expanded(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -760,10 +882,15 @@ class _SessionHeroCard extends StatelessWidget {
 }
 
 class _ConfigurationCard extends StatefulWidget {
-  const _ConfigurationCard({super.key, required this.provider, required this.onConfirmTypeChange});
+  const _ConfigurationCard({
+    super.key,
+    required this.provider,
+    required this.onConfirmTypeChange,
+  });
 
   final WorkoutProProvider provider;
-  final Future<bool> Function(BuildContext context, String message) onConfirmTypeChange;
+  final Future<bool> Function(BuildContext context, String message)
+  onConfirmTypeChange;
 
   @override
   State<_ConfigurationCard> createState() => _ConfigurationCardState();
@@ -790,11 +917,7 @@ class _ConfigurationCardState extends State<_ConfigurationCard> {
         value: 'Libre',
         onTap: () => _openTemplateSelector(context),
       ),
-      _SettingRow(
-        label: 'Descanso',
-        value: 'Auto',
-        onTap: () {},
-      ),
+      _SettingRow(label: 'Descanso', value: 'Auto', onTap: () {}),
     ];
 
     return SummaryCard(
@@ -809,7 +932,11 @@ class _ConfigurationCardState extends State<_ConfigurationCard> {
               children: [
                 const Text(
                   'Configuración',
-                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: AppColors.textPrimary),
+                  style: TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 18,
+                    color: AppColors.textPrimary,
+                  ),
                 ),
                 const Spacer(),
                 TextButton(
@@ -819,8 +946,12 @@ class _ConfigurationCardState extends State<_ConfigurationCard> {
               ],
             ),
             const SizedBox(height: 8),
-            ...List.generate(_expanded ? rows.length : 2, (index) => rows[index]),
-            if (!_expanded) const Divider(height: 20, color: AppColors.borderSubtle),
+            ...List.generate(
+              _expanded ? rows.length : 2,
+              (index) => rows[index],
+            ),
+            if (!_expanded)
+              const Divider(height: 20, color: AppColors.borderSubtle),
             if (!_expanded)
               Align(
                 alignment: Alignment.centerLeft,
@@ -828,7 +959,9 @@ class _ConfigurationCardState extends State<_ConfigurationCard> {
                   onPressed: () => setState(() => _expanded = true),
                   icon: const Icon(Icons.unfold_more),
                   label: const Text('Más opciones'),
-                  style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+                  style: TextButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                  ),
                 ),
               ),
           ],
@@ -860,6 +993,7 @@ class _ConfigurationCardState extends State<_ConfigurationCard> {
             } else {
               widget.provider.setType(type);
             }
+            if (!ctx.mounted) return;
             Navigator.of(ctx).pop();
           },
         ),
@@ -931,14 +1065,14 @@ class _SettingRow extends StatelessWidget {
                     children: [
                       Text(
                         label,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: AppColors.textMuted,
-                            ),
+                        style: Theme.of(context).textTheme.bodySmall
+                            ?.copyWith(color: AppColors.textMuted),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         value,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(
                               color: AppColors.textPrimary,
                               fontWeight: FontWeight.w700,
                             ),
@@ -958,7 +1092,11 @@ class _SettingRow extends StatelessWidget {
 }
 
 class SimpleWorkoutSection extends StatefulWidget {
-  const SimpleWorkoutSection({required this.provider, required this.title});
+  const SimpleWorkoutSection({
+    super.key,
+    required this.provider,
+    required this.title,
+  });
 
   final WorkoutProProvider provider;
   final String title;
@@ -979,11 +1117,15 @@ class _SimpleWorkoutSectionState extends State<SimpleWorkoutSection> {
   @override
   void initState() {
     super.initState();
-    _activityController = TextEditingController(text: provider.activityName ?? '');
-    _durationController =
-        TextEditingController(text: provider.durationMinutes?.toString() ?? '');
-    _distanceController =
-        TextEditingController(text: provider.distanceKm?.toString() ?? '');
+    _activityController = TextEditingController(
+      text: provider.activityName ?? '',
+    );
+    _durationController = TextEditingController(
+      text: provider.durationMinutes?.toString() ?? '',
+    );
+    _distanceController = TextEditingController(
+      text: provider.distanceKm?.toString() ?? '',
+    );
     _paceController = TextEditingController(text: provider.pace ?? '');
     _notesController = TextEditingController(text: provider.notes ?? '');
   }
@@ -1028,7 +1170,10 @@ class _SimpleWorkoutSectionState extends State<SimpleWorkoutSection> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(widget.title, style: const TextStyle(fontWeight: FontWeight.w700)),
+            Text(
+              widget.title,
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
             const SizedBox(height: 12),
             TextField(
               controller: _activityController,
@@ -1060,7 +1205,9 @@ class _SimpleWorkoutSectionState extends State<SimpleWorkoutSection> {
                       labelText: 'Distancia (km)',
                       prefixIcon: Icon(Icons.social_distance),
                     ),
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
                     onChanged: (v) => provider.setDistance(double.tryParse(v)),
                   ),
                 ),
@@ -1096,6 +1243,7 @@ class _SimpleWorkoutSectionState extends State<SimpleWorkoutSection> {
 
 class StrengthSection extends StatefulWidget {
   const StrengthSection({
+    super.key,
     required this.provider,
     required this.exerciseIndex,
     required this.onAddExercise,
@@ -1116,7 +1264,7 @@ class _StrengthSectionState extends State<StrengthSection> {
   Widget build(BuildContext context) {
     final hasExercises = widget.provider.exercises.isNotEmpty;
 
-    final suggested = [
+    final suggested = {
       ...widget.provider.recentExercises,
       ...widget.provider.mostUsedExercises,
       'Press banca',
@@ -1124,10 +1272,7 @@ class _StrengthSectionState extends State<StrengthSection> {
       'Sentadilla',
       'Peso muerto',
       'Remo con barra',
-    ]
-        .toSet()
-        .take(14)
-        .toList();
+    }.take(14).toList();
 
     final visibleSuggestions = suggested.take(hasExercises ? 5 : 6).toList();
     final expandedSuggestions = suggested.take(14).toList();
@@ -1144,13 +1289,21 @@ class _StrengthSectionState extends State<StrengthSection> {
                 children: [
                   const Text(
                     'Ejercicios',
-                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: AppColors.textPrimary),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 18,
+                      color: AppColors.textPrimary,
+                    ),
                   ),
                   const Spacer(),
                   if (hasExercises)
                     IconButton(
                       tooltip: 'Agregar ejercicio',
-                      onPressed: () => _openAddExercise(context, widget.provider, widget.exerciseIndex),
+                      onPressed: () => _openAddExercise(
+                        context,
+                        widget.provider,
+                        widget.exerciseIndex,
+                      ),
                       icon: const Icon(Icons.add),
                     ),
                 ],
@@ -1167,39 +1320,62 @@ class _StrengthSectionState extends State<StrengthSection> {
                               suggestions: expandedSuggestions,
                               visibleSuggestions: visibleSuggestions,
                               expanded: _showAllSuggestions,
-                              onToggle: () => setState(() => _showAllSuggestions = !_showAllSuggestions),
+                              onToggle: () => setState(
+                                () =>
+                                    _showAllSuggestions = !_showAllSuggestions,
+                              ),
                               onPick: _addSuggested,
-                              onOpenLibrary: () => _openAddExercise(context, widget.provider, widget.exerciseIndex),
+                              onOpenLibrary: () => _openAddExercise(
+                                context,
+                                widget.provider,
+                                widget.exerciseIndex,
+                              ),
                             ),
                           const SizedBox(height: 8),
                           ReorderableListView.builder(
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),
                             itemCount: widget.provider.exercises.length,
-                            onReorder: widget.provider.reorderExercise,
+                            onReorderItem: widget.provider.reorderExercise,
                             itemBuilder: (context, index) {
                               final exercise = widget.provider.exercises[index];
-                              final definition = widget.exerciseIndex.findByQuery(exercise.name);
+                              final definition = widget.exerciseIndex
+                                  .findByQuery(exercise.name);
                               return Padding(
                                 key: ValueKey(exercise.id),
                                 padding: const EdgeInsets.only(bottom: 10),
                                 child: ExerciseCard(
                                   exercise: exercise,
                                   definition: definition,
-                                  onDuplicate: () => widget.provider.duplicateExercise(exercise.id),
+                                  onDuplicate: () => widget.provider
+                                      .duplicateExercise(exercise.id),
                                   onDelete: () async {
-                                    final confirm = await _confirmDelete(context);
-                                    if (confirm) widget.provider.removeExercise(exercise.id);
+                                    final confirm = await _confirmDelete(
+                                      context,
+                                    );
+                                    if (confirm) {
+                                      widget.provider.removeExercise(
+                                        exercise.id,
+                                      );
+                                    }
                                   },
-                                  onAddSet: () => widget.provider.addSet(exercise.id),
-                                  onCopySet: () => widget.provider.copyPreviousSet(exercise.id),
-                                  onBumpReps: () => widget.provider.bumpReps(exercise.id, 1),
-                                  onBumpWeight: () => widget.provider.bumpWeight(exercise.id, 2.5),
-                                  onUpdateSet: (set) => widget.provider.updateSet(exercise.id, set.id, set),
-                                  onDeleteSet: (setId) => widget.provider.removeSet(exercise.id, setId),
-                                  onRestoreSet: (setIndex, set) =>
-                                      widget.provider.insertSet(exercise.id, setIndex, set),
-                                  onUpdateNotes: (notes) => widget.provider.updateExerciseNotes(exercise.id, notes),
+                                  onAddSet: () =>
+                                      widget.provider.addSet(exercise.id),
+                                  onCopySet: () => widget.provider
+                                      .copyPreviousSet(exercise.id),
+                                  onBumpReps: () =>
+                                      widget.provider.bumpReps(exercise.id, 1),
+                                  onBumpWeight: () => widget.provider
+                                      .bumpWeight(exercise.id, 2.5),
+                                  onUpdateSet: (set) => widget.provider
+                                      .updateSet(exercise.id, set.id, set),
+                                  onDeleteSet: (setId) => widget.provider
+                                      .removeSet(exercise.id, setId),
+                                  onRestoreSet: (setIndex, set) => widget
+                                      .provider
+                                      .insertSet(exercise.id, setIndex, set),
+                                  onUpdateNotes: (notes) => widget.provider
+                                      .updateExerciseNotes(exercise.id, notes),
                                 ),
                               );
                             },
@@ -1209,24 +1385,33 @@ class _StrengthSectionState extends State<StrengthSection> {
                             tilePadding: EdgeInsets.zero,
                             childrenPadding: const EdgeInsets.only(top: 8),
                             title: const Text('Métricas (opcional)'),
-                            children: [
-                              _MetricsRow(provider: widget.provider),
-                            ],
+                            children: [_MetricsRow(provider: widget.provider)],
                           ),
                         ],
                       )
                     : _EmptyExercisesState(
                         onAddExercise: widget.onAddExercise,
-                        onOpenLibrary: () => _openAddExercise(context, widget.provider, widget.exerciseIndex),
+                        onOpenLibrary: () => _openAddExercise(
+                          context,
+                          widget.provider,
+                          widget.exerciseIndex,
+                        ),
                         suggestions: suggested.isNotEmpty
                             ? _SuggestionsRow(
                                 suggestions: expandedSuggestions,
                                 visibleSuggestions: visibleSuggestions,
                                 expanded: _showAllSuggestions,
                                 dense: true,
-                                onToggle: () => setState(() => _showAllSuggestions = !_showAllSuggestions),
+                                onToggle: () => setState(
+                                  () => _showAllSuggestions =
+                                      !_showAllSuggestions,
+                                ),
                                 onPick: _addSuggested,
-                                onOpenLibrary: () => _openAddExercise(context, widget.provider, widget.exerciseIndex),
+                                onOpenLibrary: () => _openAddExercise(
+                                  context,
+                                  widget.provider,
+                                  widget.exerciseIndex,
+                                ),
                               )
                             : null,
                       ),
@@ -1247,10 +1432,7 @@ class _StrengthSectionState extends State<StrengthSection> {
     final match = widget.exerciseIndex.findByQuery(name);
     final exercise = match != null
         ? widget.provider.fromDefinition(match)
-        : WorkoutExercise(
-            id: const Uuid().v4(),
-            name: name,
-          );
+        : WorkoutExercise(id: const Uuid().v4(), name: name);
     widget.provider.addExerciseWithDefaults(exercise);
   }
 }
@@ -1274,7 +1456,11 @@ class _EmptyExercisesState extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.fitness_center_outlined, size: 46, color: AppColors.textSecondary),
+          const Icon(
+            Icons.fitness_center_outlined,
+            size: 46,
+            color: AppColors.textSecondary,
+          ),
           const SizedBox(height: 10),
           Text(
             'Agregá tu primer ejercicio',
@@ -1289,10 +1475,7 @@ class _EmptyExercisesState extends StatelessWidget {
             style: textTheme.bodyMedium?.copyWith(color: AppColors.textMuted),
           ),
           const SizedBox(height: 10),
-          if (suggestions != null) ...[
-            suggestions!,
-            const SizedBox(height: 8),
-          ],
+          if (suggestions != null) ...[suggestions!, const SizedBox(height: 8)],
           const SizedBox(height: 6),
           SizedBox(
             width: double.infinity,
@@ -1345,13 +1528,18 @@ class _SuggestionsRow extends StatelessWidget {
             children: [
               const Text(
                 'Sugeridos',
-                style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                ),
               ),
               const Spacer(),
               if (showToggle)
                 TextButton(
                   onPressed: onToggle,
-                  style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+                  style: TextButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                  ),
                   child: Text(expanded ? 'Ver menos' : 'Ver más'),
                 ),
             ],
@@ -1362,7 +1550,7 @@ class _SuggestionsRow extends StatelessWidget {
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: chips.length + 1,
-              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              separatorBuilder: (_, _) => const SizedBox(width: 8),
               itemBuilder: (context, i) {
                 if (i == chips.length) {
                   return _SuggestionChip(
@@ -1372,10 +1560,7 @@ class _SuggestionsRow extends StatelessWidget {
                   );
                 }
                 final name = chips[i];
-                return _SuggestionChip(
-                  label: name,
-                  onTap: () => onPick(name),
-                );
+                return _SuggestionChip(label: name, onTap: () => onPick(name));
               },
             ),
           ),
@@ -1426,7 +1611,8 @@ Future<void> _openAddExercise(
     context: context,
     showDragHandle: true,
     isScrollControlled: true,
-    builder: (context) => _ExerciseSelector(provider: provider, exerciseIndex: exerciseIndex),
+    builder: (context) =>
+        _ExerciseSelector(provider: provider, exerciseIndex: exerciseIndex),
   );
 
   if (chosen == null) return;
@@ -1439,7 +1625,9 @@ Future<bool> _confirmDelete(BuildContext context) async {
     context: context,
     builder: (_) => AlertDialog(
       title: const Text('Eliminar ejercicio'),
-      content: const Text('¿Eliminar este ejercicio? Esta acción no se puede deshacer.'),
+      content: const Text(
+        '¿Eliminar este ejercicio? Esta acción no se puede deshacer.',
+      ),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(false),
@@ -1514,7 +1702,10 @@ class _MetricsRowState extends State<_MetricsRow> {
 }
 
 class _ExerciseSelector extends StatefulWidget {
-  const _ExerciseSelector({required this.provider, required this.exerciseIndex});
+  const _ExerciseSelector({
+    required this.provider,
+    required this.exerciseIndex,
+  });
 
   final WorkoutProProvider provider;
   final ExerciseLibraryIndex exerciseIndex;
@@ -1567,7 +1758,7 @@ class _ExerciseSelectorState extends State<_ExerciseSelector> {
             borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.5),
+                color: Colors.black.withValues(alpha: 0.5),
                 blurRadius: 24,
                 offset: const Offset(0, -4),
               ),
@@ -1589,7 +1780,10 @@ class _ExerciseSelectorState extends State<_ExerciseSelector> {
                     children: [
                       const Text(
                         'Agregar ejercicio',
-                        style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 18,
+                        ),
                       ),
                       const Spacer(),
                       IconButton(
@@ -1621,8 +1815,11 @@ class _ExerciseSelectorState extends State<_ExerciseSelector> {
                   Row(
                     children: [
                       FilledButton.tonal(
-                        onPressed: () => setState(() => _showFilters = !_showFilters),
-                        style: FilledButton.styleFrom(visualDensity: VisualDensity.compact),
+                        onPressed: () =>
+                            setState(() => _showFilters = !_showFilters),
+                        style: FilledButton.styleFrom(
+                          visualDensity: VisualDensity.compact,
+                        ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -1654,13 +1851,41 @@ class _ExerciseSelectorState extends State<_ExerciseSelector> {
                             spacing: 8,
                             runSpacing: 6,
                             children: [
-                              _chip('Pecho', muscleFilter == 'pecho', () => _toggleMuscle('pecho')),
-                              _chip('Espalda', muscleFilter == 'espalda', () => _toggleMuscle('espalda')),
-                              _chip('Piernas', muscleFilter == 'piernas', () => _toggleMuscle('piernas')),
-                              _chip('Hombros', muscleFilter == 'hombros', () => _toggleMuscle('hombros')),
-                              _chip('Bíceps', muscleFilter == 'bíceps', () => _toggleMuscle('bíceps')),
-                              _chip('Tríceps', muscleFilter == 'tríceps', () => _toggleMuscle('tríceps')),
-                              _chip('Core', muscleFilter == 'core', () => _toggleMuscle('core')),
+                              _chip(
+                                'Pecho',
+                                muscleFilter == 'pecho',
+                                () => _toggleMuscle('pecho'),
+                              ),
+                              _chip(
+                                'Espalda',
+                                muscleFilter == 'espalda',
+                                () => _toggleMuscle('espalda'),
+                              ),
+                              _chip(
+                                'Piernas',
+                                muscleFilter == 'piernas',
+                                () => _toggleMuscle('piernas'),
+                              ),
+                              _chip(
+                                'Hombros',
+                                muscleFilter == 'hombros',
+                                () => _toggleMuscle('hombros'),
+                              ),
+                              _chip(
+                                'Bíceps',
+                                muscleFilter == 'bíceps',
+                                () => _toggleMuscle('bíceps'),
+                              ),
+                              _chip(
+                                'Tríceps',
+                                muscleFilter == 'tríceps',
+                                () => _toggleMuscle('tríceps'),
+                              ),
+                              _chip(
+                                'Core',
+                                muscleFilter == 'core',
+                                () => _toggleMuscle('core'),
+                              ),
                             ],
                           ),
                           const SizedBox(height: 8),
@@ -1668,11 +1893,31 @@ class _ExerciseSelectorState extends State<_ExerciseSelector> {
                             spacing: 8,
                             runSpacing: 6,
                             children: [
-                              _chip('Bodyweight', equipmentFilter == 'bodyweight', () => _toggleEquipment('bodyweight')),
-                              _chip('Barbell', equipmentFilter == 'barbell', () => _toggleEquipment('barbell')),
-                              _chip('Dumbbell', equipmentFilter == 'dumbbell', () => _toggleEquipment('dumbbell')),
-                              _chip('Machine', equipmentFilter == 'machine', () => _toggleEquipment('machine')),
-                              _chip('Cable', equipmentFilter == 'cable', () => _toggleEquipment('cable')),
+                              _chip(
+                                'Bodyweight',
+                                equipmentFilter == 'bodyweight',
+                                () => _toggleEquipment('bodyweight'),
+                              ),
+                              _chip(
+                                'Barbell',
+                                equipmentFilter == 'barbell',
+                                () => _toggleEquipment('barbell'),
+                              ),
+                              _chip(
+                                'Dumbbell',
+                                equipmentFilter == 'dumbbell',
+                                () => _toggleEquipment('dumbbell'),
+                              ),
+                              _chip(
+                                'Machine',
+                                equipmentFilter == 'machine',
+                                () => _toggleEquipment('machine'),
+                              ),
+                              _chip(
+                                'Cable',
+                                equipmentFilter == 'cable',
+                                () => _toggleEquipment('cable'),
+                              ),
                             ],
                           ),
                           const SizedBox(height: 8),
@@ -1680,11 +1925,31 @@ class _ExerciseSelectorState extends State<_ExerciseSelector> {
                             spacing: 8,
                             runSpacing: 6,
                             children: [
-                              _chip('Push', patternFilter == 'push', () => _togglePattern('push')),
-                              _chip('Pull', patternFilter == 'pull', () => _togglePattern('pull')),
-                              _chip('Squat', patternFilter == 'squat', () => _togglePattern('squat')),
-                              _chip('Hinge', patternFilter == 'hinge', () => _togglePattern('hinge')),
-                              _chip('Core', patternFilter == 'core', () => _togglePattern('core')),
+                              _chip(
+                                'Push',
+                                patternFilter == 'push',
+                                () => _togglePattern('push'),
+                              ),
+                              _chip(
+                                'Pull',
+                                patternFilter == 'pull',
+                                () => _togglePattern('pull'),
+                              ),
+                              _chip(
+                                'Squat',
+                                patternFilter == 'squat',
+                                () => _togglePattern('squat'),
+                              ),
+                              _chip(
+                                'Hinge',
+                                patternFilter == 'hinge',
+                                () => _togglePattern('hinge'),
+                              ),
+                              _chip(
+                                'Core',
+                                patternFilter == 'core',
+                                () => _togglePattern('core'),
+                              ),
                             ],
                           ),
                         ],
@@ -1703,13 +1968,17 @@ class _ExerciseSelectorState extends State<_ExerciseSelector> {
                           _quickSection('Más usados', mostUsed),
                         _quickSection('Sugeridos', topSuggestions),
                         const SizedBox(height: 4),
-                        Text('Resultados (${filtered.length})',
-                            style: Theme.of(context).textTheme.titleSmall),
+                        Text(
+                          'Resultados (${filtered.length})',
+                          style: Theme.of(context).textTheme.titleSmall,
+                        ),
                         const SizedBox(height: 6),
                         if (hasQuery && !exactMatch)
                           ListTile(
                             leading: const Icon(Icons.add_circle_outline),
-                            title: Text('Crear "${_queryController.text.trim()}"'),
+                            title: Text(
+                              'Crear "${_queryController.text.trim()}"',
+                            ),
                             onTap: () => _createCustom(),
                           ),
                         ...filtered.map(
@@ -1719,7 +1988,7 @@ class _ExerciseSelectorState extends State<_ExerciseSelector> {
                               [
                                 if (exercise.primaryMuscles.isNotEmpty)
                                   exercise.primaryMuscles.join(', '),
-                                if (exercise.equipment != null) exercise.equipment!,
+                                exercise.equipment,
                               ].where((e) => e.isNotEmpty).join(' · '),
                             ),
                             trailing: const Icon(Icons.add_circle_outline),
@@ -1762,7 +2031,8 @@ class _ExerciseSelectorState extends State<_ExerciseSelector> {
     });
   }
 
-  bool get _hasAnyFilter => muscleFilter != null || equipmentFilter != null || patternFilter != null;
+  bool get _hasAnyFilter =>
+      muscleFilter != null || equipmentFilter != null || patternFilter != null;
 
   void _clearFilters() {
     setState(() {
@@ -1776,16 +2046,20 @@ class _ExerciseSelectorState extends State<_ExerciseSelector> {
     var results = widget.exerciseIndex.search(_queryController.text);
     if (muscleFilter != null) {
       results = results
-          .where((e) => e.primaryMuscles
-              .map((m) => m.toLowerCase())
-              .contains(muscleFilter))
+          .where(
+            (e) => e.primaryMuscles
+                .map((m) => m.toLowerCase())
+                .contains(muscleFilter),
+          )
           .toList();
     }
     if (equipmentFilter != null) {
       results = results.where((e) => e.equipment == equipmentFilter).toList();
     }
     if (patternFilter != null) {
-      results = results.where((e) => e.movementPattern == patternFilter).toList();
+      results = results
+          .where((e) => e.movementPattern == patternFilter)
+          .toList();
     }
     return results;
   }
@@ -1797,7 +2071,7 @@ class _ExerciseSelectorState extends State<_ExerciseSelector> {
       onSelected: (_) => onSelected(),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       backgroundColor: AppColors.surface,
-      selectedColor: AppColors.borderSubtle.withOpacity(0.35),
+      selectedColor: AppColors.borderSubtle.withValues(alpha: 0.35),
     );
   }
 
@@ -1815,7 +2089,7 @@ class _ExerciseSelectorState extends State<_ExerciseSelector> {
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: exercises.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              separatorBuilder: (_, _) => const SizedBox(width: 8),
               itemBuilder: (context, index) {
                 final exercise = exercises[index];
                 return _SuggestionChip(

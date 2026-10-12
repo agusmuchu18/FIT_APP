@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui' show FontFeature;
 
 import 'package:flutter/material.dart';
 
@@ -51,11 +50,11 @@ class _NowPlayingWorkoutChipState extends State<NowPlayingWorkoutChip> {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(22),
-            color: AppColors.card.withOpacity(0.88),
-            border: Border.all(color: Colors.white.withOpacity(0.12)),
+            color: AppColors.card.withValues(alpha: 0.88),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.24),
+                color: Colors.black.withValues(alpha: 0.24),
                 blurRadius: 18,
                 offset: const Offset(0, 8),
               ),
@@ -67,10 +66,14 @@ class _NowPlayingWorkoutChipState extends State<NowPlayingWorkoutChip> {
                 width: 38,
                 height: 38,
                 decoration: BoxDecoration(
-                  color: AppColors.accent.withOpacity(0.18),
+                  color: AppColors.accent.withValues(alpha: 0.18),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.fitness_center_rounded, color: AppColors.accent, size: 20),
+                child: const Icon(
+                  Icons.fitness_center_rounded,
+                  color: AppColors.accent,
+                  size: 20,
+                ),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -82,7 +85,8 @@ class _NowPlayingWorkoutChipState extends State<NowPlayingWorkoutChip> {
                       widget.draft.routineName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                      style: Theme.of(context).textTheme.titleSmall
+                          ?.copyWith(fontWeight: FontWeight.w700),
                     ),
                     const SizedBox(height: 2),
                     Text(
@@ -96,7 +100,11 @@ class _NowPlayingWorkoutChipState extends State<NowPlayingWorkoutChip> {
                 ),
               ),
               const SizedBox(width: 6),
-              const Icon(Icons.open_in_full_rounded, size: 20, color: AppColors.accent),
+              const Icon(
+                Icons.open_in_full_rounded,
+                size: 20,
+                color: AppColors.accent,
+              ),
             ],
           ),
         ),
@@ -109,7 +117,9 @@ class _NowPlayingWorkoutChipState extends State<NowPlayingWorkoutChip> {
     final hours = safe.inHours;
     final minutes = (safe.inMinutes % 60).toString().padLeft(2, '0');
     final seconds = (safe.inSeconds % 60).toString().padLeft(2, '0');
-    if (hours > 0) return '${hours.toString().padLeft(2, '0')}:$minutes:$seconds';
+    if (hours > 0) {
+      return '${hours.toString().padLeft(2, '0')}:$minutes:$seconds';
+    }
     return '$minutes:$seconds';
   }
 }

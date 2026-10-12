@@ -7,8 +7,8 @@ class AppColors {
 
   // Surfaces
   static const Color background = Color(0xFF0E1624); // base
-  static const Color card = Color(0xFF161F2C);       // cards principales
-  static const Color surface = Color(0xFF1B2433);    // inputs/containers
+  static const Color card = Color(0xFF161F2C); // cards principales
+  static const Color surface = Color(0xFF1B2433); // inputs/containers
 
   // Accents
   static const Color accent = Color(0xFF2AF5D2);

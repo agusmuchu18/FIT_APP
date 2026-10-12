@@ -6,11 +6,55 @@ import 'workout_mini_bar.dart';
 
 final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
 
+Widget workoutMiniBarAppBuilder(BuildContext context, Widget? child) {
+  return _WorkoutAppOverlay(child: child);
+}
+
+class _WorkoutAppOverlay extends StatefulWidget {
+  const _WorkoutAppOverlay({required this.child});
+
+  final Widget? child;
+
+  @override
+  State<_WorkoutAppOverlay> createState() => _WorkoutAppOverlayState();
+}
+
+class _WorkoutAppOverlayState extends State<_WorkoutAppOverlay> {
+  late final OverlayEntry _appEntry = OverlayEntry(
+    builder: (_) => widget.child ?? const SizedBox.shrink(),
+  );
+  late final OverlayEntry _miniBarEntry = OverlayEntry(
+    builder: (_) => const WorkoutMiniBarHostOverlay(),
+  );
+
+  @override
+  void didUpdateWidget(covariant _WorkoutAppOverlay oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.child != widget.child) {
+      _appEntry.markNeedsBuild();
+    }
+  }
+
+  @override
+  void dispose() {
+    _appEntry.remove();
+    _miniBarEntry.remove();
+    _appEntry.dispose();
+    _miniBarEntry.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) =>
+      Overlay(initialEntries: [_appEntry, _miniBarEntry]);
+}
+
 class WorkoutMiniBarOverlayController {
   WorkoutMiniBarOverlayController._();
 
   static const double mainShellBarHeight = 76;
-  static final WorkoutMiniBarOverlayController instance = WorkoutMiniBarOverlayController._();
+  static final WorkoutMiniBarOverlayController instance =
+      WorkoutMiniBarOverlayController._();
 
   final ValueNotifier<bool> bottomNavVisible = ValueNotifier(true);
   final ValueNotifier<String?> currentRouteName = ValueNotifier(null);
@@ -30,10 +74,10 @@ class WorkoutMiniBarOverlayController {
 
     // Mantener robustez ante cambios de rutas:
     // por defecto asumimos que la bottom nav está visible, excepto en rutas full-screen.
-    const fullScreenRoutesWithoutBottomNav = <String>{
-      '/workout/session',
-    };
-    final showBottomNav = routeName == null || !fullScreenRoutesWithoutBottomNav.contains(routeName);
+    const fullScreenRoutesWithoutBottomNav = <String>{'/workout/session'};
+    final showBottomNav =
+        routeName == null ||
+        !fullScreenRoutesWithoutBottomNav.contains(routeName);
     if (bottomNavVisible.value != showBottomNav) {
       bottomNavVisible.value = showBottomNav;
     }
@@ -83,7 +127,8 @@ class WorkoutMiniBarHostOverlay extends StatefulWidget {
   const WorkoutMiniBarHostOverlay({super.key});
 
   @override
-  State<WorkoutMiniBarHostOverlay> createState() => _WorkoutMiniBarHostOverlayState();
+  State<WorkoutMiniBarHostOverlay> createState() =>
+      _WorkoutMiniBarHostOverlayState();
 }
 
 class _WorkoutMiniBarHostOverlayState extends State<WorkoutMiniBarHostOverlay> {
@@ -117,13 +162,19 @@ class _WorkoutMiniBarHostOverlayState extends State<WorkoutMiniBarHostOverlay> {
       builder: (context, draft, _) {
         return ValueListenableBuilder<bool>(
           valueListenable: overlayController.bottomNavVisible,
-          builder: (context, bottomNavVisible, __) {
+          builder: (context, bottomNavVisible, _) {
             return ValueListenableBuilder<String?>(
               valueListenable: overlayController.currentRouteName,
-              builder: (context, _, ___) {
-                final hidden = draft == null || overlayController.shouldHideMiniBar;
+              builder: (context, _, _) {
+                final hidden =
+                    draft == null || overlayController.shouldHideMiniBar;
                 final bottomInset = MediaQuery.of(context).padding.bottom;
-                final bottomOffset = (bottomNavVisible ? WorkoutMiniBarOverlayController.mainShellBarHeight : 0) + bottomInset + 12;
+                final bottomOffset =
+                    (bottomNavVisible
+                        ? WorkoutMiniBarOverlayController.mainShellBarHeight
+                        : 0) +
+                    bottomInset +
+                    12;
 
                 if (kDebugMode) {
                   final snapshot =
@@ -158,10 +209,14 @@ class _WorkoutMiniBarHostOverlayState extends State<WorkoutMiniBarHostOverlay> {
                                   ? const SizedBox.shrink()
                                   : WorkoutMiniBar(
                                       draft: draft,
-                                      onContinue: () => appNavigatorKey.currentState?.pushNamed('/workout/session'),
+                                      onContinue: () => appNavigatorKey
+                                          .currentState
+                                          ?.pushNamed('/workout/session'),
                                       onPauseResume: () => draft.isPaused
-                                          ? WorkoutInProgressController.instance.resumePausedWorkout()
-                                          : WorkoutInProgressController.instance.pause(),
+                                          ? WorkoutInProgressController.instance
+                                                .resumePausedWorkout()
+                                          : WorkoutInProgressController.instance
+                                                .pause(),
                                       onDiscard: _confirmDiscardDraft,
                                     ),
                             ),
@@ -191,8 +246,14 @@ class _WorkoutMiniBarHostOverlayState extends State<WorkoutMiniBarHostOverlay> {
         title: const Text('Descartar entrenamiento'),
         content: const Text('¿Querés descartar el entrenamiento en curso?'),
         actions: [
-          TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: const Text('Cancelar')),
-          FilledButton(onPressed: () => Navigator.of(dialogContext).pop(true), child: const Text('Descartar')),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Descartar'),
+          ),
         ],
       ),
     );

@@ -1,13 +1,14 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../common/theme/app_colors.dart';
+import '../../common/widgets/fit_glyph.dart';
 import '../pro/data/exercise_definition.dart';
 import '../pro/data/exercise_library.dart';
 import '../pro/models/workout_models.dart';
+import '../data/workout_repository.dart';
 import '../workout_in_progress_controller.dart';
 import 'routine_draft_controller.dart';
 import 'routine_review_screen.dart';
@@ -18,17 +19,25 @@ class ExercisePickerController extends ChangeNotifier {
   ExercisePickerController({
     required List<ExerciseDefinition> exercises,
     List<String> initialRecentExerciseIds = const [],
-  })  : _allExercises = exercises,
-        _recentExerciseIds = initialRecentExerciseIds {
+  }) : _allExercises = exercises,
+       _recentExerciseIds = initialRecentExerciseIds {
     _recompute();
   }
 
-  static const _sessionsKey = 'pro_workout_sessions';
-  static const int _minimumQueryLength = 2;
   static const int _resultsPageSize = 50;
+  static const _starterExerciseIds = [
+    'back_squat',
+    'bench_press',
+    'lat_pulldown',
+    'deadlift',
+    'military_press',
+    'plank',
+  ];
 
   final List<ExerciseDefinition> _allExercises;
   Timer? _debounce;
+  bool _disposed = false;
+  final _history = WorkoutRepository();
 
   String _query = '';
   Set<String> _equipmentFilters = {};
@@ -42,19 +51,22 @@ class ExercisePickerController extends ChangeNotifier {
   Set<String> get equipmentFilters => _equipmentFilters;
   Set<String> get muscleFilters => _muscleFilters;
   String? get expandedExerciseId => _expandedExerciseId;
-  bool get hasActiveFilters => _equipmentFilters.isNotEmpty || _muscleFilters.isNotEmpty;
-  bool get shouldShowResults => hasActiveFilters || _normalizedQuery.length >= _minimumQueryLength;
-  bool get hasShortQueryHint => !hasActiveFilters && _query.trim().isNotEmpty && _normalizedQuery.length < _minimumQueryLength;
+  bool get hasActiveFilters =>
+      _equipmentFilters.isNotEmpty || _muscleFilters.isNotEmpty;
+  bool get isBrowsing => !hasActiveFilters && _normalizedQuery.isEmpty;
   int get totalCount => _filteredExercises.length;
   int get visibleCount => math.min(_visibleLimit, totalCount);
   bool get canShowMore => visibleCount < totalCount;
-  List<ExerciseDefinition> get itemsVisible => _filteredExercises.take(visibleCount).toList(growable: false);
+  List<ExerciseDefinition> get itemsVisible =>
+      _filteredExercises.take(visibleCount).toList(growable: false);
+  List<ExerciseDefinition> get allExercises => List.unmodifiable(_allExercises);
 
   String get showingResultsLabel {
+    final noun = isBrowsing ? 'ejercicios' : 'resultados';
     if (totalCount <= _visibleLimit) {
-      return 'Mostrando $totalCount resultados';
+      return 'Mostrando $totalCount $noun';
     }
-    return 'Mostrando $visibleCount de $totalCount resultados';
+    return 'Mostrando $visibleCount de $totalCount $noun';
   }
 
   String get _normalizedQuery => _normalize(_query);
@@ -71,34 +83,15 @@ class ExercisePickerController extends ChangeNotifier {
     return muscles.toList()..sort();
   }
 
-  List<ExerciseDefinition> get recentExercises {
-    if (!shouldShowResults) return const [];
-    final byId = {for (final e in _allExercises) e.id: e};
-    return _recentExerciseIds
-        .map((id) => byId[id])
-        .whereType<ExerciseDefinition>()
-        .where(_matchesFilters)
-        .take(3)
-        .toList(growable: false);
-  }
-
-  List<ExerciseDefinition> get filteredExercises {
-    final recentIds = recentExercises.map((e) => e.id).toSet();
-    return _filteredExercises
-        .where((exercise) => !recentIds.contains(exercise.id))
-        .toList(growable: false);
-  }
-
-
   Future<void> loadRecentFromHistory() async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_sessionsKey);
-    if (raw == null) return;
-
-    final decoded = (jsonDecode(raw) as List<dynamic>)
-        .map((e) => WorkoutSession.fromJson(e as Map<String, dynamic>))
-        .toList()
-      ..sort((a, b) => b.date.compareTo(a.date));
+    List<WorkoutSession> decoded;
+    try {
+      decoded = await _history.listAllSessions();
+      decoded.sort((a, b) => b.date.compareTo(a.date));
+    } catch (_) {
+      return;
+    }
+    if (_disposed) return;
 
     final unique = <String>{};
     final recent = <String>[];
@@ -108,6 +101,7 @@ class ExercisePickerController extends ChangeNotifier {
           recent.add(exercise.id);
           if (recent.length == 3) {
             _recentExerciseIds = recent;
+            _recompute();
             notifyListeners();
             return;
           }
@@ -115,9 +109,9 @@ class ExercisePickerController extends ChangeNotifier {
       }
     }
     _recentExerciseIds = recent;
+    _recompute();
     notifyListeners();
   }
-
 
   void setQueryDebounced(String value) {
     _debounce?.cancel();
@@ -153,28 +147,48 @@ class ExercisePickerController extends ChangeNotifier {
     notifyListeners();
   }
 
-
   void _recompute() {
-    if (!shouldShowResults) {
-      _filteredExercises = const [];
-      return;
+    _filteredExercises = _allExercises
+        .where(_matchesFilters)
+        .toList(growable: false);
+    if (isBrowsing) {
+      final priority = [..._recentExerciseIds, ..._starterExerciseIds];
+      final rank = <String, int>{};
+      for (final id in priority) {
+        rank.putIfAbsent(id, () => rank.length);
+      }
+      final originalOrder = <String, int>{
+        for (var index = 0; index < _allExercises.length; index++)
+          _allExercises[index].id: index,
+      };
+      _filteredExercises.sort((a, b) {
+        final byPriority = (rank[a.id] ?? rank.length).compareTo(
+          rank[b.id] ?? rank.length,
+        );
+        return byPriority != 0
+            ? byPriority
+            : originalOrder[a.id]!.compareTo(originalOrder[b.id]!);
+      });
     }
-    _filteredExercises = _allExercises.where(_matchesFilters).toList(growable: false);
   }
 
   bool _matchesFilters(ExerciseDefinition exercise) {
-    if (_equipmentFilters.isNotEmpty && !_equipmentFilters.contains(exercise.equipment)) {
+    if (_equipmentFilters.isNotEmpty &&
+        !_equipmentFilters.contains(exercise.equipment)) {
       return false;
     }
 
     if (_muscleFilters.isNotEmpty) {
-      final muscles = {...exercise.primaryMuscles, ...exercise.secondaryMuscles};
+      final muscles = {
+        ...exercise.primaryMuscles,
+        ...exercise.secondaryMuscles,
+      };
       final hasMuscleMatch = _muscleFilters.any(muscles.contains);
       if (!hasMuscleMatch) return false;
     }
 
     final normalizedQuery = _normalizedQuery;
-    if (normalizedQuery.length < _minimumQueryLength) return true;
+    if (normalizedQuery.isEmpty) return true;
 
     final searchable = [
       exercise.name,
@@ -203,6 +217,7 @@ class ExercisePickerController extends ChangeNotifier {
 
   @override
   void dispose() {
+    _disposed = true;
     _debounce?.cancel();
     super.dispose();
   }
@@ -221,24 +236,31 @@ class TemplateExercisePickerScreen extends StatefulWidget {
   final RoutineDraftController? draftController;
 
   @override
-  State<TemplateExercisePickerScreen> createState() => _TemplateExercisePickerScreenState();
+  State<TemplateExercisePickerScreen> createState() =>
+      _TemplateExercisePickerScreenState();
 }
 
-class _TemplateExercisePickerScreenState extends State<TemplateExercisePickerScreen> {
+class _TemplateExercisePickerScreenState
+    extends State<TemplateExercisePickerScreen> {
   late final ExercisePickerController _controller;
   late final bool _ownedController;
   late final RoutineDraftController _draftController;
   late final RoutinesRepository _repository;
   late final Map<String, ExerciseDefinition> _exercisesById;
+  bool _allowPop = false;
 
   @override
   void initState() {
     super.initState();
     _ownedController = widget.controller == null;
-    _controller = widget.controller ?? ExercisePickerController(exercises: exerciseLibrary);
+    _controller =
+        widget.controller ??
+        ExercisePickerController(exercises: exerciseLibrary);
     _draftController = widget.draftController ?? RoutineDraftController();
     _repository = widget.repository ?? RoutinesRepository();
-    _exercisesById = {for (final exercise in exerciseLibrary) exercise.id: exercise};
+    _exercisesById = {
+      for (final exercise in _controller.allExercises) exercise.id: exercise,
+    };
     if (_ownedController) {
       unawaited(_controller.loadRecentFromHistory());
     }
@@ -259,27 +281,39 @@ class _TemplateExercisePickerScreenState extends State<TemplateExercisePickerScr
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final bottomInset = MediaQuery.of(context).padding.bottom;
-    final hasInProgressBar = WorkoutInProgressController.instance.currentDraft != null;
+    final hasInProgressBar =
+        WorkoutInProgressController.instance.currentDraft != null;
     return ListenableBuilder(
       listenable: Listenable.merge([_controller, _draftController]),
       builder: (context, _) {
         final hasSelection = _draftController.selectedCount > 0;
         final miniBarHeight = hasSelection ? 72.0 : 0.0;
         final overlayPadding = hasInProgressBar ? 76.0 : 0.0;
-        return WillPopScope(
-          onWillPop: () async {
-            if (!hasSelection) return true;
+        return PopScope(
+          canPop: _allowPop || !hasSelection,
+          onPopInvokedWithResult: (didPop, result) async {
+            if (didPop || _allowPop || !hasSelection) return;
             final discard = await showDialog<bool>(
               context: context,
               builder: (_) => AlertDialog(
                 title: const Text('¿Descartar rutina?'),
                 actions: [
-                  TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Seguir editando')),
-                  FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Descartar')),
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(false),
+                    child: const Text('Seguir editando'),
+                  ),
+                  FilledButton(
+                    onPressed: () => Navigator.of(context).pop(true),
+                    child: const Text('Descartar'),
+                  ),
                 ],
               ),
             );
-            return discard == true;
+            if (discard != true || !mounted) return;
+            setState(() => _allowPop = true);
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) Navigator.of(context).pop(result);
+            });
           },
           child: Scaffold(
             resizeToAvoidBottomInset: true,
@@ -306,10 +340,13 @@ class _TemplateExercisePickerScreenState extends State<TemplateExercisePickerScr
                               onChanged: _draftController.setWorkoutType,
                             ),
                             const SizedBox(height: 12),
-                            ExerciseSearchField(onChanged: _controller.setQueryDebounced),
+                            ExerciseSearchField(
+                              onChanged: _controller.setQueryDebounced,
+                            ),
                             const SizedBox(height: 12),
                             FilterPillsRow(
-                              equipmentCount: _controller.equipmentFilters.length,
+                              equipmentCount:
+                                  _controller.equipmentFilters.length,
                               muscleCount: _controller.muscleFilters.length,
                               onTapEquipment: () => _showFilterSheet(
                                 context,
@@ -330,64 +367,76 @@ class _TemplateExercisePickerScreenState extends State<TemplateExercisePickerScr
                         ),
                       ),
                     ),
-                    if (!_controller.shouldShowResults)
-                      SliverFillRemaining(
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SectionHeader(
+                              title: _controller.isBrowsing
+                                  ? 'Explorá ejercicios'
+                                  : 'Resultados',
+                            ),
+                            if (_controller.isBrowsing) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                'Elegí movimientos para armar tu rutina.',
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                            ],
+                            const SizedBox(height: 4),
+                            Text(
+                              _controller.showingResultsLabel,
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    if (_controller.totalCount == 0)
+                      const SliverFillRemaining(
                         hasScrollBody: false,
-                        child: _SearchEmptyState(showShortHint: _controller.hasShortQueryHint),
+                        child: _NoResultsState(),
                       )
                     else ...[
-                      const SliverToBoxAdapter(
-                        child: Padding(
-                          padding: EdgeInsets.fromLTRB(16, 8, 16, 8),
-                          child: SectionHeader(title: 'Resultados'),
-                        ),
+                      SliverList.builder(
+                        itemCount: _controller.itemsVisible.length,
+                        itemBuilder: (context, index) {
+                          final exercise = _controller.itemsVisible[index];
+                          return Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+                            child: ExerciseExpandableCard(
+                              exercise: exercise,
+                              expanded:
+                                  _controller.expandedExerciseId == exercise.id,
+                              selected: _draftController.contains(exercise.id),
+                              onTap: () =>
+                                  _controller.toggleExpanded(exercise.id),
+                              onAdd: () => _toggleSelection(exercise),
+                            ),
+                          );
+                        },
                       ),
-                      SliverToBoxAdapter(
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                          child: Text(
-                            _controller.showingResultsLabel,
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                        ),
-                      ),
-                      if (_controller.totalCount == 0)
-                        const SliverFillRemaining(
-                          hasScrollBody: false,
-                          child: _NoResultsState(),
-                        )
-                      else ...[
-                        SliverList.builder(
-                          itemCount: _controller.itemsVisible.length,
-                          itemBuilder: (context, index) {
-                            final exercise = _controller.itemsVisible[index];
-                            return Padding(
-                              padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-                              child: ExerciseExpandableCard(
-                                exercise: exercise,
-                                expanded: _controller.expandedExerciseId == exercise.id,
-                                selected: _draftController.contains(exercise.id),
-                                onTap: () => _controller.toggleExpanded(exercise.id),
-                                onAdd: () => _toggleSelection(exercise),
-                              ),
-                            );
-                          },
-                        ),
-                        if (_controller.canShowMore)
-                          SliverToBoxAdapter(
-                            child: Padding(
-                              padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
-                              child: Center(
-                                child: OutlinedButton(
-                                  onPressed: _controller.showMore,
-                                  child: const Text('Mostrar más'),
-                                ),
+                      if (_controller.canShowMore)
+                        SliverToBoxAdapter(
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+                            child: Center(
+                              child: OutlinedButton(
+                                onPressed: _controller.showMore,
+                                child: const Text('Mostrar más'),
                               ),
                             ),
                           ),
-                      ],
+                        ),
                     ],
-                    SliverToBoxAdapter(child: SizedBox(height: bottomInset + miniBarHeight + overlayPadding + 20)),
+                    SliverToBoxAdapter(
+                      child: SizedBox(
+                        height:
+                            bottomInset + miniBarHeight + overlayPadding + 20,
+                      ),
+                    ),
                   ],
                 ),
                 Align(
@@ -423,13 +472,16 @@ class _TemplateExercisePickerScreenState extends State<TemplateExercisePickerScr
       MaterialPageRoute(
         builder: (_) => RoutineReviewScreen(
           draftController: _draftController,
-          exercisesById: {for (final exercise in exerciseLibrary) exercise.id: exercise},
+          exercisesById: {
+            for (final exercise in exerciseLibrary) exercise.id: exercise,
+          },
           repository: _repository,
         ),
       ),
     );
     if (result == true && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Rutina guardada')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Rutina guardada')));
       Navigator.of(context).pop('saved');
     }
   }
@@ -492,7 +544,7 @@ class _TemplateExercisePickerScreenState extends State<TemplateExercisePickerScr
                           child: const Text('Aplicar'),
                         ),
                       ],
-                    )
+                    ),
                   ],
                 ),
               ),
@@ -541,7 +593,9 @@ class _SelectionMiniBar extends StatelessWidget {
               color: Theme.of(context).colorScheme.surface,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
-                side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
+                side: BorderSide(
+                  color: Theme.of(context).colorScheme.outlineVariant,
+                ),
               ),
               child: InkWell(
                 onTap: onTap,
@@ -569,14 +623,16 @@ class _SelectionMiniBar extends StatelessWidget {
                                       ),
                                     ),
                                     visualDensity: VisualDensity.compact,
-                                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                    materialTapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
                                   ),
                                 ),
                               if (count > 3)
                                 Chip(
                                   label: Text('+${count - 3}'),
                                   visualDensity: VisualDensity.compact,
-                                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  materialTapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
                                 ),
                             ],
                           ),
@@ -589,7 +645,10 @@ class _SelectionMiniBar extends StatelessWidget {
                         tooltip: 'Limpiar selección',
                       ),
                       const SizedBox(width: 6),
-                      FilledButton.tonal(onPressed: onTap, child: Text('Ver ($count)')),
+                      FilledButton.tonal(
+                        onPressed: onTap,
+                        child: Text('Ver ($count)'),
+                      ),
                     ],
                   ),
                 ),
@@ -614,18 +673,12 @@ class WorkoutTypeSegment extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _WorkoutTypeCarousel(
-      selected: selected,
-      onChanged: onChanged,
-    );
+    return _WorkoutTypeCarousel(selected: selected, onChanged: onChanged);
   }
 }
 
 class ExerciseSearchField extends StatelessWidget {
-  const ExerciseSearchField({
-    super.key,
-    required this.onChanged,
-  });
+  const ExerciseSearchField({super.key, required this.onChanged});
 
   final ValueChanged<String> onChanged;
 
@@ -635,7 +688,11 @@ class ExerciseSearchField extends StatelessWidget {
       onChanged: onChanged,
       decoration: const InputDecoration(
         hintText: 'Buscar ejercicio o músculo…',
-        prefixIcon: Icon(Icons.search),
+        prefixIcon: Center(
+          widthFactor: 1,
+          heightFactor: 1,
+          child: FitGlyph(kind: FitGlyphKind.search, size: 20),
+        ),
       ),
     );
   }
@@ -663,7 +720,9 @@ class FilterPillsRow extends StatelessWidget {
           child: OutlinedButton(
             onPressed: onTapEquipment,
             child: Text(
-              equipmentCount == 0 ? 'Filtro equipamiento' : 'Filtro equipamiento · $equipmentCount',
+              equipmentCount == 0
+                  ? 'Equipamiento'
+                  : 'Equipamiento · $equipmentCount',
               overflow: TextOverflow.ellipsis,
             ),
           ),
@@ -673,7 +732,7 @@ class FilterPillsRow extends StatelessWidget {
           child: OutlinedButton(
             onPressed: onTapMuscle,
             child: Text(
-              muscleCount == 0 ? 'Filtro muscular' : 'Filtro muscular · $muscleCount',
+              muscleCount == 0 ? 'Músculos' : 'Músculos · $muscleCount',
               overflow: TextOverflow.ellipsis,
             ),
           ),
@@ -694,7 +753,11 @@ class _WorkoutTypeCarousel extends StatefulWidget {
 }
 
 class _WorkoutTypeCarouselState extends State<_WorkoutTypeCarousel> {
-  static const _types = [TemplateWorkoutType.gym, TemplateWorkoutType.sport, TemplateWorkoutType.other];
+  static const _types = [
+    TemplateWorkoutType.gym,
+    TemplateWorkoutType.sport,
+    TemplateWorkoutType.other,
+  ];
   late final PageController _controller;
   double _page = 0;
 
@@ -702,12 +765,13 @@ class _WorkoutTypeCarouselState extends State<_WorkoutTypeCarousel> {
   void initState() {
     super.initState();
     _page = _types.indexOf(widget.selected).toDouble();
-    _controller = PageController(initialPage: _page.toInt(), viewportFraction: 0.35)
-      ..addListener(() {
-        setState(() {
-          _page = _controller.page ?? _page;
-        });
-      });
+    _controller =
+        PageController(initialPage: _page.toInt(), viewportFraction: 0.35)
+          ..addListener(() {
+            setState(() {
+              _page = _controller.page ?? _page;
+            });
+          });
   }
 
   @override
@@ -716,7 +780,11 @@ class _WorkoutTypeCarouselState extends State<_WorkoutTypeCarousel> {
     if (oldWidget.selected != widget.selected) {
       final target = _types.indexOf(widget.selected);
       if ((_page - target).abs() > 0.01) {
-        _controller.animateToPage(target, duration: const Duration(milliseconds: 200), curve: Curves.easeOut);
+        _controller.animateToPage(
+          target,
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
+        );
       }
     }
   }
@@ -746,13 +814,23 @@ class _WorkoutTypeCarouselState extends State<_WorkoutTypeCarousel> {
               scale: scale,
               child: Center(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
-                    color: selected ? Theme.of(context).colorScheme.surfaceContainerHighest : Colors.transparent,
+                    border: Border.all(
+                      color: Theme.of(context).colorScheme.outlineVariant,
+                    ),
+                    color: selected
+                        ? Theme.of(context).colorScheme.surfaceContainerHighest
+                        : Colors.transparent,
                   ),
-                  child: Text(_typeLabel(_types[index]), style: Theme.of(context).textTheme.titleSmall),
+                  child: Text(
+                    _typeLabel(_types[index]),
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
                 ),
               ),
             ),
@@ -763,35 +841,6 @@ class _WorkoutTypeCarouselState extends State<_WorkoutTypeCarousel> {
   }
 
   String _typeLabel(TemplateWorkoutType type) => typeLabel(type);
-}
-
-class _SearchEmptyState extends StatelessWidget {
-  const _SearchEmptyState({required this.showShortHint});
-
-  final bool showShortHint;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.search, size: 38, color: Theme.of(context).colorScheme.outline),
-            const SizedBox(height: 12),
-            Text('Buscá un ejercicio o músculo', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
-            Text(
-              showShortHint ? 'Escribí 2 o más letras' : 'Escribí arriba para ver resultados',
-              style: Theme.of(context).textTheme.bodyMedium,
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 class _NoResultsState extends StatelessWidget {
@@ -805,7 +854,10 @@ class _NoResultsState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Sin resultados', style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              'Sin resultados',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
             const SizedBox(height: 8),
             Text(
               'Probá otro término o ajustá filtros.',
@@ -851,19 +903,27 @@ class ExerciseExpandableCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final titleStyle = large
-        ? Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)
-        : Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700);
+        ? Theme.of(context).textTheme.titleMedium
+              ?.copyWith(fontWeight: FontWeight.w700)
+        : Theme.of(context).textTheme.titleSmall
+              ?.copyWith(fontWeight: FontWeight.w700);
 
     return Card(
+      margin: EdgeInsets.zero,
+      color: AppColors.card,
+      elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: AppColors.borderSubtle),
       ),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 14, vertical: large ? 16 : 12),
+          padding: EdgeInsets.symmetric(
+            horizontal: 14,
+            vertical: large ? 16 : 12,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -871,14 +931,26 @@ class ExerciseExpandableCard extends StatelessWidget {
                 children: [
                   CircleAvatar(
                     radius: large ? 22 : 18,
-                    child: const Icon(Icons.fitness_center, size: 18),
+                    backgroundColor: AppColors.accentTraining.withValues(
+                      alpha: 0.12,
+                    ),
+                    child: const FitGlyph(
+                      kind: FitGlyphKind.workout,
+                      size: 18,
+                      color: AppColors.accentTraining,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(exercise.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: titleStyle),
+                        Text(
+                          exercise.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: titleStyle,
+                        ),
                         const SizedBox(height: 2),
                         Text(
                           _subtitle(exercise),
@@ -889,7 +961,23 @@ class ExerciseExpandableCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  Icon(expanded ? Icons.expand_less : Icons.help_outline),
+                  IconButton(
+                    onPressed: onAdd,
+                    tooltip: selected
+                        ? 'Quitar ${exercise.name}'
+                        : 'Agregar ${exercise.name}',
+                    icon: FitGlyph(
+                      kind: selected ? FitGlyphKind.check : FitGlyphKind.add,
+                      color: AppColors.accentTraining,
+                    ),
+                  ),
+                  Transform.rotate(
+                    angle: expanded ? math.pi : 0,
+                    child: const FitGlyph(
+                      kind: FitGlyphKind.chevronDown,
+                      size: 20,
+                    ),
+                  ),
                 ],
               ),
               AnimatedSize(
@@ -901,14 +989,24 @@ class ExerciseExpandableCard extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Equipamiento: ${_pretty(exercise.equipment)}'),
-                            Text('Músculo primario: ${exercise.primaryMuscles.join(', ')}'),
+                            Text(
+                              'Equipamiento: ${_pretty(exercise.equipment)}',
+                            ),
+                            Text(
+                              'Músculo primario: ${exercise.primaryMuscles.join(', ')}',
+                            ),
                             if (exercise.secondaryMuscles.isNotEmpty)
-                              Text('Secundarios: ${exercise.secondaryMuscles.join(', ')}'),
+                              Text(
+                                'Secundarios: ${exercise.secondaryMuscles.join(', ')}',
+                              ),
                             const SizedBox(height: 10),
                             FilledButton.tonalIcon(
                               onPressed: onAdd,
-                              icon: Icon(selected ? Icons.check_circle : Icons.add_circle_outline),
+                              icon: Icon(
+                                selected
+                                    ? Icons.check_circle
+                                    : Icons.add_circle_outline,
+                              ),
                               label: Text(selected ? 'Agregado ✓' : 'Agregar'),
                             ),
                           ],
@@ -954,7 +1052,9 @@ class RecentExerciseCard extends StatelessWidget {
 }
 
 String _subtitle(ExerciseDefinition exercise) {
-  final primary = exercise.primaryMuscles.isNotEmpty ? exercise.primaryMuscles.first : 'Sin músculo';
+  final primary = exercise.primaryMuscles.isNotEmpty
+      ? exercise.primaryMuscles.first
+      : 'Sin músculo';
   return '$primary · ${_pretty(exercise.equipment)}';
 }
 

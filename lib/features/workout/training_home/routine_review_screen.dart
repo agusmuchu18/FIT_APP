@@ -27,12 +27,16 @@ class RoutineReviewScreen extends StatefulWidget {
 class _RoutineReviewScreenState extends State<RoutineReviewScreen> {
   late final TextEditingController _nameController;
   final TextEditingController _notesController = TextEditingController();
-  final Map<String, WorkoutExercise> _exerciseConfigs = <String, WorkoutExercise>{};
+  final Map<String, WorkoutExercise> _exerciseConfigs =
+      <String, WorkoutExercise>{};
   final List<_RoutineExerciseItem> _items = <_RoutineExerciseItem>[];
   int _itemSeed = 0;
   String? _expandedExerciseItemId;
+  bool _saving = false;
+  final _formKey = GlobalKey<FormState>();
 
-  bool get _canSave => _nameController.text.trim().isNotEmpty && _items.isNotEmpty;
+  bool get _canSave =>
+      !_saving && _nameController.text.trim().isNotEmpty && _items.isNotEmpty;
 
   @override
   void initState() {
@@ -50,96 +54,113 @@ class _RoutineReviewScreenState extends State<RoutineReviewScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: widget.draftController,
-      builder: (context, _) {
-        _syncItems(widget.draftController.selectedExerciseIds);
-        if (_expandedExerciseItemId != null && !_items.any((item) => item.instanceId == _expandedExerciseItemId)) {
-          _expandedExerciseItemId = null;
-        }
+    return Form(
+      key: _formKey,
+      child: AnimatedBuilder(
+        animation: widget.draftController,
+        builder: (context, _) {
+          _syncItems(widget.draftController.selectedExerciseIds);
+          if (_expandedExerciseItemId != null &&
+              !_items.any(
+                (item) => item.instanceId == _expandedExerciseItemId,
+              )) {
+            _expandedExerciseItemId = null;
+          }
 
-        return Scaffold(
-          appBar: AppBar(
-            title: const Text('Nueva rutina'),
-            actions: [
-              Padding(
-                padding: const EdgeInsets.only(right: 12),
-                child: FilledButton(
-                  onPressed: _canSave ? _saveRoutine : null,
-                  child: const Text('Guardar'),
-                ),
-              ),
-            ],
-          ),
-          body: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                RoutineHeaderFields(
-                  nameController: _nameController,
-                  notesController: _notesController,
-                ),
-                const SizedBox(height: 14),
-                ExercisesSectionHeader(
-                  count: _items.length,
-                  onAddTap: () => Navigator.of(context).pop(false),
-                ),
-                const SizedBox(height: 8),
-                Expanded(
-                  child: ReorderableListView.builder(
-                    buildDefaultDragHandles: false,
-                    itemCount: _items.length,
-                    proxyDecorator: (child, _, animation) => AnimatedBuilder(
-                      animation: animation,
-                      builder: (context, __) => Material(
-                        color: Colors.transparent,
-                        child: Transform.scale(
-                          scale: Tween<double>(begin: 1, end: 1.01).evaluate(animation),
-                          child: child,
-                        ),
-                      ),
-                    ),
-                    onReorder: (oldIndex, newIndex) {
-                      setState(() {
-                        widget.draftController.reorder(oldIndex, newIndex);
-                      });
-                    },
-                    itemBuilder: (context, index) {
-                      final item = _items[index];
-                      final exercise = widget.exercisesById[item.exerciseId];
-                      final configured = _configFor(item.instanceId, item.exerciseId, exercise);
-                      final expanded = _expandedExerciseItemId == item.instanceId;
-                      return Padding(
-                        key: ValueKey(item.instanceId),
-                        padding: const EdgeInsets.symmetric(vertical: 6),
-                        child: ExerciseCard(
-                          title: exercise?.name ?? item.exerciseId,
-                          config: configured,
-                          expanded: expanded,
-                          dragHandle: ReorderableDragStartListener(
-                            index: index,
-                            child: const Padding(
-                              padding: EdgeInsets.all(6),
-                              child: Icon(Icons.drag_handle_rounded),
-                            ),
-                          ),
-                          onTap: () => setState(() {
-                            _expandedExerciseItemId = expanded ? null : item.instanceId;
-                          }),
-                          onChanged: (updated) => _updateExerciseConfig(item.instanceId, updated),
-                          onDuplicate: () => _duplicateExercise(index),
-                          onDelete: () => _deleteExercise(index),
-                        ),
-                      );
-                    },
+          return Scaffold(
+            appBar: AppBar(
+              title: const Text('Nueva rutina'),
+              actions: [
+                Padding(
+                  padding: const EdgeInsets.only(right: 12),
+                  child: FilledButton(
+                    onPressed: _canSave ? _saveRoutine : null,
+                    child: const Text('Guardar'),
                   ),
                 ),
               ],
             ),
-          ),
-        );
-      },
+            body: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  RoutineHeaderFields(
+                    nameController: _nameController,
+                    notesController: _notesController,
+                  ),
+                  const SizedBox(height: 14),
+                  ExercisesSectionHeader(
+                    count: _items.length,
+                    onAddTap: () => Navigator.of(context).pop(false),
+                  ),
+                  const SizedBox(height: 8),
+                  Expanded(
+                    child: ReorderableListView.builder(
+                      buildDefaultDragHandles: false,
+                      itemCount: _items.length,
+                      proxyDecorator: (child, _, animation) => AnimatedBuilder(
+                        animation: animation,
+                        builder: (context, _) => Material(
+                          color: Colors.transparent,
+                          child: Transform.scale(
+                            scale: Tween<double>(
+                              begin: 1,
+                              end: 1.01,
+                            ).evaluate(animation),
+                            child: child,
+                          ),
+                        ),
+                      ),
+                      onReorderItem: (oldIndex, newIndex) {
+                        setState(() {
+                          widget.draftController.reorder(oldIndex, newIndex);
+                        });
+                      },
+                      itemBuilder: (context, index) {
+                        final item = _items[index];
+                        final exercise = widget.exercisesById[item.exerciseId];
+                        final configured = _configFor(
+                          item.instanceId,
+                          item.exerciseId,
+                          exercise,
+                        );
+                        final expanded =
+                            _expandedExerciseItemId == item.instanceId;
+                        return Padding(
+                          key: ValueKey(item.instanceId),
+                          padding: const EdgeInsets.symmetric(vertical: 6),
+                          child: ExerciseCard(
+                            title: exercise?.name ?? item.exerciseId,
+                            config: configured,
+                            expanded: expanded,
+                            dragHandle: ReorderableDragStartListener(
+                              index: index,
+                              child: const Padding(
+                                padding: EdgeInsets.all(6),
+                                child: Icon(Icons.drag_handle_rounded),
+                              ),
+                            ),
+                            onTap: () => setState(() {
+                              _expandedExerciseItemId = expanded
+                                  ? null
+                                  : item.instanceId;
+                            }),
+                            onChanged: (updated) =>
+                                _updateExerciseConfig(item.instanceId, updated),
+                            onDuplicate: () => _duplicateExercise(index),
+                            onDelete: () => _deleteExercise(index),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 
@@ -155,7 +176,12 @@ class _RoutineReviewScreenState extends State<RoutineReviewScreen> {
       if (bucket != null && bucket.isNotEmpty) {
         next.add(bucket.removeFirst());
       } else {
-        next.add(_RoutineExerciseItem(instanceId: '${exerciseId}_inst_${_itemSeed++}', exerciseId: exerciseId));
+        next.add(
+          _RoutineExerciseItem(
+            instanceId: '${exerciseId}_inst_${_itemSeed++}',
+            exerciseId: exerciseId,
+          ),
+        );
       }
     }
 
@@ -173,15 +199,22 @@ class _RoutineReviewScreenState extends State<RoutineReviewScreen> {
     });
   }
 
-  WorkoutExercise _configFor(String itemId, String exerciseId, def.ExerciseDefinition? exercise) {
+  WorkoutExercise _configFor(
+    String itemId,
+    String exerciseId,
+    def.ExerciseDefinition? exercise,
+  ) {
     return _exerciseConfigs.putIfAbsent(
       itemId,
       () => WorkoutExercise(
         id: exerciseId,
         name: exercise?.name ?? exerciseId,
-        muscleGroup: exercise?.primaryMuscles.isEmpty ?? true ? null : exercise!.primaryMuscles.first,
+        muscleGroup: exercise?.primaryMuscles.isEmpty ?? true
+            ? null
+            : exercise!.primaryMuscles.first,
         equipment: exercise?.equipment,
         measurement: exercise?.defaultMeasurement,
+        targetDurationSeconds: exercise?.isTimed == true ? 30 : null,
         targetLoadType: _inferLoadType(exercise),
       ),
     );
@@ -190,21 +223,26 @@ class _RoutineReviewScreenState extends State<RoutineReviewScreen> {
   RoutineExerciseLoadType _inferLoadType(def.ExerciseDefinition? exercise) {
     if (exercise == null) return RoutineExerciseLoadType.bodyweight;
     switch (exercise.loadType) {
-      case def.LoadType.assisted_bodyweight:
+      case def.LoadType.assistedBodyweight:
         return RoutineExerciseLoadType.assistedKg;
       case def.LoadType.external:
-      case def.LoadType.bodyweight_plus_external:
-        return exercise.equipment.toLowerCase().contains('machine') || exercise.equipment.toLowerCase().contains('máquina')
+      case def.LoadType.bodyweightPlusExternal:
+        return exercise.equipment.toLowerCase().contains('machine') ||
+                exercise.equipment.toLowerCase().contains('máquina')
             ? RoutineExerciseLoadType.machineKg
             : RoutineExerciseLoadType.weightedKg;
-      case def.LoadType.bodyweight_effective:
+      case def.LoadType.bodyweightEffective:
         return RoutineExerciseLoadType.bodyweight;
     }
   }
 
   void _duplicateExercise(int index) {
     final source = _items[index];
-    final sourceConfig = _configFor(source.instanceId, source.exerciseId, widget.exercisesById[source.exerciseId]);
+    final sourceConfig = _configFor(
+      source.instanceId,
+      source.exerciseId,
+      widget.exercisesById[source.exerciseId],
+    );
     widget.draftController.insertExerciseAt(index + 1, source.exerciseId);
     _syncItems(widget.draftController.selectedExerciseIds);
     final duplicated = _items[index + 1];
@@ -226,23 +264,45 @@ class _RoutineReviewScreenState extends State<RoutineReviewScreen> {
   }
 
   Future<void> _saveRoutine() async {
+    if (_saving || !(_formKey.currentState?.validate() ?? false)) return;
     final name = _nameController.text.trim();
     if (name.isEmpty || _items.isEmpty) return;
     final notes = _notesController.text.trim();
     final exercises = _items
-        .map((item) => _configFor(item.instanceId, item.exerciseId, widget.exercisesById[item.exerciseId]))
+        .map(
+          (item) => _configFor(
+            item.instanceId,
+            item.exerciseId,
+            widget.exercisesById[item.exerciseId],
+          ),
+        )
         .map((e) => e.copyWith(notes: notes.isEmpty ? null : notes))
         .toList();
 
-    await widget.repository.saveRoutine(
-      name: name,
-      workoutType: toWorkoutType(widget.draftController.workoutType),
-      exercises: exercises,
-      activityName: typeLabel(widget.draftController.workoutType),
-    );
-    if (!mounted) return;
-    widget.draftController.clear();
-    Navigator.of(context).pop(true);
+    setState(() => _saving = true);
+    try {
+      await widget.repository.saveRoutine(
+        name: name,
+        workoutType: toWorkoutType(widget.draftController.workoutType),
+        exercises: exercises,
+        activityName: typeLabel(widget.draftController.workoutType),
+      );
+      if (!mounted) return;
+      widget.draftController.clear();
+      Navigator.of(context).pop(true);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'No se pudo guardar la rutina. Tus cambios se conservan.',
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
   }
 }
 
@@ -267,10 +327,17 @@ class RoutineHeaderFields extends StatelessWidget {
           style: Theme.of(context).textTheme.titleMedium,
           decoration: InputDecoration(
             hintText: 'Nombre de la rutina',
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 18,
+            ),
             filled: true,
-            fillColor: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.25),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: BorderSide.none),
+            fillColor: Theme.of(context).colorScheme.surfaceContainerHighest
+                .withValues(alpha: 0.25),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(18),
+              borderSide: BorderSide.none,
+            ),
           ),
         ),
         const SizedBox(height: 10),
@@ -279,7 +346,10 @@ class RoutineHeaderFields extends StatelessWidget {
           maxLines: 2,
           decoration: InputDecoration(
             hintText: 'Notas (opcional)',
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 14,
+              vertical: 12,
+            ),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
           ),
         ),
@@ -289,7 +359,11 @@ class RoutineHeaderFields extends StatelessWidget {
 }
 
 class ExercisesSectionHeader extends StatelessWidget {
-  const ExercisesSectionHeader({super.key, required this.count, required this.onAddTap});
+  const ExercisesSectionHeader({
+    super.key,
+    required this.count,
+    required this.onAddTap,
+  });
 
   final int count;
   final VoidCallback onAddTap;
@@ -299,9 +373,16 @@ class ExercisesSectionHeader extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-          child: Text('Ejercicios ($count)', style: Theme.of(context).textTheme.titleMedium),
+          child: Text(
+            'Ejercicios ($count)',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
         ),
-        FilledButton.icon(onPressed: onAddTap, icon: const Icon(Icons.add), label: const Text('Agregar')),
+        FilledButton.icon(
+          onPressed: onAddTap,
+          icon: const Icon(Icons.add),
+          label: const Text('Agregar'),
+        ),
       ],
     );
   }
@@ -336,7 +417,10 @@ class ExerciseCard extends StatelessWidget {
       color: theme.colorScheme.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.45), width: 0.7),
+        side: BorderSide(
+          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.45),
+          width: 0.7,
+        ),
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
@@ -356,7 +440,10 @@ class ExerciseCard extends StatelessWidget {
                           title,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600, fontSize: 16.5),
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16.5,
+                          ),
                         ),
                         const SizedBox(height: 8),
                         Wrap(
@@ -380,7 +467,10 @@ class ExerciseCard extends StatelessWidget {
                       if (value == 'delete') onDelete();
                     },
                     itemBuilder: (context) => const [
-                      PopupMenuItem(value: 'duplicate', child: Text('Duplicar ejercicio')),
+                      PopupMenuItem(
+                        value: 'duplicate',
+                        child: Text('Duplicar ejercicio'),
+                      ),
                       PopupMenuItem(value: 'delete', child: Text('Eliminar')),
                     ],
                   ),
@@ -396,7 +486,10 @@ class ExerciseCard extends StatelessWidget {
                   child: expanded
                       ? Padding(
                           padding: const EdgeInsets.only(top: 14),
-                          child: ExerciseConfigInline(config: config, onChanged: onChanged),
+                          child: ExerciseConfigInline(
+                            config: config,
+                            onChanged: onChanged,
+                          ),
                         )
                       : const SizedBox.shrink(),
                 ),
@@ -413,7 +506,8 @@ class ExerciseCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(999),
-        color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.55),
+        color: Theme.of(context).colorScheme.surfaceContainerHighest
+            .withValues(alpha: 0.55),
       ),
       child: Text(
         label,
@@ -423,6 +517,9 @@ class ExerciseCard extends StatelessWidget {
   }
 
   String _repsSummary(WorkoutExercise exercise) {
+    if (exercise.isTimed) {
+      return '${exercise.targetDurationSeconds ?? 30}s por serie';
+    }
     if (exercise.targetReps != null) return 'Reps: ${exercise.targetReps}';
     return 'Reps: ${exercise.targetRepsMin ?? 8}-${exercise.targetRepsMax ?? 12}';
   }
@@ -442,7 +539,11 @@ class ExerciseCard extends StatelessWidget {
 }
 
 class ExerciseConfigInline extends StatefulWidget {
-  const ExerciseConfigInline({super.key, required this.config, required this.onChanged});
+  const ExerciseConfigInline({
+    super.key,
+    required this.config,
+    required this.onChanged,
+  });
 
   final WorkoutExercise config;
   final ValueChanged<WorkoutExercise> onChanged;
@@ -461,11 +562,20 @@ class _ExerciseConfigInlineState extends State<ExerciseConfigInline> {
   @override
   void initState() {
     super.initState();
-    _fixedReps = widget.config.targetReps != null;
-    _repsController = TextEditingController(text: '${widget.config.targetReps ?? 10}');
-    _minController = TextEditingController(text: '${widget.config.targetRepsMin ?? 8}');
-    _maxController = TextEditingController(text: '${widget.config.targetRepsMax ?? 12}');
-    _weightController = TextEditingController(text: widget.config.targetWeightKg?.toStringAsFixed(1) ?? '');
+    _fixedReps = widget.config.isTimed || widget.config.targetReps != null;
+    _repsController = TextEditingController(
+      text:
+          '${widget.config.isTimed ? (widget.config.targetDurationSeconds ?? 30) : (widget.config.targetReps ?? 10)}',
+    );
+    _minController = TextEditingController(
+      text: '${widget.config.targetRepsMin ?? 8}',
+    );
+    _maxController = TextEditingController(
+      text: '${widget.config.targetRepsMax ?? 12}',
+    );
+    _weightController = TextEditingController(
+      text: widget.config.targetWeightKg?.toStringAsFixed(1) ?? '',
+    );
   }
 
   @override
@@ -479,10 +589,16 @@ class _ExerciseConfigInlineState extends State<ExerciseConfigInline> {
 
   @override
   Widget build(BuildContext context) {
-    final weightApplies = widget.config.targetLoadType == RoutineExerciseLoadType.weightedKg ||
-        widget.config.targetLoadType == RoutineExerciseLoadType.assistedKg;
+    final weightApplies =
+        widget.config.targetLoadType == RoutineExerciseLoadType.weightedKg ||
+        widget.config.targetLoadType == RoutineExerciseLoadType.assistedKg ||
+        widget.config.targetLoadType == RoutineExerciseLoadType.machineKg;
     return Column(
-      key: ValueKey(widget.config.id + widget.config.targetLoadType.name + widget.config.targetSets.toString()),
+      key: ValueKey(
+        widget.config.id +
+            widget.config.targetLoadType.name +
+            widget.config.targetSets.toString(),
+      ),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('Series', style: Theme.of(context).textTheme.labelMedium),
@@ -490,38 +606,60 @@ class _ExerciseConfigInlineState extends State<ExerciseConfigInline> {
         Row(
           children: [
             IconButton.filledTonal(
-              onPressed: widget.config.targetSets > 1 ? () => _setSets(widget.config.targetSets - 1) : null,
+              onPressed: widget.config.targetSets > 1
+                  ? () => _setSets(widget.config.targetSets - 1)
+                  : null,
               icon: const Icon(Icons.remove),
             ),
             const SizedBox(width: 10),
-            Text('${widget.config.targetSets}', style: Theme.of(context).textTheme.titleLarge),
+            Text(
+              '${widget.config.targetSets}',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
             const SizedBox(width: 10),
             IconButton.filledTonal(
-              onPressed: widget.config.targetSets < 20 ? () => _setSets(widget.config.targetSets + 1) : null,
+              onPressed: widget.config.targetSets < 20
+                  ? () => _setSets(widget.config.targetSets + 1)
+                  : null,
               icon: const Icon(Icons.add),
             ),
           ],
         ),
         const SizedBox(height: 14),
-        Text('Reps', style: Theme.of(context).textTheme.labelMedium),
-        const SizedBox(height: 8),
-        SegmentedButton<bool>(
-          segments: const [
-            ButtonSegment(value: true, label: Text('Fijas')),
-            ButtonSegment(value: false, label: Text('Rango')),
-          ],
-          selected: {_fixedReps},
-          onSelectionChanged: (v) {
-            setState(() => _fixedReps = v.first);
-            _emit();
-          },
+        Text(
+          widget.config.isTimed ? 'Duración por serie' : 'Reps',
+          style: Theme.of(context).textTheme.labelMedium,
         ),
+        const SizedBox(height: 8),
+        if (!widget.config.isTimed)
+          SegmentedButton<bool>(
+            segments: const [
+              ButtonSegment(value: true, label: Text('Fijas')),
+              ButtonSegment(value: false, label: Text('Rango')),
+            ],
+            selected: {_fixedReps},
+            onSelectionChanged: (v) {
+              setState(() => _fixedReps = v.first);
+              _emit();
+            },
+          ),
         const SizedBox(height: 10),
         if (_fixedReps)
-          TextField(
+          TextFormField(
             controller: _repsController,
             keyboardType: TextInputType.number,
-            decoration: const InputDecoration(labelText: 'Reps'),
+            decoration: InputDecoration(
+              labelText: widget.config.isTimed ? 'Segundos' : 'Reps',
+            ),
+            autovalidateMode: AutovalidateMode.onUserInteraction,
+            validator: (value) {
+              final parsed = int.tryParse(value ?? '');
+              return parsed == null ||
+                      parsed < 1 ||
+                      parsed > (widget.config.isTimed ? 86400 : 9999)
+                  ? 'Ingresá un valor válido mayor a cero'
+                  : null;
+            },
             onChanged: (_) => _emit(),
           )
         else
@@ -555,15 +693,25 @@ class _ExerciseConfigInlineState extends State<ExerciseConfigInline> {
         ),
         if (weightApplies) ...[
           const SizedBox(height: 10),
-          TextField(
+          TextFormField(
             controller: _weightController,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             decoration: InputDecoration(
-              labelText: widget.config.targetLoadType == RoutineExerciseLoadType.assistedKg
+              labelText:
+                  widget.config.targetLoadType ==
+                      RoutineExerciseLoadType.assistedKg
                   ? 'Asistencia (kg)'
                   : 'Peso objetivo (kg)',
             ),
             onChanged: (_) => _emit(),
+            autovalidateMode: AutovalidateMode.onUserInteraction,
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) return null;
+              final weight = double.tryParse(value.replaceAll(',', '.'));
+              return weight == null || !weight.isFinite || weight < 0
+                  ? 'Ingresá una carga válida'
+                  : null;
+            },
           ),
         ],
       ],
@@ -574,35 +722,61 @@ class _ExerciseConfigInlineState extends State<ExerciseConfigInline> {
     final selected = await showModalBottomSheet<RoutineExerciseLoadType>(
       context: context,
       showDragHandle: true,
-      builder: (context) => LoadTypeBottomSheet(selected: widget.config.targetLoadType),
+      builder: (context) =>
+          LoadTypeBottomSheet(selected: widget.config.targetLoadType),
     );
     if (selected == null) return;
     _setLoadType(selected);
   }
 
-  void _setSets(int sets) => widget.onChanged(widget.config.copyWith(targetSets: sets));
+  void _setSets(int sets) =>
+      widget.onChanged(widget.config.copyWith(targetSets: sets));
 
   void _setLoadType(RoutineExerciseLoadType type) {
-    final canWeight = type == RoutineExerciseLoadType.weightedKg || type == RoutineExerciseLoadType.assistedKg;
+    final canWeight =
+        type == RoutineExerciseLoadType.weightedKg ||
+        type == RoutineExerciseLoadType.assistedKg ||
+        type == RoutineExerciseLoadType.machineKg;
     if (!canWeight) _weightController.text = '';
-    widget.onChanged(widget.config.copyWith(targetLoadType: type, targetWeightKg: canWeight ? widget.config.targetWeightKg : null));
+    widget.onChanged(
+      widget.config.copyWith(
+        targetLoadType: type,
+        targetWeightKg: canWeight ? widget.config.targetWeightKg : null,
+        clearTargetWeightKg: !canWeight,
+      ),
+    );
   }
 
   void _emit() {
-    final fixed = ((int.tryParse(_repsController.text) ?? widget.config.targetReps ?? 10).clamp(0, 99)) as int;
-    final minRaw = ((int.tryParse(_minController.text) ?? widget.config.targetRepsMin ?? 8).clamp(0, 99)) as int;
-    final maxRaw = ((int.tryParse(_maxController.text) ?? widget.config.targetRepsMax ?? 12).clamp(0, 99)) as int;
+    final fixed =
+        ((int.tryParse(_repsController.text) ?? widget.config.targetReps ?? 10)
+            .clamp(1, widget.config.isTimed ? 86400 : 9999));
+    final minRaw =
+        ((int.tryParse(_minController.text) ?? widget.config.targetRepsMin ?? 8)
+            .clamp(1, 9999));
+    final maxRaw =
+        ((int.tryParse(_maxController.text) ??
+                widget.config.targetRepsMax ??
+                12)
+            .clamp(1, 9999));
     final min = minRaw <= maxRaw ? minRaw : maxRaw;
     final max = maxRaw >= minRaw ? maxRaw : minRaw;
     final weight = double.tryParse(_weightController.text.replaceAll(',', '.'));
-    final canWeight = widget.config.targetLoadType == RoutineExerciseLoadType.weightedKg ||
-        widget.config.targetLoadType == RoutineExerciseLoadType.assistedKg;
-    widget.onChanged(widget.config.copyWith(
-      targetReps: _fixedReps ? fixed : null,
-      targetRepsMin: _fixedReps ? null : min,
-      targetRepsMax: _fixedReps ? null : max,
-      targetWeightKg: canWeight ? weight : null,
-    ));
+    final canWeight =
+        widget.config.targetLoadType == RoutineExerciseLoadType.weightedKg ||
+        widget.config.targetLoadType == RoutineExerciseLoadType.assistedKg ||
+        widget.config.targetLoadType == RoutineExerciseLoadType.machineKg;
+    widget.onChanged(
+      widget.config.copyWith(
+        targetReps: !widget.config.isTimed && _fixedReps ? fixed : null,
+        clearTargetReps: widget.config.isTimed || !_fixedReps,
+        targetDurationSeconds: widget.config.isTimed ? fixed : null,
+        targetRepsMin: _fixedReps ? null : min,
+        targetRepsMax: _fixedReps ? null : max,
+        targetWeightKg: canWeight ? weight : null,
+        clearTargetWeightKg: !canWeight || weight == null,
+      ),
+    );
   }
 
   String _label(RoutineExerciseLoadType type) {
@@ -674,7 +848,10 @@ class LoadTypeBottomSheet extends StatelessWidget {
 }
 
 class _RoutineExerciseItem {
-  const _RoutineExerciseItem({required this.instanceId, required this.exerciseId});
+  const _RoutineExerciseItem({
+    required this.instanceId,
+    required this.exerciseId,
+  });
 
   final String instanceId;
   final String exerciseId;
