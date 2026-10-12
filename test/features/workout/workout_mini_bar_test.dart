@@ -21,9 +21,15 @@ void main() {
     );
   }
 
-  testWidgets('muestra mini bar con título y timer mm:ss cuando hay draft', (tester) async {
+  testWidgets('muestra mini bar con título y timer mm:ss cuando hay draft', (
+    tester,
+  ) async {
     final notifier = ValueNotifier<WorkoutInProgressDraft?>(
-      buildDraft(startTime: DateTime.now().subtract(const Duration(minutes: 2, seconds: 5))),
+      buildDraft(
+        startTime: DateTime.now().subtract(
+          const Duration(minutes: 2, seconds: 5),
+        ),
+      ),
     );
 
     await tester.pumpWidget(
@@ -31,7 +37,7 @@ void main() {
         home: Scaffold(
           body: ValueListenableBuilder<WorkoutInProgressDraft?>(
             valueListenable: notifier,
-            builder: (_, draft, __) {
+            builder: (_, draft, _) {
               if (draft == null) return const SizedBox.shrink();
               return WorkoutMiniBar(
                 draft: draft,
@@ -46,13 +52,24 @@ void main() {
     );
 
     expect(find.text('Entrenamiento en curso'), findsOneWidget);
-    expect(find.textMatching(RegExp(r'^\d{2}:\d{2}$')), findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Text &&
+            RegExp(r'^\d{2}:\d{2}$').hasMatch(widget.data ?? ''),
+      ),
+      findsOneWidget,
+    );
     expect(find.byType(WorkoutMiniBar), findsOneWidget);
   });
 
-  testWidgets('al descartar y confirmar, desaparece la mini bar', (tester) async {
+  testWidgets('al descartar y confirmar, desaparece la mini bar', (
+    tester,
+  ) async {
     final notifier = ValueNotifier<WorkoutInProgressDraft?>(
-      buildDraft(startTime: DateTime.now().subtract(const Duration(minutes: 1))),
+      buildDraft(
+        startTime: DateTime.now().subtract(const Duration(minutes: 1)),
+      ),
     );
 
     Future<void> confirmDiscard(BuildContext context) async {
@@ -61,8 +78,14 @@ void main() {
         builder: (_) => AlertDialog(
           title: const Text('Descartar entrenamiento'),
           actions: [
-            TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancelar')),
-            FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Descartar')),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Descartar'),
+            ),
           ],
         ),
       );

@@ -1,0 +1,45 @@
+{
+  "tool": "image_gen built-in",
+  "prompts": [
+    {
+      "name": "hero",
+      "prompt": "Stylized concept art asset for professional fitness app. Wide 16:9 hero. Premium 3D athletic mannequin wearing a complete opaque dark navy fitted training shirt and fitted leggings. Matte ceramic-like fabric texture, subtle turquoise accents on the shirt shoulders and sleeves. Cropped upper-body portrait, clean abstract faceless mannequin, fully clothed sports sculpture. Subject on right half, dark navy empty space left for interface text added separately. Dark studio background #17212D, soft rim lighting, photorealistic 3D product rendering, restrained elegant sculptural fitness visual. No lettering, logos, interface, badges, hologram rings or game elements."
+    },
+    {
+      "name": "push",
+      "prompt": "Stylized concept art, professional FIT_APP fitness application local thumbnail, square image. Premium restrained 3D sports mannequin wearing fully opaque complete matte dark navy training shirt and leggings, smooth abstract faceless head. Navy studio background #17212D and subtle turquoise accents on clothing, soft editorial rim lighting, modern fitness sculpture. Clean single subject, visually legible at 64 pixels. No text, logos, interface, badges, game aesthetic, rings or glowing grids. Upper body figure in controlled standing press pose, turquoise shirt accents across chest and front shoulders."
+    },
+    {
+      "name": "pull",
+      "prompt": "Stylized concept art, professional FIT_APP fitness application local thumbnail, square image. Premium restrained 3D sports mannequin wearing fully opaque complete matte dark navy training shirt and leggings, smooth abstract faceless head. Navy studio background #17212D and subtle turquoise accents on clothing, soft editorial rim lighting, modern fitness sculpture. Clean single subject, visually legible at 64 pixels. No text, logos, interface, badges, game aesthetic, rings or glowing grids. Upper body figure viewed from behind in controlled rowing pose, turquoise shirt accents across upper back."
+    },
+    {
+      "name": "legs",
+      "prompt": "Stylized concept art, professional FIT_APP fitness application local thumbnail, square image. Premium restrained 3D sports mannequin wearing fully opaque complete matte dark navy training shirt and leggings, smooth abstract faceless head. Navy studio background #17212D and subtle turquoise accents on clothing, soft editorial rim lighting, modern fitness sculpture. Clean single subject, visually legible at 64 pixels. No text, logos, interface, badges, game aesthetic, rings or glowing grids. Full clothed athletic figure in a stable squat stance, turquoise leggings accents at thighs and calves."
+    },
+    {
+      "name": "fullBody",
+      "prompt": "Stylized concept art, professional FIT_APP fitness application local thumbnail, square image. Premium restrained 3D sports mannequin wearing fully opaque complete matte dark navy training shirt and leggings, smooth abstract faceless head. Navy studio background #17212D and subtle turquoise accents on clothing, soft editorial rim lighting, modern fitness sculpture. Clean single subject, visually legible at 64 pixels. No text, logos, interface, badges, game aesthetic, rings or glowing grids. Full clothed athletic figure standing confidently in balanced training pose, turquoise shirt and leggings accents."
+    },
+    {
+      "name": "arms",
+      "prompt": "Stylized concept art, professional FIT_APP fitness application local thumbnail, square image. Premium restrained 3D sports mannequin wearing fully opaque complete matte dark navy training shirt and leggings, smooth abstract faceless head. Navy studio background #17212D and subtle turquoise accents on clothing, soft editorial rim lighting, modern fitness sculpture. Clean single subject, visually legible at 64 pixels. No text, logos, interface, badges, game aesthetic, rings or glowing grids. Close view of clothed mannequin upper body and bent arms, turquoise sleeves accents."
+    },
+    {
+      "name": "cardio",
+      "prompt": "Stylized concept art, professional FIT_APP fitness application local thumbnail, square image. Premium restrained 3D sports mannequin wearing fully opaque complete matte dark navy training shirt and leggings, smooth abstract faceless head. Navy studio background #17212D and subtle turquoise accents on clothing, soft editorial rim lighting, modern fitness sculpture. Clean single subject, visually legible at 64 pixels. No text, logos, interface, badges, game aesthetic, rings or glowing grids. Fully clothed athletic mannequin in a dynamic running stride, turquoise slim shoe and clothing accents."
+    },
+    {
+      "name": "mobility",
+      "prompt": "Stylized concept art, professional FIT_APP fitness application local thumbnail, square image. Premium restrained 3D sports mannequin wearing fully opaque complete matte dark navy training shirt and leggings, smooth abstract faceless head. Navy studio background #17212D and subtle turquoise accents on clothing, soft editorial rim lighting, modern fitness sculpture. Clean single subject, visually legible at 64 pixels. No text, logos, interface, badges, game aesthetic, rings or glowing grids. Fully clothed athletic mannequin in gentle supported stretching stance, flowing elegant movement, turquoise clothing accent."
+    },
+    {
+      "name": "mixed",
+      "prompt": "Stylized concept art, professional FIT_APP fitness application local thumbnail, square image. Premium restrained 3D sports mannequin wearing fully opaque complete matte dark navy training shirt and leggings, smooth abstract faceless head. Navy studio background #17212D and subtle turquoise accents on clothing, soft editorial rim lighting, modern fitness sculpture. Clean single subject, visually legible at 64 pixels. No text, logos, interface, badges, game aesthetic, rings or glowing grids. Stylized matte navy dumbbell and resistance band neatly arranged, sculptural gym equipment, turquoise subtle edge accents."
+    },
+    {
+      "name": "empty",
+      "prompt": "Stylized concept art, professional FIT_APP fitness application local thumbnail, square image. Premium restrained 3D sports mannequin wearing fully opaque complete matte dark navy training shirt and leggings, smooth abstract faceless head. Navy studio background #17212D and subtle turquoise accents on clothing, soft editorial rim lighting, modern fitness sculpture. Clean single subject, visually legible at 64 pixels. No text, logos, interface, badges, game aesthetic, rings or glowing grids. Elegant matte navy sculptural dumbbell resting on a circular low podium, restrained turquoise small accent, calm generous empty space, welcoming visual for an empty workout history. No mannequin."
+    }
+  ]
+}

@@ -14,15 +14,7 @@ void main() {
       MaterialApp(
         initialRoute: '/workout',
         navigatorObservers: [WorkoutMiniBarRouteObserver()],
-        builder: (context, child) {
-          final app = child ?? const SizedBox.shrink();
-          return Overlay(
-            initialEntries: [
-              OverlayEntry(builder: (_) => app),
-              OverlayEntry(builder: (_) => const WorkoutMiniBarHostOverlay()),
-            ],
-          );
-        },
+        builder: workoutMiniBarAppBuilder,
         routes: {
           '/workout': (_) => const TrainingHomeScreen(),
           '/workout/session': (_) => const Scaffold(body: Text('Session')),
@@ -32,26 +24,31 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('render de TrainingHomeScreen con draft activo muestra mini bar', (tester) async {
-    final now = DateTime.now();
-    SharedPreferences.setMockInitialValues({
-      WorkoutInProgressController.draftKey: jsonEncode({
-        'sessionStart': now.subtract(const Duration(minutes: 3)).toIso8601String(),
-        'isPaused': false,
-        'pausedAt': null,
-        'accumulatedPausedSeconds': 0,
-        'lastUpdated': now.toIso8601String(),
-      }),
-      'pro_workout_templates': jsonEncode([]),
-      'pro_workout_sessions': jsonEncode([]),
-    });
+  testWidgets(
+    'render de TrainingHomeScreen con draft activo muestra mini bar',
+    (tester) async {
+      final now = DateTime.now();
+      SharedPreferences.setMockInitialValues({
+        WorkoutInProgressController.draftKey: jsonEncode({
+          'sessionStart': now
+              .subtract(const Duration(minutes: 3))
+              .toIso8601String(),
+          'isPaused': false,
+          'pausedAt': null,
+          'accumulatedPausedSeconds': 0,
+          'lastUpdated': now.toIso8601String(),
+        }),
+        'pro_workout_templates': jsonEncode([]),
+        'pro_workout_sessions': jsonEncode([]),
+      });
 
-    await WorkoutInProgressController.instance.initialize();
-    await pumpTrainingWithOverlay(tester);
+      await WorkoutInProgressController.instance.initialize();
+      await pumpTrainingWithOverlay(tester);
 
-    expect(find.byType(WorkoutMiniBar), findsOneWidget);
-    expect(find.text('Entrenamiento en curso'), findsOneWidget);
-  });
+      expect(find.byType(WorkoutMiniBar), findsOneWidget);
+      expect(find.text('Entrenamiento en curso'), findsOneWidget);
+    },
+  );
 
   testWidgets('draft null no muestra mini bar', (tester) async {
     SharedPreferences.setMockInitialValues({
@@ -67,11 +64,15 @@ void main() {
     expect(find.byType(WorkoutMiniBar), findsNothing);
   });
 
-  testWidgets('tooltips de mini bar funcionan dentro de Overlay real', (tester) async {
+  testWidgets('tooltips de mini bar funcionan dentro de Overlay real', (
+    tester,
+  ) async {
     final now = DateTime.now();
     SharedPreferences.setMockInitialValues({
       WorkoutInProgressController.draftKey: jsonEncode({
-        'sessionStart': now.subtract(const Duration(minutes: 1)).toIso8601String(),
+        'sessionStart': now
+            .subtract(const Duration(minutes: 1))
+            .toIso8601String(),
         'isPaused': false,
         'pausedAt': null,
         'accumulatedPausedSeconds': 0,
@@ -91,4 +92,29 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('el builder refleja cambios del árbol de la app', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    await WorkoutInProgressController.instance.initialize();
+    WorkoutInProgressController.instance.syncFromRaw(null);
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        builder: workoutMiniBarAppBuilder,
+        home: Scaffold(body: Text('Primera')),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Primera'), findsOneWidget);
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        builder: workoutMiniBarAppBuilder,
+        home: Scaffold(body: Text('Segunda')),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Segunda'), findsOneWidget);
+    expect(find.text('Primera'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
 }

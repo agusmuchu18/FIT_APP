@@ -1,0 +1,129 @@
+{
+  "date": "2026-10-12",
+  "palette": "dark navy / turquoise",
+  "artDirection": "Premium matte 3D sports sculptures. Fully opaque training apparel. Decorative, not physiological muscle charts.",
+  "encoding": "WebP quality 82, longest edge capped; no asset overwrites",
+  "generationNotes": "Initial unclothed abstract anatomical sculpture was rejected by the image service. Final assets use fully clothed mannequins and gym equipment.",
+  "assets": [
+    {
+      "name": "hero",
+      "source": "C:\\Users\\User\\.codex\\generated_images\\01a09f32-ad8f-7362-8c5f-3b4431258acf\\exec-fd7ceb01-6380-41e3-927b-b9f4cb0349d0.png",
+      "file": "assets/images/workout/summary_hero.webp",
+      "maxWidth": 960,
+      "tool": "image_gen built-in",
+      "status": "generated",
+      "decorative": true,
+      "bytes": 14856,
+      "width": 960,
+      "height": 540
+    },
+    {
+      "name": "push",
+      "source": "C:\\Users\\User\\.codex\\generated_images\\01a09f32-ad8f-7362-8c5f-3b4431258acf\\exec-90eb364b-761f-433b-888b-98dc53d24e09.png",
+      "file": "assets/images/workout/history_push.webp",
+      "maxWidth": 384,
+      "tool": "image_gen built-in",
+      "status": "generated",
+      "decorative": true,
+      "bytes": 8356,
+      "width": 384,
+      "height": 384
+    },
+    {
+      "name": "pull",
+      "source": "C:\\Users\\User\\.codex\\generated_images\\01a09f32-ad8f-7362-8c5f-3b4431258acf\\exec-648cc937-0cf9-484f-96e7-3c804c32eebd.png",
+      "file": "assets/images/workout/history_pull.webp",
+      "maxWidth": 384,
+      "tool": "image_gen built-in",
+      "status": "generated",
+      "decorative": true,
+      "bytes": 10618,
+      "width": 384,
+      "height": 384
+    },
+    {
+      "name": "legs",
+      "source": "C:\\Users\\User\\.codex\\generated_images\\01a09f32-ad8f-7362-8c5f-3b4431258acf\\exec-1b715f8c-be40-424f-b1c6-419bdd8964f1.png",
+      "file": "assets/images/workout/history_legs.webp",
+      "maxWidth": 384,
+      "tool": "image_gen built-in",
+      "status": "generated",
+      "decorative": true,
+      "bytes": 6576,
+      "width": 384,
+      "height": 384
+    },
+    {
+      "name": "fullBody",
+      "source": "C:\\Users\\User\\.codex\\generated_images\\01a09f32-ad8f-7362-8c5f-3b4431258acf\\exec-7ff81bc6-25bf-4c86-8e74-643713882ee4.png",
+      "file": "assets/images/workout/history_fullBody.webp",
+      "maxWidth": 384,
+      "tool": "image_gen built-in",
+      "status": "generated",
+      "decorative": true,
+      "bytes": 6148,
+      "width": 384,
+      "height": 384
+    },
+    {
+      "name": "arms",
+      "source": "C:\\Users\\User\\.codex\\generated_images\\01a09f32-ad8f-7362-8c5f-3b4431258acf\\exec-fef330ab-1d1e-4bd7-b6bc-aa8a9e19ce3e.png",
+      "file": "assets/images/workout/history_arms.webp",
+      "maxWidth": 384,
+      "tool": "image_gen built-in",
+      "status": "generated",
+      "decorative": true,
+      "bytes": 10046,
+      "width": 384,
+      "height": 384
+    },
+    {
+      "name": "cardio",
+      "source": "C:\\Users\\User\\.codex\\generated_images\\01a09f32-ad8f-7362-8c5f-3b4431258acf\\exec-04bb8815-659c-4059-b4be-fe23db49f909.png",
+      "file": "assets/images/workout/history_cardio.webp",
+      "maxWidth": 384,
+      "tool": "image_gen built-in",
+      "status": "generated",
+      "decorative": true,
+      "bytes": 6794,
+      "width": 384,
+      "height": 384
+    },
+    {
+      "name": "mobility",
+      "source": "C:\\Users\\User\\.codex\\generated_images\\01a09f32-ad8f-7362-8c5f-3b4431258acf\\exec-927d27b5-c3ca-4e38-878e-bdf87e6ac3a8.png",
+      "file": "assets/images/workout/history_mobility.webp",
+      "maxWidth": 384,
+      "tool": "image_gen built-in",
+      "status": "generated",
+      "decorative": true,
+      "bytes": 6844,
+      "width": 384,
+      "height": 384
+    },
+    {
+      "name": "mixed",
+      "source": "C:\\Users\\User\\.codex\\generated_images\\01a09f32-ad8f-7362-8c5f-3b4431258acf\\exec-0d3af461-868d-4815-ac3a-eb3fbe600e33.png",
+      "file": "assets/images/workout/history_mixed.webp",
+      "maxWidth": 384,
+      "tool": "image_gen built-in",
+      "status": "generated",
+      "decorative": true,
+      "bytes": 8980,
+      "width": 384,
+      "height": 384
+    },
+    {
+      "name": "empty",
+      "source": "C:\\Users\\User\\.codex\\generated_images\\01a09f32-ad8f-7362-8c5f-3b4431258acf\\exec-a6f70da7-4824-47da-8027-cd18127a38e8.png",
+      "file": "assets/images/workout/history_empty.webp",
+      "maxWidth": 640,
+      "tool": "image_gen built-in",
+      "status": "generated",
+      "decorative": true,
+      "bytes": 9076,
+      "width": 640,
+      "height": 640
+    }
+  ]
+}

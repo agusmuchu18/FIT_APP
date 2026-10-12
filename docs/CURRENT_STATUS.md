@@ -1,0 +1,166 @@
+# Current status
+
+**Actualizado:** 2026-10-12
+**Base auditada:** `9f61c68ff4a362d48f97265d300f7ae54de64edc`
+**Carpeta local:** `D:\Datos User\Escritorio\fitness\fit_app`
+
+## Salud comprobada
+
+| Control | Resultado |
+|---|---|
+| SDK | Flutter 3.47.3 / Dart 3.13.3; actualización estable aplicada |
+| `dart format` | Base de 158 archivos; cambios posteriores formateados por archivo |
+| `flutter analyze --fatal-infos` | 0 problemas |
+| `flutter test --no-pub` | 142/142 aprobadas, incluido el ensayo del recorrido móvil con Hive en disco |
+| Web release `/FIT_APP/` | Compila con fuente e imágenes locales; dry run Wasm aprobado |
+| YAML de GitHub | Sintaxis válida |
+| APK Android | Debug recompilado con dependencias/assets actuales; falta ejecución en dispositivo físico. Release anterior no valida este corte |
+| Integración móvil local | APK de prueba compilado; recorrido compartido ensayado en host. No ejecutado en Android/iPhone |
+
+La ampliación previa de alimentación/USDA está en la carpeta original y sigue
+pendiente de commit. Entrenamiento tiene commits locales en
+`codex/workout-redesign-20261012`; no se hizo push ni despliegue. Las comprobaciones
+corresponden a la carpeta de trabajo actual, que conserva cambios previos de otros
+módulos; no equivalen a validar un checkout limpio de esos commits.
+
+## Entrenamiento · corte actual
+
+El rediseño autorizado del 12/10 está documentado en
+`docs/plans/WORKOUT_REDESIGN_2026_10_12.md`, con entrega A–J y comprobaciones.
+Sesión activa tiene acción contextual y confirmación previa; descanso usa un
+selector único y banner. Guardar reemplaza la sesión por un resumen completo por
+ID persistido. Historial ofrece filtros por cuenta, métricas, semanas reales y
+lista agrupada por mes. Detalle conserva todas las series y permite repetir con
+ID nuevo, sin modificar el original. Cálculos compartidos distinguen unidades,
+datos ambiguos y tiempos desconocidos. Diez nuevos WebP locales suman 88.294 bytes.
+Hay capturas golden a 320/390/900 px y texto al 200%; no son ejecución nativa.
+Suite de 142 pruebas, análisis, web release y APK debug pasaron con este código.
+Quedan ejecución Android/iPhone, lectores de pantalla, perfilado y ciclo de vida
+de plataforma. No se certifica todavía preparación al 100% para App Store.
+
+El siguiente párrafo conserva contexto de las mejoras anteriores del módulo.
+
+El plan verificable está en `docs/plans/WORKOUT_PROFESSIONALIZATION.md` y la
+evidencia del corte actual en `docs/plans/WORKOUT_READINESS_2026_10_01.md`.
+Sesiones ricas v2 en Hive, proyección con ID estable a Home/Rachas, refresco de
+Home al guardar, búsqueda real de rutinas, pausa y descanso persistentes,
+validación de series, edición de nombre, tipo, carpeta, ejercicios y objetivos, detalle
+de historial, ajustes de descanso, tres imágenes editoriales locales e iconografía
+propia de entrada están implementados. Crear rutina muestra ejercicios desde el
+inicio, prioriza movimientos variados y recientes, y permite agregarlos desde
+la lista; búsqueda y filtros refinan el catálogo. La mini-barra vive dentro de un
+`Overlay` válido para que sus tooltips no fallen al abrir Entrenamiento. Un
+borrador legado `pro_*` reabre su flujo original y exige
+decisión explícita antes de reemplazarlo. Datos corruptos de carpetas/metadatos
+se aíslan sin bloquear el historial. El corte actual añade guardado al volver y
+segundo plano, error/reintento de guardado, carga con recuperación, pausa visible,
+configuración real, eliminación de series y resumen al terminar. Segundos y
+asistencia quedan separados de repeticiones/carga externa; se conserva el tipo
+de rutina. Una respuesta tardía del historial no pisa ediciones nuevas.
+Invitado y cuentas usan namespaces independientes; los datos anteriores siguen
+en invitado. Al arrancar se reparan proyecciones de cierre incompletas sin duplicar.
+El reloj deja de reconstruir el gráfico cada dos segundos. El APK debug compiló
+sin fallback en este corte; persisten warnings de futuro soporte Gradle/AGP/Kotlin.
+La continuación del 02/10 corrige el encabezado y la altura de tarjetas de
+rutinas guardadas para pantallas pequeñas/texto grande. El recorrido local
+de `integration_test` está preparado con namespace aislado y limpieza acotada;
+`integration_test/README.md` detalla cómo ejecutarlo y sus límites.
+
+No está completado al 100 %: faltan recorridos Android/iPhone, lectores de pantalla
+reales, benchmarks en profile mode, interrupciones de proceso/almacenamiento en
+dispositivo, media e instrucciones validadas por ejercicio, metodología muscular
+y sincronización de sesiones ricas/rutinas entre dispositivos. Los borradores
+legados se conservan y aún requieren auditoría de migración. No hay Android
+conectado ni AVD instalado; iPhone requiere macOS/Xcode.
+
+## Continuidad de modernización (registro de otra copia)
+
+Estas notas históricas de `work/fit_app` no certifican automáticamente la carpeta
+original. Para Entrenamiento, prevalece el corte actual descrito arriba.
+
+- Cola por propietario, modo force persistido, compare-and-swap y protección
+  contra respuestas tardías/cambios de cuenta; tareas legacy no se reasignan.
+- Contención local de una cuenta por dispositivo (no aislamiento multiusuario).
+- Push Firestore transaccional y pull paginado con desempate por ID; 25 pruebas
+  adicionales de sync/persistencia/binding/transporte frente a las 34 iniciales.
+- UI: retirados datos/fotos ficticios del perfil, estados explícitos no conectados;
+  contraste del botón primario, Home vacío y reduced motion; título de sesión.
+- Mini-barra oculta en acceso/registro/sesión, sin perder el borrador al navegar;
+  ruta inicial explícita para diferenciar login de Home.
+- Alimentación: alimentos personalizados, comidas del día y recuperación de la
+  última comida ahora persisten en `SharedPreferences`; un fallo conserva el
+  borrador. Selector y acciones adaptables, porciones claras, estado de búsqueda,
+  reduced motion y modo local no invasivo. Flujo real validado a 390×844:
+  registrar 107 kcal y recargar conserva el resumen.
+- USDA/offline: Worker gratuito Cloudflare desplegado y probado en vivo; catálogo oficial
+  Foundation 04/2026 con 363 alimentos, aliases españoles y hasta 500 detalles
+  aprendidos. Secreto cifrado y búsqueda web pública operativos.
+- Registro de alimento: gramos y mililitros dejan de estar tras un paywall falso;
+  incrementos predecibles, máximo acotado y resultados locales ordenados/limitados.
+- Capturas visuales de Entrenamiento y Crear rutina a 390×844 revisadas; fotos,
+  ejercicios e iconos visibles. Ambos layouts pasan a 320 px con texto 200 %.
+- Figma: foundations, 45 variables, 8 estilos de texto y 2 efectos creados.
+  Componentes y tres pilotos NO completados: última llamada bloqueada por cupo
+  MCP Starter. No se ha comprobado un restablecimiento del cupo.
+- Diseño/pendientes: `DESIGN_SYSTEM.md`, `UX_AUDIT.md`, `MODERNIZATION_PLAN.md`.
+
+## Mejoras ya aplicadas
+
+- Migración de APIs Flutter/Dart obsoletas y formato uniforme.
+- Autenticación simulada reemplazada por Firebase Authentication.
+- Arranque sin login anónimo automático y fallback local explícito.
+- Reglas Firestore por propietario añadidas y denegación por defecto.
+- Clave USDA eliminada del build web; timeout, errores, carreras y caché
+  corregidos.
+- Proxy USDA seguro, catálogo offline oficial y persistencia de consultados añadidos.
+- Errores de rutinas/selectores y pruebas de widgets corregidos.
+- Siete pruebas de nutrición añadidas; golden de perfil validado.
+- CI, Pages, Dependabot, README y lockfile actualizados.
+- APIs de reordenamiento migradas a `onReorderItem` para Flutter 3.47.
+- Memoria técnica y Skill personal de contexto eficiente añadidas.
+
+FlutterFire está actualizado a `firebase_core 4.15.0`, `firebase_auth 6.7.0` y
+`cloud_firestore 6.10.0`; `cupertino_icons` está en 2.0.0. Se eliminó
+`google_fonts` y se empaquetó Inter localmente para garantizar texto offline y
+goldens reproducibles. `flutter pub outdated` deja cuatro transitivas no
+resolubles con las restricciones actuales: `cross_file`, `equatable`,
+`material_color_utilities` y `test_api`. No hay directas pendientes.
+
+El entorno Android local quedó operativo con SDK 36, Build Tools 36.0.0,
+Platform Tools 37.0.1, NDK 28.2.13676358, CMake 3.22.1 y Java 17. Los APK usan
+`minSdk 24`, `targetSdk 36` y firma v2. El release todavía está firmado con el
+certificado de debug. Flutter 3.47.2 también avisa que próximamente exigirá AGP
+9.0.1, Gradle 9.1.0 y Kotlin 2.3.20; la migración de toolchain debe validarse
+como cambio separado. Las dependencias Dart solicitadas sí quedaron actualizadas.
+
+## Bloqueadores de producción
+
+1. Elegir package/bundle IDs; todavía existen valores `com.example`.
+2. Configurar firma Android release; el SDK local ya está operativo.
+3. Registrar Firebase nativo, habilitar providers, probar/desplegar Rules y
+   activar App Check.
+4. Auditar el aislamiento por cuenta de los demás módulos; Entrenamiento ya tiene
+   namespaces y pruebas de cambios de cuenta, pero falta verificación nativa.
+5. Verificar con Firebase real la transición invitado/cuenta. La decisión está
+   tomada: mantener el historial de invitado separado, sin importación automática.
+6. Implementar exportación, importación, eliminación de cuenta y privacidad.
+7. Completar los `TODO`/“Próximamente” reales en workout, nutrition, perfil,
+   settings e integraciones.
+8. Implementar handlers nativos para las integraciones de salud.
+
+## Próximo orden recomendado
+
+1. Revisar Entrenamiento en Android e iPhone reales siguiendo el informe del
+   12/10; validar lectores de pantalla, teclado, rendimiento y segundo plano.
+2. Validar Firestore con emuladores: los tests actuales usan dobles de contrato;
+   timestamps del cliente aún pueden omitir escrituras tardías con fecha antigua.
+3. Revisar los cambios previos pendientes de otros módulos antes de publicarlos;
+   conservar cambios ajenos. Configuración Firebase y firma siguen abiertas.
+4. Android físico aplazado por el usuario; no bloquea el trabajo anterior.
+
+Flutter 3.47.3 actualizó `platform` a 3.2.0 e `image_picker_android` a
+0.8.13+23. `material_color_utilities 0.13.0` y `test_api 0.7.12` siguen fijadas
+por el SDK; no son dependencias directas actualizables desde esta app.
+
+Actualizar este archivo sólo cuando cambien validaciones, versiones, bloqueadores
+o decisiones; no copiar logs completos.
