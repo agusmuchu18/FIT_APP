@@ -536,7 +536,6 @@ class _TemplateExercisePickerScreenState
                                     name: activity.name,
                                     targetSets: 1,
                                     measurement: 'seconds',
-                                    targetDurationSeconds: 60,
                                     sportPlan: SportActivityPlan(
                                       activityId: activity.id,
                                       mode: activity.mode,
