@@ -1,3 +1,6 @@
+import '../pro/models/workout_models.dart';
+import 'sport_activity.dart';
+
 class PreviousSet {
   const PreviousSet({
     required this.kg,
@@ -138,6 +141,8 @@ class ExerciseInSession {
     this.isTimed = false,
     this.isAssisted = false,
     this.sets = const [],
+    this.plan,
+    this.sportResult,
   });
 
   final String id;
@@ -150,6 +155,9 @@ class ExerciseInSession {
   final bool isTimed;
   final bool isAssisted;
   final List<SetInSession> sets;
+  final WorkoutExercise? plan;
+  SportActivityPlan? get sportPlan => plan?.sportPlan;
+  final SportMeasurements? sportResult;
 
   ExerciseInSession copyWith({
     String? id,
@@ -164,6 +172,9 @@ class ExerciseInSession {
     bool? isTimed,
     bool? isAssisted,
     List<SetInSession>? sets,
+    WorkoutExercise? plan,
+    SportMeasurements? sportResult,
+    bool clearSportResult = false,
   }) {
     return ExerciseInSession(
       id: id ?? this.id,
@@ -176,6 +187,8 @@ class ExerciseInSession {
       isTimed: isTimed ?? this.isTimed,
       isAssisted: isAssisted ?? this.isAssisted,
       sets: sets ?? this.sets,
+      plan: plan ?? this.plan,
+      sportResult: clearSportResult ? null : sportResult ?? this.sportResult,
     );
   }
 
@@ -184,6 +197,8 @@ class ExerciseInSession {
   Map<String, dynamic> toJson() => {
     'id': id,
     'exerciseId': exerciseId,
+    'plan': plan?.toJson(),
+    'sportResult': sportResult?.toJson(),
     'name': name,
     'notes': notes,
     'restEnabled': restEnabled,
@@ -198,6 +213,14 @@ class ExerciseInSession {
     return ExerciseInSession(
       id: json['id'] as String,
       exerciseId: json['exerciseId'] as String? ?? json['id'] as String,
+      plan: json['plan'] is Map<String, dynamic>
+          ? WorkoutExercise.fromJson(json['plan'] as Map<String, dynamic>)
+          : null,
+      sportResult: json['sportResult'] is Map<String, dynamic>
+          ? SportMeasurements.fromJson(
+              json['sportResult'] as Map<String, dynamic>,
+            )
+          : null,
       name: json['name'] as String,
       notes: json['notes'] as String?,
       restEnabled: json['restEnabled'] as bool? ?? false,

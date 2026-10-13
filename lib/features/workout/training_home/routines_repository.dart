@@ -9,6 +9,8 @@ import '../../../core/data/account_storage_scope.dart';
 import 'package:uuid/uuid.dart';
 
 import '../pro/models/workout_models.dart';
+import '../domain/sport_activity.dart';
+import '../domain/routine_plan_validation.dart';
 
 class RoutinesRepository {
   RoutinesRepository({SharedPreferences? prefs})
@@ -47,6 +49,14 @@ class RoutinesRepository {
   }
 
   ValueListenable<List<WorkoutTemplate>> watchRoutines() => _routinesNotifier;
+  Future<List<RoutineFolder>> getFolders() async {
+    await _ensurePrefs();
+    final raw = _prefs!.getString('pro_workout_folders');
+    if (raw == null) return [];
+    return (jsonDecode(raw) as List)
+        .map((e) => RoutineFolder.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
 
   Future<WorkoutTemplate> saveRoutine({
     required String name,
@@ -54,19 +64,36 @@ class RoutinesRepository {
     required List<WorkoutExercise> exercises,
     String? activityName,
     String? folderId,
+    String? routineId,
+    String? notes,
+    FootballMode? footballMode,
   }) => _serialize(() async {
     await _ensurePrefs();
     final routines = _readTemplates();
+    if (name.trim().isEmpty || exercises.isEmpty) {
+      throw ArgumentError('Nombre y ejercicios son obligatorios');
+    }
+    for (final e in exercises) {
+      final error = RoutinePlanValidation.error(e);
+      if (error != null) throw ArgumentError(error);
+    }
     final template = WorkoutTemplate(
-      id: _uuid.v4(),
+      id: routineId ?? _uuid.v4(),
       name: name,
       type: workoutType,
       origin: TemplateOrigin.user,
       activityName: activityName,
       folderId: folderId,
+      notes: notes,
+      footballMode: footballMode,
       exercises: exercises,
     );
-    routines.add(template);
+    final index = routines.indexWhere((e) => e.id == template.id);
+    if (index < 0) {
+      routines.add(template);
+    } else {
+      routines[index] = template;
+    }
     await _persistTemplates(routines);
     return template;
   });

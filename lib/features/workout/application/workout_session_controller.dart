@@ -13,6 +13,7 @@ import '../pro/models/workout_models.dart';
 import '../pro/data/exercise_library.dart';
 import '../pro/data/exercise_definition.dart';
 import '../training_home/routines_repository.dart';
+import '../domain/sport_activity.dart';
 import '../workout_in_progress_controller.dart';
 
 class IncompleteWorkoutException implements Exception {
@@ -258,30 +259,42 @@ class WorkoutSessionController extends ChangeNotifier {
           _routineName = routine.name;
           _workoutType = routine.type;
           _exercises = routine.exercises.map((exercise) {
-            final sets = List.generate(
-              exercise.targetSets,
-              (index) => SetInSession(
+            final sets = List.generate(exercise.targetSets, (index) {
+              final target = index < exercise.setTargets.length
+                  ? exercise.setTargets[index]
+                  : null;
+              return SetInSession(
                 id: _uuid.v4(),
                 index: index + 1,
                 kg:
                     exercise.targetLoadType ==
                         RoutineExerciseLoadType.assistedKg
                     ? null
-                    : exercise.targetWeightKg,
+                    : exercise.targetLoadType ==
+                          RoutineExerciseLoadType.bodyweight
+                    ? null
+                    : target?.weightKg ?? exercise.targetWeightKg,
                 assistanceKg:
                     exercise.targetLoadType ==
                         RoutineExerciseLoadType.assistedKg
-                    ? exercise.targetWeightKg
+                    ? target?.weightKg ?? exercise.targetWeightKg
                     : null,
                 reps: exercise.isTimed
                     ? null
-                    : (exercise.targetReps ?? exercise.targetRepsMin),
-                durationSeconds: exercise.targetDurationSeconds,
-              ),
-            );
+                    : (target?.reps ??
+                          target?.repsMin ??
+                          exercise.targetReps ??
+                          exercise.targetRepsMin),
+                durationSeconds: exercise.sportPlan == null
+                    ? target?.durationSeconds ?? exercise.targetDurationSeconds
+                    : null,
+              );
+            });
             return ExerciseInSession(
               id: _uuid.v4(),
               exerciseId: exercise.id,
+              plan: exercise,
+              notes: exercise.notes,
               name: exercise.name,
               isTimed:
                   exercise.isTimed ||
@@ -289,8 +302,9 @@ class WorkoutSessionController extends ChangeNotifier {
               isAssisted:
                   exercise.targetLoadType == RoutineExerciseLoadType.assistedKg,
               restEnabled:
-                  exercise.restSeconds != null ||
-                  _preferences.defaultRestEnabled,
+                  exercise.restEnabled ??
+                  (exercise.restSeconds != null ||
+                      _preferences.defaultRestEnabled),
               restSeconds:
                   exercise.restSeconds ??
                   (_preferences.defaultRestEnabled
@@ -419,6 +433,30 @@ class WorkoutSessionController extends ChangeNotifier {
     _scheduleAutosave();
   }
 
+  void updateSportResult(String exerciseId, SportMeasurements? result) {
+    if (!canEdit) return;
+    _exercises = _exercises.map((e) {
+      if (e.id != exerciseId || e.sportPlan == null) return e;
+      final valid = e.sportPlan!.resultValid(result);
+      return e.copyWith(
+        sportResult: result,
+        clearSportResult: result == null,
+        sets: [
+          for (final s in e.sets)
+            s.copyWith(
+              durationSeconds: result?.values[SportMetric.durationSeconds]
+                  ?.toInt(),
+              clearDuration:
+                  result?.values[SportMetric.durationSeconds] == null,
+              done: valid && s.done,
+            ),
+        ],
+      );
+    }).toList();
+    notifyListeners();
+    _scheduleAutosave();
+  }
+
   void updateExerciseRest(
     String exerciseId, {
     required bool enabled,
@@ -491,7 +529,11 @@ class WorkoutSessionController extends ChangeNotifier {
     }).toList();
     final updatedSet = _exercises[exerciseIndex].sets[setIndex];
     if (updatedSet.done &&
-        !updatedSet.hasValidResult(isTimed: originalExercise.isTimed)) {
+        (!updatedSet.hasValidResult(isTimed: originalExercise.isTimed) ||
+            (originalExercise.sportPlan != null &&
+                !originalExercise.sportPlan!.resultValid(
+                  originalExercise.sportResult,
+                )))) {
       _exercises = _replaceExercise(
         _exercises[exerciseIndex].copyWith(
           sets: [

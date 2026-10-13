@@ -47,6 +47,7 @@ class WorkoutRepeatService {
           ExerciseInSession(
             id: const Uuid().v4(),
             exerciseId: e.id,
+            plan: e.copyWith(sets: [], clearSportResult: true),
             name: e.name,
             notes: e.notes,
             restEnabled: e.restEnabled ?? e.restSeconds != null,
@@ -62,7 +63,9 @@ class WorkoutRepeatService {
                       ? null
                       : e.sets[i].externalLoadKg,
                   reps: e.sets[i].reps,
-                  durationSeconds: e.sets[i].durationSeconds,
+                  durationSeconds: e.sportPlan == null
+                      ? e.sets[i].durationSeconds
+                      : null,
                   assistanceKg: e.sets[i].assistanceKg,
                   done: false,
                 ),

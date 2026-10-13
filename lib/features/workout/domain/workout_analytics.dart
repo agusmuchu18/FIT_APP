@@ -289,14 +289,21 @@ class WorkoutAnalytics {
               name: e.name,
               notes: e.notes,
               targetSets: e.sets.length,
+              instanceId: e.plan?.instanceId,
+              setTargets: e.plan?.setTargets ?? const [],
+              sportPlan: e.sportPlan,
+              sportPurpose: e.plan?.sportPurpose,
+              sportResult: e.sportResult,
               restEnabled: e.restEnabled,
               measurement: e.isTimed ? 'seconds' : 'reps',
-              targetLoadType: e.isAssisted
-                  ? RoutineExerciseLoadType.assistedKg
-                  : (_definitions[e.exerciseId]?.loadType ==
-                            LoadType.bodyweightEffective
-                        ? RoutineExerciseLoadType.bodyweight
-                        : RoutineExerciseLoadType.weightedKg),
+              targetLoadType:
+                  e.plan?.targetLoadType ??
+                  (e.isAssisted
+                      ? RoutineExerciseLoadType.assistedKg
+                      : (_definitions[e.exerciseId]?.loadType ==
+                                LoadType.bodyweightEffective
+                            ? RoutineExerciseLoadType.bodyweight
+                            : RoutineExerciseLoadType.weightedKg)),
               restSeconds: e.restSeconds,
               sets: e.sets
                   .map(

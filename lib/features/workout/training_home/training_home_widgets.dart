@@ -486,7 +486,7 @@ class RoutineFolderCard extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              '$count rutinas',
+              '$count ${count == 1 ? 'rutina' : 'rutinas'}',
               style: Theme.of(context).textTheme.bodySmall
                   ?.copyWith(color: AppColors.textMuted),
             ),

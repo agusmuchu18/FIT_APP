@@ -16,7 +16,7 @@ WorkoutType toWorkoutType(TemplateWorkoutType type) {
 String typeLabel(TemplateWorkoutType type) {
   switch (type) {
     case TemplateWorkoutType.gym:
-      return 'Gym';
+      return 'Gimnasio';
     case TemplateWorkoutType.sport:
       return 'Deporte';
     case TemplateWorkoutType.other:

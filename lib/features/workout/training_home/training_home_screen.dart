@@ -1,3 +1,7 @@
+import '../../../app/theme/app_theme.dart';
+import 'routine_library_card.dart';
+import 'routine_library_actions.dart';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -15,9 +19,12 @@ class TrainingHomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => TrainingHomeController()..initialize(),
-      child: const _TrainingHomeView(),
+    return Theme(
+      data: AppTheme.workout,
+      child: ChangeNotifierProvider(
+        create: (_) => TrainingHomeController()..initialize(),
+        child: const _TrainingHomeView(),
+      ),
     );
   }
 }
@@ -32,6 +39,7 @@ class _TrainingHomeView extends StatefulWidget {
 class _TrainingHomeViewState extends State<_TrainingHomeView> {
   int _routinesViewIndex = 0;
   bool _navigating = false;
+  WorkoutType? _typeFilter;
 
   @override
   Widget build(BuildContext context) {
@@ -86,116 +94,156 @@ class _TrainingHomeViewState extends State<_TrainingHomeView> {
       ),
       body: RefreshIndicator(
         onRefresh: controller.refresh,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            if (controller.loadError != null)
-              TextButton(
-                onPressed: controller.refresh,
-                child: const Text('No se pudo actualizar. Reintentar'),
-              ),
-            Text(
-              todayStatus,
-              style: Theme.of(context).textTheme.bodySmall
-                  ?.copyWith(color: AppColors.textMuted),
-            ),
-            if (controller.latestSession != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Text(
-                  'Última sesión: ${_lastSessionLabel(controller.latestSession!)} · ${_daysAgoLabel(controller.latestSession!.date)}',
-                  style: Theme.of(context).textTheme.bodySmall
-                      ?.copyWith(color: AppColors.textMuted),
+        child: CustomScrollView(
+          slivers: [
+            SliverPadding(
+              padding: const EdgeInsets.all(16),
+              sliver: SliverToBoxAdapter(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (controller.loadError != null)
+                      TextButton(
+                        onPressed: controller.refresh,
+                        child: const Text('No se pudo actualizar. Reintentar'),
+                      ),
+                    Text(
+                      todayStatus,
+                      style: Theme.of(context).textTheme.bodySmall
+                          ?.copyWith(color: AppColors.textMuted),
+                    ),
+                    if (controller.latestSession != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          'Última sesión: ${_lastSessionLabel(controller.latestSession!)} · ${_daysAgoLabel(controller.latestSession!.date)}',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: AppColors.textMuted),
+                        ),
+                      ),
+                    const SizedBox(height: 14),
+                    PrimaryStartWorkoutCard(
+                      onTap: () => _goAndRefresh(
+                        context,
+                        controller,
+                        '/workout/session',
+                        arguments: {'trainingContext': 'Gym'},
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      'Rutinas',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      height:
+                          184 *
+                          (MediaQuery.textScalerOf(context).scale(16) / 16),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: RoutineActionTile(
+                              title: 'Nueva rutina',
+                              subtitle: 'Crear desde cero o duplicar',
+                              glyph: FitGlyphKind.routine,
+                              imageAsset:
+                                  'assets/images/workout/routine_builder.webp',
+                              onTap: () => _goAndRefresh(
+                                context,
+                                controller,
+                                '/workout/routines/new',
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: RoutineActionTile(
+                              title: 'Buscar rutinas',
+                              subtitle: 'Explorar plantillas',
+                              glyph: FitGlyphKind.discover,
+                              imageAsset:
+                                  'assets/images/workout/equipment_detail.webp',
+                              onTap: () => _goAndRefresh(
+                                context,
+                                controller,
+                                '/workout/routines/search',
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    if (!controller.hasRoutines)
+                      const EmptyRoutinesInfoCard()
+                    else ...[
+                      Wrap(
+                        alignment: WrapAlignment.spaceBetween,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: 8,
+                        children: [
+                          Text(
+                            'Mis rutinas',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          IconButton(
+                            onPressed: () =>
+                                _showCreateFolderSheet(context, controller),
+                            icon: const Icon(Icons.create_new_folder_outlined),
+                            tooltip: 'Crear carpeta',
+                          ),
+                          TextButton.icon(
+                            onPressed: () =>
+                                _showSortSheet(context, controller),
+                            icon: const Icon(Icons.sort),
+                            label: const Text('Ordenar'),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      SegmentedButton<int>(
+                        segments: const [
+                          ButtonSegment(value: 0, label: Text('Todas')),
+                          ButtonSegment(value: 1, label: Text('Carpetas')),
+                        ],
+                        selected: {_routinesViewIndex},
+                        onSelectionChanged: (value) =>
+                            setState(() => _routinesViewIndex = value.first),
+                      ),
+                      const SizedBox(height: 10),
+                      if (_routinesViewIndex == 0)
+                        DropdownButtonFormField<WorkoutType>(
+                          isExpanded: true,
+                          initialValue: _typeFilter,
+                          decoration: const InputDecoration(
+                            labelText: 'Tipo de rutina',
+                          ),
+                          items: const [
+                            DropdownMenuItem(value: null, child: Text('Todos')),
+                            DropdownMenuItem(
+                              value: WorkoutType.strength,
+                              child: Text('Gimnasio'),
+                            ),
+                            DropdownMenuItem(
+                              value: WorkoutType.sport,
+                              child: Text('Deporte'),
+                            ),
+                          ],
+                          onChanged: (v) => setState(() => _typeFilter = v),
+                        )
+                      else
+                        _foldersGrid(context, controller),
+                    ],
+                  ],
                 ),
               ),
-            const SizedBox(height: 14),
-            PrimaryStartWorkoutCard(
-              onTap: () => _goAndRefresh(
-                context,
-                controller,
-                '/workout/session',
-                arguments: {'trainingContext': 'Gym'},
-              ),
             ),
-            const SizedBox(height: 20),
-            Text('Rutinas', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 12),
-            SizedBox(
-              height: 184 * (MediaQuery.textScalerOf(context).scale(16) / 16),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: RoutineActionTile(
-                      title: 'Nueva rutina',
-                      subtitle: 'Crear desde cero o duplicar',
-                      glyph: FitGlyphKind.routine,
-                      imageAsset: 'assets/images/workout/routine_builder.webp',
-                      onTap: () => _goAndRefresh(
-                        context,
-                        controller,
-                        '/workout/routines/new',
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: RoutineActionTile(
-                      title: 'Buscar rutinas',
-                      subtitle: 'Explorar plantillas',
-                      glyph: FitGlyphKind.discover,
-                      imageAsset: 'assets/images/workout/equipment_detail.webp',
-                      onTap: () => _goAndRefresh(
-                        context,
-                        controller,
-                        '/workout/routines/search',
-                      ),
-                    ),
-                  ),
-                ],
+            if (_routinesViewIndex == 0 && controller.hasRoutines)
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                sliver: _routinesList(controller),
               ),
-            ),
-            const SizedBox(height: 16),
-            if (!controller.hasRoutines)
-              const EmptyRoutinesInfoCard()
-            else ...[
-              Wrap(
-                alignment: WrapAlignment.spaceBetween,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                spacing: 8,
-                children: [
-                  Text(
-                    'Mis rutinas',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  IconButton(
-                    onPressed: () =>
-                        _showCreateFolderSheet(context, controller),
-                    icon: const Icon(Icons.create_new_folder_outlined),
-                    tooltip: 'Crear carpeta',
-                  ),
-                  TextButton.icon(
-                    onPressed: () => _showSortSheet(context, controller),
-                    icon: const Icon(Icons.sort),
-                    label: const Text('Ordenar'),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              SegmentedButton<int>(
-                segments: const [
-                  ButtonSegment(value: 0, label: Text('Todas')),
-                  ButtonSegment(value: 1, label: Text('Carpetas')),
-                ],
-                selected: {_routinesViewIndex},
-                onSelectionChanged: (value) =>
-                    setState(() => _routinesViewIndex = value.first),
-              ),
-              const SizedBox(height: 10),
-              if (_routinesViewIndex == 0)
-                _routinesGrid(controller.routines, controller)
-              else
-                _foldersGrid(context, controller),
-            ],
           ],
         ),
       ),
@@ -210,7 +258,9 @@ class _TrainingHomeViewState extends State<_TrainingHomeView> {
       physics: const NeverScrollableScrollPhysics(),
       itemCount: sortedFolders.length + 1,
       gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-        maxCrossAxisExtent: 320,
+        maxCrossAxisExtent: MediaQuery.textScalerOf(context).scale(16) > 24
+            ? MediaQuery.sizeOf(context).width
+            : 320,
         mainAxisExtent: 125 * (MediaQuery.textScalerOf(context).scale(16) / 16),
         mainAxisSpacing: 12,
         crossAxisSpacing: 12,
@@ -236,41 +286,35 @@ class _TrainingHomeViewState extends State<_TrainingHomeView> {
     );
   }
 
-  Widget _routinesGrid(
-    List<WorkoutTemplate> routines,
-    TrainingHomeController controller,
-  ) {
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
+  Widget _routinesList(TrainingHomeController controller) {
+    final routines = controller.routines
+        .where((r) => _typeFilter == null || r.type == _typeFilter)
+        .toList();
+    if (routines.isEmpty) {
+      return const SliverToBoxAdapter(
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: Text('No hay rutinas de este tipo.'),
+        ),
+      );
+    }
+    return SliverList.builder(
       itemCount: routines.length,
-      gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-        maxCrossAxisExtent: 420,
-        mainAxisExtent: 220 * (MediaQuery.textScalerOf(context).scale(16) / 16),
-        mainAxisSpacing: 12,
-        crossAxisSpacing: 12,
-      ),
       itemBuilder: (context, index) {
         final routine = routines[index];
-        final metadata = controller.metadataFor(routine.id);
-        final typeLabel = _typeLabel(routine.type);
-        final previewExercises = routine.exercises
-            .map((exercise) => exercise.name)
-            .where((name) => name.trim().isNotEmpty)
-            .toList(growable: false);
-        return RoutineMiniCard(
-          title: routine.name,
-          typeTag: typeLabel,
-          secondaryTag: routine.activityName,
-          exercisePreview: previewExercises,
-          exerciseCount: routine.exercises.length,
-          estimatedMinutes: controller.estimatedDuration(routine),
-          lastUsed: 'Última vez: ${_daysAgoLabel(metadata.lastUsedAt)}',
-          isPinned: metadata.pinned,
-          onTap: () => _openRoutinePreview(context, controller, routine),
-          onStartTap: () => startRoutineFlow(context, controller, routine),
-          onMenuSelected: (value) =>
-              _handleMenuAction(context, controller, routine, value),
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: RoutineLibraryCard(
+            routine: routine,
+            pinned: controller.metadataFor(routine.id).pinned,
+            lastUsed: controller.lastCompletedFor(routine.id) == null
+                ? 'Sin estrenar'
+                : 'Último entrenamiento: ${_daysAgoLabel(controller.lastCompletedFor(routine.id))}',
+            onOpen: () => _openRoutinePreview(context, controller, routine),
+            onStart: () => startRoutineFlow(context, controller, routine),
+            onMenu: (value) =>
+                _handleMenuAction(context, controller, routine, value),
+          ),
         );
       },
     );
@@ -280,84 +324,67 @@ class _TrainingHomeViewState extends State<_TrainingHomeView> {
     BuildContext context,
     TrainingHomeController controller,
   ) async {
-    final nameController = TextEditingController();
+    var name = '';
+    var creating = false;
     await showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
       isScrollControlled: true,
-      builder: (_) => Padding(
-        padding: EdgeInsets.only(
-          left: 16,
-          right: 16,
-          top: 12,
-          bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Crear carpeta'),
-            const SizedBox(height: 10),
-            TextField(
-              controller: nameController,
-              autofocus: true,
-              decoration: const InputDecoration(hintText: 'Nombre de carpeta'),
-            ),
-            const SizedBox(height: 12),
-            Align(
-              alignment: Alignment.centerRight,
-              child: FilledButton(
-                onPressed: () async {
-                  final name = nameController.text.trim();
-                  if (name.isEmpty) return;
-                  await controller.createFolder(name);
-                  if (!context.mounted) return;
-                  Navigator.of(context).pop();
-                },
-                child: const Text('Guardar'),
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (_, setSheetState) => Padding(
+          padding: EdgeInsets.only(
+            left: 16,
+            right: 16,
+            top: 12,
+            bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 16,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Crear carpeta'),
+              const SizedBox(height: 10),
+              TextField(
+                onChanged: (value) => name = value,
+                autofocus: true,
+                decoration: const InputDecoration(
+                  hintText: 'Nombre de carpeta',
+                ),
               ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _openMoveToFolderSheet(
-    BuildContext context,
-    TrainingHomeController controller,
-    WorkoutTemplate routine,
-  ) async {
-    await showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      builder: (_) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              title: const Text('Mover a carpeta'),
-              subtitle: Text(routine.name),
-            ),
-            ListTile(
-              title: const Text('Sin carpeta'),
-              onTap: () async {
-                await controller.moveRoutineToFolder(routine, null);
-                if (!context.mounted) return;
-                Navigator.pop(context);
-              },
-            ),
-            ...controller.sortedFolders.map(
-              (folder) => ListTile(
-                title: Text(folder.name),
-                onTap: () async {
-                  await controller.moveRoutineToFolder(routine, folder.id);
-                  if (!context.mounted) return;
-                  Navigator.pop(context);
-                },
+              const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerRight,
+                child: FilledButton(
+                  onPressed: creating
+                      ? null
+                      : () async {
+                          if (name.trim().isEmpty || creating) return;
+                          setSheetState(() => creating = true);
+                          try {
+                            await controller.createFolder(name.trim());
+                            if (!sheetContext.mounted) return;
+                            Navigator.of(sheetContext).pop();
+                          } catch (_) {
+                            if (sheetContext.mounted) {
+                              ScaffoldMessenger.of(sheetContext).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'No se pudo guardar la carpeta. El nombre se conserva; reintentá.',
+                                  ),
+                                ),
+                              );
+                            }
+                          } finally {
+                            if (sheetContext.mounted) {
+                              setSheetState(() => creating = false);
+                            }
+                          }
+                        },
+                  child: const Text('Guardar'),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -389,31 +416,77 @@ class _TrainingHomeViewState extends State<_TrainingHomeView> {
     String action,
   ) async {
     if (action == 'rename') {
-      final c = TextEditingController(text: folder.name);
+      var editedName = folder.name;
       final updated = await showDialog<String>(
         context: context,
         builder: (_) => AlertDialog(
           title: const Text('Renombrar carpeta'),
-          content: TextField(controller: c, autofocus: true),
+          content: TextFormField(
+            initialValue: editedName,
+            onChanged: (v) => editedName = v,
+            autofocus: true,
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
               child: const Text('Cancelar'),
             ),
             FilledButton(
-              onPressed: () => Navigator.of(context).pop(c.text.trim()),
+              onPressed: () => Navigator.of(context).pop(editedName.trim()),
               child: const Text('Guardar'),
             ),
           ],
         ),
       );
       if (updated != null && updated.isNotEmpty) {
-        await controller.renameFolder(folder.id, updated);
+        try {
+          await controller.renameFolder(folder.id, updated);
+        } catch (_) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('No se pudo renombrar la carpeta. Reintentá.'),
+              ),
+            );
+          }
+        }
       }
       return;
     }
     if (action == 'delete') {
-      await controller.deleteFolder(folder.id);
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (c) => AlertDialog(
+          title: const Text('¿Eliminar carpeta?'),
+          content: const Text(
+            'Sus rutinas pasarán a Sin carpeta. Los entrenamientos realizados se conservan.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(c, false),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(c, true),
+              child: const Text('Eliminar'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true) return;
+      try {
+        await controller.deleteFolder(folder.id);
+      } catch (_) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'No se pudo eliminar la carpeta. Tus rutinas se conservan.',
+              ),
+            ),
+          );
+        }
+      }
     }
   }
 
@@ -452,44 +525,7 @@ class _TrainingHomeViewState extends State<_TrainingHomeView> {
     String action,
   ) async {
     if (action == 'menu') return;
-    switch (action) {
-      case 'edit':
-        final controllerName = TextEditingController(text: routine.name);
-        final updated = await showDialog<String>(
-          context: context,
-          builder: (_) => AlertDialog(
-            title: const Text('Editar rutina'),
-            content: TextField(controller: controllerName, autofocus: true),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Cancelar'),
-              ),
-              FilledButton(
-                onPressed: () =>
-                    Navigator.of(context).pop(controllerName.text.trim()),
-                child: const Text('Guardar'),
-              ),
-            ],
-          ),
-        );
-        if (updated != null && updated.isNotEmpty) {
-          await controller.renameRoutine(routine, updated);
-        }
-        break;
-      case 'duplicate':
-        await controller.duplicateRoutine(routine);
-        break;
-      case 'pin':
-        await controller.togglePinned(routine);
-        break;
-      case 'move':
-        await _openMoveToFolderSheet(context, controller, routine);
-        break;
-      case 'delete':
-        await controller.deleteRoutine(routine);
-        break;
-    }
+    await runRoutineLibraryAction(context, controller, routine, action);
   }
 
   Future<void> _openRoutinePreview(
@@ -545,7 +581,7 @@ class _TrainingHomeViewState extends State<_TrainingHomeView> {
   String _typeLabel(WorkoutType type) {
     switch (type) {
       case WorkoutType.strength:
-        return 'Gym';
+        return 'Gimnasio';
       case WorkoutType.cardio:
         return 'Cardio';
       case WorkoutType.functional:

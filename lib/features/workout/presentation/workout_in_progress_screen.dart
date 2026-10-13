@@ -10,6 +10,7 @@ import '../pro/data/exercise_library.dart';
 import '../pro/data/exercise_definition.dart';
 import '../training_home/workout_settings_screen.dart';
 import 'widgets/exercise_card.dart';
+import 'widgets/sport_session_card.dart';
 import 'widgets/workout_in_progress_header.dart';
 import 'widgets/workout_session_action_bar.dart';
 import 'workout_summary_screen.dart';
@@ -263,61 +264,89 @@ class _WorkoutInProgressViewState extends State<_WorkoutInProgressView> {
                           final exercise = controller.exercises[index];
                           return Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 16),
-                            child: ExerciseCard(
-                              exercise: exercise,
-                              isExpanded:
-                                  controller.expandedExerciseId == exercise.id,
-                              onTap: () => controller.toggleExerciseExpansion(
-                                exercise.id,
-                              ),
-                              onNotesChanged: (value) => controller
-                                  .updateExerciseNotes(exercise.id, value),
-                              onRestToggle: (value) =>
-                                  controller.updateExerciseRest(
-                                    exercise.id,
-                                    enabled: value,
-                                    seconds: exercise.restSeconds ?? 90,
+                            child: exercise.sportPlan != null
+                                ? SportSessionCard(
+                                    key: ValueKey(exercise.id),
+                                    exercise: exercise,
+                                    onChanged: (result) => controller
+                                        .updateSportResult(exercise.id, result),
+                                    onDone: (done) {
+                                      for (final set in exercise.sets) {
+                                        controller.updateSet(
+                                          exercise.id,
+                                          set.id,
+                                          done: done,
+                                        );
+                                      }
+                                    },
+                                    onRest: (enabled, seconds) =>
+                                        controller.updateExerciseRest(
+                                          exercise.id,
+                                          enabled: enabled,
+                                          seconds: seconds,
+                                        ),
+                                    onRemove: () =>
+                                        controller.removeExercise(exercise.id),
+                                  )
+                                : ExerciseCard(
+                                    exercise: exercise,
+                                    isExpanded:
+                                        controller.expandedExerciseId ==
+                                        exercise.id,
+                                    onTap: () => controller
+                                        .toggleExerciseExpansion(exercise.id),
+                                    onNotesChanged: (value) =>
+                                        controller.updateExerciseNotes(
+                                          exercise.id,
+                                          value,
+                                        ),
+                                    onRestToggle: (value) =>
+                                        controller.updateExerciseRest(
+                                          exercise.id,
+                                          enabled: value,
+                                          seconds: exercise.restSeconds ?? 90,
+                                        ),
+                                    onRestSecondsChanged: (seconds) =>
+                                        controller.updateExerciseRest(
+                                          exercise.id,
+                                          enabled: exercise.restEnabled,
+                                          seconds: seconds,
+                                        ),
+                                    onSetChanged:
+                                        (
+                                          setId, {
+                                          kg,
+                                          clearKg,
+                                          reps,
+                                          clearReps,
+                                          done,
+                                        }) => controller.updateSet(
+                                          exercise.id,
+                                          setId,
+                                          kg: kg,
+                                          clearKg: clearKg ?? false,
+                                          reps: reps,
+                                          clearReps: clearReps ?? false,
+                                          done: done,
+                                        ),
+                                    onAddSet: () =>
+                                        controller.addSet(exercise.id),
+                                    onDurationChanged: (setId, seconds) =>
+                                        controller.updateSet(
+                                          exercise.id,
+                                          setId,
+                                          durationSeconds: seconds,
+                                          clearDuration: seconds == null,
+                                        ),
+                                    onDeleteSet: (setId) => controller
+                                        .removeSet(exercise.id, setId),
+                                    onDelete: () =>
+                                        controller.removeExercise(exercise.id),
+                                    onMoveUp: () =>
+                                        controller.moveExerciseUp(exercise.id),
+                                    onMoveDown: () => controller
+                                        .moveExerciseDown(exercise.id),
                                   ),
-                              onRestSecondsChanged: (seconds) =>
-                                  controller.updateExerciseRest(
-                                    exercise.id,
-                                    enabled: exercise.restEnabled,
-                                    seconds: seconds,
-                                  ),
-                              onSetChanged:
-                                  (
-                                    setId, {
-                                    kg,
-                                    clearKg,
-                                    reps,
-                                    clearReps,
-                                    done,
-                                  }) => controller.updateSet(
-                                    exercise.id,
-                                    setId,
-                                    kg: kg,
-                                    clearKg: clearKg ?? false,
-                                    reps: reps,
-                                    clearReps: clearReps ?? false,
-                                    done: done,
-                                  ),
-                              onAddSet: () => controller.addSet(exercise.id),
-                              onDurationChanged: (setId, seconds) =>
-                                  controller.updateSet(
-                                    exercise.id,
-                                    setId,
-                                    durationSeconds: seconds,
-                                    clearDuration: seconds == null,
-                                  ),
-                              onDeleteSet: (setId) =>
-                                  controller.removeSet(exercise.id, setId),
-                              onDelete: () =>
-                                  controller.removeExercise(exercise.id),
-                              onMoveUp: () =>
-                                  controller.moveExerciseUp(exercise.id),
-                              onMoveDown: () =>
-                                  controller.moveExerciseDown(exercise.id),
-                            ),
                           );
                         }, childCount: controller.exercises.length),
                       ),

@@ -4,7 +4,11 @@ import 'package:intl/intl.dart';
 
 import '../../../common/theme/app_layout.dart';
 import '../../domain/workout_analytics.dart';
+import '../../domain/sport_activity.dart';
 import '../../pro/models/workout_models.dart';
+import 'exercise_thumbnail.dart';
+import 'workout_artwork.dart';
+export 'workout_artwork.dart';
 
 String workoutNumber(num v) => NumberFormat('#,##0.#', 'es').format(v);
 String workoutDuration(Duration? d) => d == null
@@ -55,44 +59,6 @@ String workoutDominantLabel(WorkoutReport report) => report.externalVolume > 0
     : report.reps > 0
     ? 'Repeticiones registradas'
     : report.setsLabel;
-
-class WorkoutArtwork extends StatelessWidget {
-  const WorkoutArtwork({
-    super.key,
-    this.category,
-    this.hero = false,
-    this.empty = false,
-  });
-  final WorkoutArtCategory? category;
-  final bool hero, empty;
-  static String asset({
-    WorkoutArtCategory? category,
-    bool hero = false,
-    bool empty = false,
-  }) =>
-      'assets/images/workout/${hero
-          ? 'summary_hero'
-          : empty
-          ? 'history_empty'
-          : 'history_${category?.name ?? 'mixed'}'}.webp';
-  @override
-  Widget build(BuildContext context) => ExcludeSemantics(
-    child: Image.asset(
-      asset(category: category, hero: hero, empty: empty),
-      fit: BoxFit.cover,
-      errorBuilder: (_, _, _) => ColoredBox(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        child: Center(
-          child: Icon(
-            empty ? Icons.history : Icons.fitness_center,
-            color: Theme.of(context).colorScheme.primary,
-            size: hero ? 72 : 32,
-          ),
-        ),
-      ),
-    ),
-  );
-}
 
 class ReportPanel extends StatelessWidget {
   const ReportPanel({super.key, required this.child});
@@ -457,6 +423,10 @@ class WorkoutExerciseReportCard extends StatelessWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (expanded) ...[
+          ExerciseThumbnail(exercise: report.exercise),
+          const SizedBox(height: AppSpacing.sm),
+        ],
         Text(
           report.exercise.name,
           style: Theme.of(context).textTheme.titleMedium,
@@ -471,6 +441,15 @@ class WorkoutExerciseReportCard extends StatelessWidget {
               : '${report.reps} repeticiones registradas',
         ),
         if (expanded) ...[
+          if (report.exercise.sportResult case final result?) ...[
+            const SizedBox(height: AppSpacing.md),
+            const Text('Resultados de la actividad'),
+            for (final e in result.values.entries)
+              Text('${e.key.label}: ${workoutNumber(e.value)}'),
+            if (result.position.isNotEmpty)
+              Text('Posición: ${result.position}'),
+            if (result.notes.isNotEmpty) Text('Observaciones: ${result.notes}'),
+          ],
           if (report.exercise.restEnabled != null ||
               report.exercise.restSeconds != null)
             Padding(

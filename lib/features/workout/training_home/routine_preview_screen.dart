@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 
-import '../../common/theme/app_colors.dart';
+import '../../../app/theme/app_theme.dart';
+import '../domain/routine_labels.dart';
+import '../domain/sport_activity.dart';
 import '../pro/models/workout_models.dart';
+import '../presentation/widgets/exercise_thumbnail.dart';
 import 'start_routine_flow.dart';
-import 'routine_edit_screen.dart';
 import 'training_home_controller.dart';
+import 'routine_library_card.dart';
+import 'routine_library_actions.dart';
 
-class RoutinePreviewScreen extends StatefulWidget {
+class RoutinePreviewScreen extends StatelessWidget {
   const RoutinePreviewScreen({
     super.key,
     required this.routine,
@@ -14,162 +18,163 @@ class RoutinePreviewScreen extends StatefulWidget {
     required this.typeLabel,
     required this.lastUsedLabel,
   });
-
   final WorkoutTemplate routine;
   final TrainingHomeController controller;
-  final String typeLabel;
-  final String lastUsedLabel;
-
+  final String typeLabel, lastUsedLabel;
   @override
-  State<RoutinePreviewScreen> createState() => _RoutinePreviewScreenState();
-}
-
-class _RoutinePreviewScreenState extends State<RoutinePreviewScreen> {
-  int? _expandedIndex;
-
-  @override
-  Widget build(BuildContext context) {
-    final estimatedMinutes = widget.controller.estimatedDuration(
-      widget.routine,
-    );
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.routine.name),
-        actions: [
-          TextButton(
-            onPressed: _editRoutine,
-            child: const Text('Editar rutina'),
-          ),
-        ],
-      ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
-        children: [
-          Text(
-            widget.routine.name,
-            style: Theme.of(context).textTheme.headlineSmall
-                ?.copyWith(fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              Chip(label: Text(widget.typeLabel)),
-              if (widget.routine.activityName != null &&
-                  widget.routine.activityName!.trim().isNotEmpty)
-                Chip(label: Text(widget.routine.activityName!)),
+  Widget build(BuildContext context) => Theme(
+    data: AppTheme.workout,
+    child: AnimatedBuilder(
+      animation: controller,
+      builder: (context, _) {
+        final current = controller.routines
+            .where((e) => e.id == routine.id)
+            .firstOrNull;
+        if (current == null) {
+          return Scaffold(
+            appBar: AppBar(title: const Text('Rutina eliminada')),
+            body: const Center(
+              child: Text(
+                'La rutina ya no está disponible. Tus sesiones se conservan.',
+              ),
+            ),
+          );
+        }
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('Ver rutina'),
+            actions: [
+              PopupMenuButton<String>(
+                tooltip: 'Opciones de rutina',
+                onSelected: (v) =>
+                    runRoutineLibraryAction(context, controller, current, v),
+                itemBuilder: (_) => const [
+                  PopupMenuItem(value: 'duplicate', child: Text('Duplicar')),
+                  PopupMenuItem(value: 'move', child: Text('Mover a carpeta')),
+                  PopupMenuItem(value: 'delete', child: Text('Eliminar')),
+                ],
+              ),
             ],
           ),
-          const SizedBox(height: 10),
-          Text(
-            '${widget.routine.exercises.length} ejercicios${' · ~$estimatedMinutes min'} · Última vez: ${widget.lastUsedLabel}',
-            style: Theme.of(context).textTheme.bodyMedium
-                ?.copyWith(color: AppColors.textMuted),
-          ),
-          const SizedBox(height: 18),
-          Text('Ejercicios', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 10),
-          if (widget.routine.exercises.isEmpty)
-            Text(
-              'Esta rutina no tiene ejercicios todavía.',
-              style: Theme.of(context).textTheme.bodyMedium,
-            )
-          else
-            ...widget.routine.exercises.asMap().entries.map((entry) {
-              final index = entry.key;
-              final exercise = entry.value;
-              final expanded = _expandedIndex == index;
-              return Card(
-                margin: const EdgeInsets.only(bottom: 10),
-                child: Column(
-                  children: [
-                    ListTile(
-                      onTap: () => setState(
-                        () => _expandedIndex = expanded ? null : index,
-                      ),
-                      leading: CircleAvatar(
-                        radius: 14,
-                        child: Text('${index + 1}'),
-                      ),
-                      title: Text(exercise.name),
-                      subtitle: Text(_exerciseSummary(exercise)),
-                      trailing: Icon(
-                        expanded ? Icons.expand_less : Icons.expand_more,
-                      ),
-                    ),
-                    AnimatedSize(
-                      duration: const Duration(milliseconds: 180),
-                      child: expanded
-                          ? Padding(
-                              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text('Sets: ${exercise.targetSets}'),
-                                  Text(
-                                    exercise.isTimed
-                                        ? 'Duración: ${exercise.targetDurationSeconds ?? 30} s por serie'
-                                        : 'Reps: ${exercise.targetReps ?? '${exercise.targetRepsMin ?? 8}-${exercise.targetRepsMax ?? 12}'}',
-                                  ),
-                                  Text('Carga: ${_loadLabel(exercise)}'),
-                                  if (exercise.targetWeightKg != null)
-                                    Text(
-                                      'Peso objetivo: ${exercise.targetWeightKg!.toStringAsFixed(1)} kg',
-                                    ),
-                                ],
-                              ),
-                            )
-                          : const SizedBox.shrink(),
-                    ),
-                  ],
+          body: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              if (current.exercises.isNotEmpty)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: ExerciseThumbnail(
+                    exercise: current.exercises.first,
+                    size: 120,
+                  ),
                 ),
-              );
-            }),
-        ],
-      ),
-      bottomNavigationBar: SafeArea(
-        minimum: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-        child: FilledButton(
-          onPressed: () =>
-              startRoutineFlow(context, widget.controller, widget.routine),
-          style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(56)),
-          child: const Text('Iniciar rutina'),
-        ),
-      ),
-    );
-  }
-
-  Future<void> _editRoutine() async {
-    final saved = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(
-        builder: (_) => RoutineEditScreen(
-          routine: widget.routine,
-          controller: widget.controller,
-        ),
-      ),
-    );
-    if (saved == true && mounted) Navigator.pop(context);
-  }
-
-  String _exerciseSummary(WorkoutExercise exercise) {
-    if (exercise.isTimed) {
-      return '${exercise.targetSets} series · ${exercise.targetDurationSeconds ?? 30} s por serie';
-    }
-    return '${exercise.targetSets} series · ${exercise.targetReps != null ? '${exercise.targetReps} reps' : '${exercise.targetRepsMin ?? 8}-${exercise.targetRepsMax ?? 12} reps'}';
-  }
-
-  String _loadLabel(WorkoutExercise exercise) {
-    switch (exercise.targetLoadType) {
-      case RoutineExerciseLoadType.bodyweight:
-        return 'Bodyweight';
-      case RoutineExerciseLoadType.weightedKg:
-        return 'Weighted';
-      case RoutineExerciseLoadType.assistedKg:
-        return 'Assisted';
-      case RoutineExerciseLoadType.machineKg:
-        return 'Machine';
-    }
-  }
+              const SizedBox(height: 16),
+              Text(
+                current.name,
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+              Text(RoutineLibraryCard.type(current)),
+              Text(RoutineLibraryCard.focus(current)),
+              const SizedBox(height: 12),
+              Text(
+                '${current.exercises.length} ejercicios · ${current.exercises.fold(0, (n, e) => n + e.targetSets)} series planificadas',
+              ),
+              Text(
+                controller.lastCompletedFor(current.id) == null
+                    ? 'Sin estrenar'
+                    : 'Último entrenamiento: ${controller.lastCompletedFor(current.id)!.toLocal().toString().split(' ').first}',
+              ),
+              if (current.notes?.isNotEmpty == true) ...[
+                const SizedBox(height: 12),
+                Text(current.notes!),
+              ],
+              const SizedBox(height: 24),
+              Text(
+                'Configuración guardada',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 12),
+              for (final e in current.exercises)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              ExerciseThumbnail(exercise: e),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      RoutineLabels.exerciseName(e.name),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleMedium,
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(RoutineLabels.summary(e)),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (e.sportPlan case final p?) ...[
+                            if (p.objective.isNotEmpty)
+                              Text('Objetivo: ${p.objective}'),
+                            for (final v in p.targets.values.entries)
+                              Text('${v.key.label}: ${v.value}'),
+                            if (p.targets.position.isNotEmpty)
+                              Text('Posición: ${p.targets.position}'),
+                          ],
+                          for (var i = 0; i < e.setTargets.length; i++)
+                            Text(
+                              'Serie ${i + 1}: ${e.setTargets[i].durationSeconds == null ? '${e.setTargets[i].reps ?? '${e.setTargets[i].repsMin}–${e.setTargets[i].repsMax}'} repeticiones' : '${e.setTargets[i].durationSeconds}s'}${e.setTargets[i].weightKg == null ? '' : ' · ${e.setTargets[i].weightKg} kg (${RoutineLabels.load(e.targetLoadType)})'}',
+                            ),
+                          if (e.notes?.isNotEmpty == true) Text(e.notes!),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          bottomNavigationBar: SafeArea(
+            top: false,
+            minimum: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: () =>
+                        startRoutineFlow(context, controller, current),
+                    child: const Text('Iniciar entrenamiento'),
+                  ),
+                ),
+                SizedBox(
+                  width: double.infinity,
+                  child: TextButton(
+                    onPressed: () => runRoutineLibraryAction(
+                      context,
+                      controller,
+                      current,
+                      'edit',
+                    ),
+                    child: const Text('Editar rutina'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    ),
+  );
 }

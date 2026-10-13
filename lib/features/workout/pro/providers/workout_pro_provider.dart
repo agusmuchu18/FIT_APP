@@ -936,23 +936,36 @@ class WorkoutProProvider extends ChangeNotifier {
 
   List<SetEntry> _buildTemplateSets(WorkoutExercise exercise) {
     return List<SetEntry>.generate(exercise.targetSets, (index) {
-      final baseReps = exercise.targetReps ?? exercise.targetRepsMin;
+      final target = index < exercise.setTargets.length
+          ? exercise.setTargets[index]
+          : null;
+      final baseReps = exercise.isTimed
+          ? null
+          : target?.reps ??
+                target?.repsMin ??
+                exercise.targetReps ??
+                exercise.targetRepsMin;
       final load =
           exercise.targetLoadType == RoutineExerciseLoadType.weightedKg ||
-              exercise.targetLoadType == RoutineExerciseLoadType.machineKg
-          ? exercise.targetWeightKg
+              exercise.targetLoadType == RoutineExerciseLoadType.machineKg ||
+              exercise.targetLoadType == RoutineExerciseLoadType.addedWeightKg
+          ? target?.weightKg ?? exercise.targetWeightKg
           : null;
       final assistance =
           exercise.targetLoadType == RoutineExerciseLoadType.assistedKg
-          ? exercise.targetWeightKg
+          ? target?.weightKg ?? exercise.targetWeightKg
           : null;
       return SetEntry(
         id: _uuid.v4(),
         reps: baseReps,
+        durationSeconds: exercise.isTimed
+            ? target?.durationSeconds ?? exercise.targetDurationSeconds
+            : null,
         externalLoadKg: load,
         assistanceKg: assistance,
         restSeconds: exercise.restSeconds,
         rir: exercise.rir,
+        done: false,
       );
     });
   }
@@ -965,23 +978,12 @@ class WorkoutProProvider extends ChangeNotifier {
     if (template.type == WorkoutType.strength) {
       _exercises = template.exercises
           .map(
-            (e) => WorkoutExercise(
+            (e) => e.copyWith(
               id: _uuid.v4(),
-              name: e.name,
-              muscleGroup: e.muscleGroup,
-              equipment: e.equipment,
-              measurement: e.measurement,
-              notes: e.notes,
-              targetSets: e.targetSets,
-              targetReps: e.targetReps,
-              targetRepsMin: e.targetRepsMin,
-              targetRepsMax: e.targetRepsMax,
-              targetLoadType: e.targetLoadType,
-              targetWeightKg: e.targetWeightKg,
-              restSeconds: e.restSeconds,
-              rir: e.rir,
-              sets: e.sets.isNotEmpty
-                  ? e.sets.map((s) => s.copyWith(id: _uuid.v4())).toList()
+              sets: e.setTargets.isEmpty && e.sets.isNotEmpty
+                  ? e.sets
+                        .map((s) => s.copyWith(id: _uuid.v4(), done: false))
+                        .toList()
                   : _buildTemplateSets(e),
             ),
           )

@@ -191,141 +191,116 @@ class TrainingHomeController extends ChangeNotifier {
   }
 
   Future<void> deleteRoutine(WorkoutTemplate routine) async {
-    _routines = _routines.where((element) => element.id != routine.id).toList();
+    final next = _routines.where((e) => e.id != routine.id).toList();
+    await _routinesRepository.replaceRoutines(next);
+    _routines = next;
     _metadata.remove(routine.id);
-    await _persistTemplates();
     await _persistMetadata();
     notifyListeners();
   }
 
   Future<void> duplicateRoutine(WorkoutTemplate routine) async {
-    final duplicated = WorkoutTemplate(
+    final copy = routine.copyWith(
       id: _uuid.v4(),
       name: '${routine.name} (copia)',
-      type: routine.type,
-      origin: TemplateOrigin.user,
-      activityName: routine.activityName,
-      folderId: routine.folderId,
       exercises: routine.exercises
           .map(
-            (exercise) => exercise.copyWith(
-              sets: exercise.sets
-                  .map((set) => set.copyWith(id: _uuid.v4()))
-                  .toList(),
+            (e) => e.copyWith(
+              instanceId: _uuid.v4(),
+              sets: e.sets.map((v) => v.copyWith(id: _uuid.v4())).toList(),
             ),
           )
           .toList(),
     );
-    _routines = [..._routines, duplicated];
-    await _persistTemplates();
+    final next = [..._routines, copy];
+    await _routinesRepository.replaceRoutines(next);
+    _routines = next;
     notifyListeners();
   }
 
-  Future<void> renameRoutine(WorkoutTemplate routine, String name) async {
-    _routines = _routines
-        .map(
-          (element) => element.id == routine.id
-              ? WorkoutTemplate(
-                  id: element.id,
-                  name: name,
-                  type: element.type,
-                  origin: element.origin,
-                  activityName: element.activityName,
-                  folderId: element.folderId,
-                  exercises: element.exercises,
-                )
-              : element,
-        )
-        .toList();
-    await _persistTemplates();
-    notifyListeners();
-  }
+  Future<void> renameRoutine(WorkoutTemplate routine, String name) =>
+      updateRoutine(routine.copyWith(name: name.trim()));
 
   Future<void> updateRoutine(WorkoutTemplate updated) async {
-    final index = _routines.indexWhere((routine) => routine.id == updated.id);
-    if (index < 0) throw StateError('Routine not found');
+    final index = _routines.indexWhere((r) => r.id == updated.id);
+    if (index < 0) throw StateError('La rutina ya no existe');
     final next = [..._routines]..[index] = updated;
     await _routinesRepository.replaceRoutines(next);
     _routines = next;
     notifyListeners();
   }
 
+  Object? _foldersReadError;
+  Future<void> _saveFolders(List<RoutineFolder> next) async {
+    if (_foldersReadError != null) {
+      throw StateError(
+        "La lista de carpetas contiene datos ilegibles y se conserva sin sobrescribir",
+      );
+    }
+    if (_prefs == null) throw StateError('Primero cargá tus carpetas');
+    await _prefs!.setString(
+      _foldersKey,
+      jsonEncode(next.map((e) => e.toJson()).toList()),
+    );
+    _folders = next;
+    notifyListeners();
+  }
+
   Future<void> createFolder(String name) async {
-    final nextSortOrder = _folders.isEmpty
+    if (name.trim().isEmpty) throw ArgumentError('Ingresá un nombre');
+    final order = _folders.isEmpty
         ? 0
-        : _folders
-                  .map((folder) => folder.sortOrder)
-                  .reduce((a, b) => a > b ? a : b) +
-              1;
-    _folders = [
+        : _folders.map((f) => f.sortOrder).reduce((a, b) => a > b ? a : b) + 1;
+    await _saveFolders([
       ..._folders,
-      RoutineFolder(id: _uuid.v4(), name: name, sortOrder: nextSortOrder),
-    ];
-    await _persistFolders();
-    notifyListeners();
+      RoutineFolder(id: _uuid.v4(), name: name.trim(), sortOrder: order),
+    ]);
   }
 
-  Future<void> renameFolder(String folderId, String name) async {
-    _folders = _folders
-        .map(
-          (f) => f.id == folderId
-              ? RoutineFolder(
-                  id: f.id,
-                  name: name,
-                  sortOrder: f.sortOrder,
-                  color: f.color,
-                  icon: f.icon,
-                )
-              : f,
-        )
-        .toList();
-    await _persistFolders();
-    notifyListeners();
+  Future<void> renameFolder(String id, String name) async {
+    if (name.trim().isEmpty) throw ArgumentError('Ingresá un nombre');
+    await _saveFolders(
+      _folders
+          .map(
+            (f) => f.id == id
+                ? RoutineFolder(
+                    id: f.id,
+                    name: name.trim(),
+                    sortOrder: f.sortOrder,
+                    color: f.color,
+                    icon: f.icon,
+                  )
+                : f,
+          )
+          .toList(),
+    );
   }
 
-  Future<void> deleteFolder(String folderId) async {
-    _folders = _folders.where((f) => f.id != folderId).toList();
-    _routines = _routines
-        .map(
-          (r) => r.folderId == folderId
-              ? WorkoutTemplate(
-                  id: r.id,
-                  name: r.name,
-                  type: r.type,
-                  origin: r.origin,
-                  activityName: r.activityName,
-                  folderId: null,
-                  exercises: r.exercises,
-                )
-              : r,
-        )
+  Future<void> deleteFolder(String id) async {
+    if (_foldersReadError != null) {
+      throw StateError(
+        'La lista de carpetas ilegible se conserva sin sobrescribir',
+      );
+    }
+    // Unlink first: a failed folder write leaves every routine safely visible.
+    final routines = _routines
+        .map((r) => r.folderId == id ? r.copyWith(clearFolder: true) : r)
         .toList();
-    await _persistFolders();
-    await _persistTemplates();
-    notifyListeners();
+    await _routinesRepository.replaceRoutines(routines);
+    _routines = routines;
+    await _saveFolders(_folders.where((f) => f.id != id).toList());
   }
 
   Future<void> moveRoutineToFolder(
     WorkoutTemplate routine,
     String? folderId,
   ) async {
-    _routines = _routines
-        .map(
-          (r) => r.id == routine.id
-              ? WorkoutTemplate(
-                  id: r.id,
-                  name: r.name,
-                  type: r.type,
-                  origin: r.origin,
-                  activityName: r.activityName,
-                  folderId: folderId,
-                  exercises: r.exercises,
-                )
-              : r,
-        )
-        .toList();
-    await _persistTemplates();
-    notifyListeners();
+    if (folderId != null && !_folders.any((f) => f.id == folderId)) {
+      throw ArgumentError('La carpeta ya no existe');
+    }
+    await updateRoutine(
+      routine.copyWith(folderId: folderId, clearFolder: folderId == null),
+    );
   }
 
   List<WorkoutTemplate> routinesForFolder(String? folderId) {
@@ -340,6 +315,16 @@ class TrainingHomeController extends ChangeNotifier {
     );
     final effectiveSets = sets == 0 ? routine.exercises.length * 3 : sets;
     return (effectiveSets * 2.5).round().clamp(15, 120);
+  }
+
+  DateTime? lastCompletedFor(String routineId) {
+    final dates =
+        _sessions
+            .where((e) => e.templateId == routineId)
+            .map((e) => e.date)
+            .toList()
+          ..sort();
+    return dates.lastOrNull;
   }
 
   List<WorkoutTemplate> _sortedRoutines() {
@@ -399,10 +384,6 @@ class TrainingHomeController extends ChangeNotifier {
 
   Future<void> _loadTemplates() async {
     _routines = await _routinesRepository.getAllRoutines();
-  }
-
-  Future<void> _persistTemplates() async {
-    await _routinesRepository.replaceRoutines(_routines);
   }
 
   Future<void> _loadSessions() async {
@@ -470,28 +451,21 @@ class TrainingHomeController extends ChangeNotifier {
       return;
     }
     final parsed = <RoutineFolder>[];
+    _foldersReadError = null;
     try {
-      final decoded = jsonDecode(raw) as List<dynamic>;
-      for (final item in decoded) {
+      for (final item in jsonDecode(raw) as List) {
         try {
           parsed.add(
             RoutineFolder.fromJson(Map<String, dynamic>.from(item as Map)),
           );
-        } catch (_) {
-          // A damaged folder must not hide valid folders or sessions.
+        } catch (error) {
+          _foldersReadError = error;
         }
       }
-    } catch (_) {
-      // Keep other workout data available if the folder list is malformed.
+    } catch (error) {
+      _foldersReadError = error;
     }
     _folders = parsed;
-  }
-
-  Future<void> _persistFolders() async {
-    await _prefs?.setString(
-      _foldersKey,
-      jsonEncode(_folders.map((e) => e.toJson()).toList()),
-    );
   }
 
   Future<void> _loadDraft() async {

@@ -1,3 +1,6 @@
+import 'routine_library_card.dart';
+import 'routine_library_actions.dart';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -5,7 +8,6 @@ import '../pro/models/workout_models.dart';
 import 'routine_preview_screen.dart';
 import 'start_routine_flow.dart';
 import 'training_home_controller.dart';
-import 'training_home_widgets.dart';
 
 class FolderRoutinesScreen extends StatelessWidget {
   const FolderRoutinesScreen({
@@ -27,44 +29,40 @@ class FolderRoutinesScreen extends StatelessWidget {
           if (routines.isEmpty) {
             return const Center(child: Text('No hay rutinas en esta carpeta.'));
           }
-          return GridView.builder(
+          return ListView.builder(
             padding: const EdgeInsets.all(16),
             itemCount: routines.length,
-            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-              maxCrossAxisExtent: 420,
-              mainAxisExtent: 220,
-              mainAxisSpacing: 12,
-              crossAxisSpacing: 12,
-            ),
             itemBuilder: (context, index) {
               final routine = routines[index];
-              final metadata = controller.metadataFor(routine.id);
-              final previewExercises = routine.exercises
-                  .map((exercise) => exercise.name)
-                  .where((name) => name.trim().isNotEmpty)
-                  .toList(growable: false);
-              return RoutineMiniCard(
-                title: routine.name,
-                typeTag: _typeLabel(routine.type),
-                secondaryTag: routine.activityName,
-                exercisePreview: previewExercises,
-                exerciseCount: routine.exercises.length,
-                estimatedMinutes: controller.estimatedDuration(routine),
-                lastUsed: 'Última vez: ${_daysAgoLabel(metadata.lastUsedAt)}',
-                isPinned: metadata.pinned,
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => RoutinePreviewScreen(
-                      routine: routine,
-                      controller: controller,
-                      typeLabel: _typeLabel(routine.type),
-                      lastUsedLabel: _daysAgoLabel(metadata.lastUsedAt),
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: RoutineLibraryCard(
+                  routine: routine,
+                  pinned: controller.metadataFor(routine.id).pinned,
+                  lastUsed: controller.lastCompletedFor(routine.id) == null
+                      ? 'Sin estrenar'
+                      : 'Último entrenamiento: ${_daysAgoLabel(controller.lastCompletedFor(routine.id))}',
+                  onOpen: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => RoutinePreviewScreen(
+                        routine: routine,
+                        controller: controller,
+                        typeLabel: _typeLabel(routine.type),
+                        lastUsedLabel: _daysAgoLabel(
+                          controller.lastCompletedFor(routine.id),
+                        ),
+                      ),
                     ),
                   ),
+                  onStart: () => startRoutineFlow(context, controller, routine),
+                  onMenu: (action) => runRoutineLibraryAction(
+                    context,
+                    controller,
+                    routine,
+                    action,
+                  ),
                 ),
-                onStartTap: () =>
-                    startRoutineFlow(context, controller, routine),
-                onMenuSelected: (_) {},
               );
             },
           );

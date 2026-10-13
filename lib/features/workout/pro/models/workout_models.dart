@@ -1,8 +1,43 @@
 import 'dart:convert';
 
+import '../../domain/sport_activity.dart';
+
 enum WorkoutType { strength, cardio, functional, sport, custom }
 
-enum RoutineExerciseLoadType { bodyweight, weightedKg, assistedKg, machineKg }
+enum RoutineExerciseLoadType {
+  bodyweight,
+  weightedKg,
+  assistedKg,
+  machineKg,
+  addedWeightKg,
+}
+
+class RoutineSetTarget {
+  const RoutineSetTarget({
+    this.reps,
+    this.repsMin,
+    this.repsMax,
+    this.weightKg,
+    this.durationSeconds,
+  });
+  final int? reps, repsMin, repsMax, durationSeconds;
+  final double? weightKg;
+  Map<String, dynamic> toJson() => {
+    'reps': reps,
+    'repsMin': repsMin,
+    'repsMax': repsMax,
+    'weightKg': weightKg,
+    'durationSeconds': durationSeconds,
+  };
+  factory RoutineSetTarget.fromJson(Map<String, dynamic> json) =>
+      RoutineSetTarget(
+        reps: json['reps'] as int?,
+        repsMin: json['repsMin'] as int?,
+        repsMax: json['repsMax'] as int?,
+        weightKg: (json['weightKg'] as num?)?.toDouble(),
+        durationSeconds: json['durationSeconds'] as int?,
+      );
+}
 
 class SetEntry {
   SetEntry({
@@ -120,6 +155,11 @@ class WorkoutExercise {
     this.rir,
     List<SetEntry>? sets,
     this.restEnabled,
+    this.instanceId,
+    this.setTargets = const [],
+    this.sportPlan,
+    this.sportResult,
+    this.sportPurpose,
   }) : sets = sets ?? [];
 
   final String id;
@@ -143,9 +183,20 @@ class WorkoutExercise {
   final int? rir;
   final List<SetEntry> sets;
   final bool? restEnabled;
+  final String? instanceId;
+  final List<RoutineSetTarget> setTargets;
+  final SportActivityPlan? sportPlan;
+  final SportMeasurements? sportResult;
+  final FootballGymPurpose? sportPurpose;
 
   WorkoutExercise copyWith({
     bool? restEnabled,
+    String? instanceId,
+    List<RoutineSetTarget>? setTargets,
+    SportActivityPlan? sportPlan,
+    SportMeasurements? sportResult,
+    bool clearSportResult = false,
+    FootballGymPurpose? sportPurpose,
     String? id,
     String? name,
     String? muscleGroup,
@@ -169,6 +220,11 @@ class WorkoutExercise {
   }) {
     return WorkoutExercise(
       restEnabled: restEnabled ?? this.restEnabled,
+      instanceId: instanceId ?? this.instanceId,
+      setTargets: setTargets ?? this.setTargets,
+      sportPlan: sportPlan ?? this.sportPlan,
+      sportPurpose: sportPurpose ?? this.sportPurpose,
+      sportResult: clearSportResult ? null : sportResult ?? this.sportResult,
       id: id ?? this.id,
       name: name ?? this.name,
       muscleGroup: muscleGroup ?? this.muscleGroup,
@@ -200,6 +256,11 @@ class WorkoutExercise {
     'measurement': measurement,
     'notes': notes,
     'targetSets': targetSets,
+    'instanceId': instanceId,
+    'setTargets': setTargets.map((e) => e.toJson()).toList(),
+    'sportPlan': sportPlan?.toJson(),
+    'sportResult': sportResult?.toJson(),
+    'sportPurpose': sportPurpose?.name,
     'restEnabled': restEnabled,
     'targetReps': targetReps,
     'targetDurationSeconds': targetDurationSeconds,
@@ -232,6 +293,23 @@ class WorkoutExercise {
     return WorkoutExercise(
       id: json['id'] as String,
       name: json['name'] as String,
+      instanceId: json['instanceId'] as String?,
+      sportPurpose: json['sportPurpose'] == null
+          ? null
+          : FootballGymPurpose.values.byName(json['sportPurpose'] as String),
+      setTargets: (json['setTargets'] as List<dynamic>? ?? [])
+          .map((e) => RoutineSetTarget.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      sportPlan: json['sportPlan'] is Map<String, dynamic>
+          ? SportActivityPlan.fromJson(
+              json['sportPlan'] as Map<String, dynamic>,
+            )
+          : null,
+      sportResult: json['sportResult'] is Map<String, dynamic>
+          ? SportMeasurements.fromJson(
+              json['sportResult'] as Map<String, dynamic>,
+            )
+          : null,
       muscleGroup: json['muscleGroup'] as String?,
       restEnabled: json['restEnabled'] as bool?,
       equipment: json['equipment'] as String?,
@@ -261,6 +339,8 @@ class WorkoutTemplate {
     this.origin = TemplateOrigin.standard,
     this.activityName,
     this.folderId,
+    this.notes,
+    this.footballMode,
     List<WorkoutExercise>? exercises,
   }) : exercises = exercises ?? [];
 
@@ -270,12 +350,39 @@ class WorkoutTemplate {
   final TemplateOrigin origin;
   final String? activityName;
   final String? folderId;
+  final String? notes;
+  final FootballMode? footballMode;
   final List<WorkoutExercise> exercises;
 
+  WorkoutTemplate copyWith({
+    String? id,
+    String? name,
+    WorkoutType? type,
+    String? folderId,
+    bool clearFolder = false,
+    List<WorkoutExercise>? exercises,
+    String? notes,
+    FootballMode? footballMode,
+    bool clearFootballMode = false,
+  }) => WorkoutTemplate(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    type: type ?? this.type,
+    origin: origin,
+    activityName: activityName,
+    folderId: clearFolder ? null : folderId ?? this.folderId,
+    exercises: exercises ?? this.exercises,
+    notes: notes ?? this.notes,
+    footballMode: clearFootballMode ? null : footballMode ?? this.footballMode,
+  );
+
   Map<String, dynamic> toJson() => {
+    'schemaVersion': 2,
     'id': id,
     'name': name,
     'type': type.name,
+    'notes': notes,
+    'footballMode': footballMode?.name,
     'origin': origin.name,
     'activityName': activityName,
     'folderId': folderId,
@@ -295,6 +402,10 @@ class WorkoutTemplate {
         ),
         activityName: json['activityName'] as String?,
         folderId: json['folderId'] as String?,
+        notes: json['notes'] as String?,
+        footballMode: json['footballMode'] is String
+            ? FootballMode.values.byName(json['footballMode'] as String)
+            : null,
         exercises: (json['exercises'] as List<dynamic>? ?? [])
             .map((e) => WorkoutExercise.fromJson(e as Map<String, dynamic>))
             .toList(),
