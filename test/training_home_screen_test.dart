@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:fit_app/app/theme/app_theme.dart';
 import 'package:fit_app/features/workout/training_home/training_home_screen.dart';
-import 'package:fit_app/features/workout/training_home/training_home_widgets.dart';
+import 'package:fit_app/features/workout/training_home/routine_library_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -41,7 +41,10 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
-        await tester.drag(find.byType(ListView).first, const Offset(0, -1100));
+        await tester.drag(
+          find.byType(CustomScrollView).first,
+          const Offset(0, -1100),
+        );
         await tester.pumpAndSettle();
         expect(find.text('Rutina guardada'), findsOneWidget);
         expect(tester.takeException(), isNull);
@@ -71,7 +74,10 @@ void main() {
       expect(find.text('Gym'), findsNothing);
       expect(find.text('Casa'), findsNothing);
       expect(find.text('Outdoor'), findsNothing);
-      await tester.drag(find.byType(ListView).first, const Offset(0, -500));
+      await tester.drag(
+        find.byType(CustomScrollView).first,
+        const Offset(0, -500),
+      );
       await tester.pumpAndSettle();
       expect(find.text('Todavía no tenés rutinas guardadas.'), findsOneWidget);
       expect(
@@ -103,12 +109,19 @@ void main() {
     });
 
     await pumpHome(tester);
-    await tester.drag(find.byType(ListView).first, const Offset(0, -500));
+    await tester.drag(
+      find.byType(CustomScrollView).first,
+      const Offset(0, -500),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('Mis rutinas'), findsOneWidget);
     expect(find.text('Ordenar'), findsOneWidget);
-    expect(find.byType(RoutineMiniCard), findsAtLeastNWidgets(1));
+    expect(find.byType(RoutineLibraryCard), findsAtLeastNWidgets(1));
+    expect(
+      tester.getSize(find.byType(RoutineLibraryCard).first).width,
+      greaterThan(330),
+    );
     expect(find.text('Gym Gym'), findsNothing);
     expect(find.text('Press banca'), findsOneWidget);
   });
@@ -138,7 +151,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Entrenamiento libre'), findsOneWidget);
-    await tester.drag(find.byType(ListView).first, const Offset(0, -550));
+    await tester.drag(
+      find.byType(CustomScrollView).first,
+      const Offset(0, -550),
+    );
     await tester.pumpAndSettle();
     expect(find.text('Nueva rutina'), findsOneWidget);
     expect(tester.takeException(), isNull);

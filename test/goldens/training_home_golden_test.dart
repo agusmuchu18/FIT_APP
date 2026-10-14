@@ -25,7 +25,11 @@ void main() {
     });
 
     await tester.pumpWidget(
-      MaterialApp(theme: AppTheme.dark, home: const TrainingHomeScreen()),
+      MaterialApp(
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.dark,
+        home: const TrainingHomeScreen(),
+      ),
     );
     await tester.runAsync(() async {
       await precacheImage(

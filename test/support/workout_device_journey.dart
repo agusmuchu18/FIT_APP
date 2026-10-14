@@ -58,16 +58,17 @@ Future<void> runWorkoutDeviceJourney(
   await tester.enterText(name, 'Rutina de verificación');
   FocusManager.instance.primaryFocus?.unfocus();
   await tester.pumpAndSettle();
-  await tester.tap(find.text('Guardar'));
+  await tester.tap(find.text('Guardar rutina'));
   await _ready(tester, find.text('Mis rutinas'));
   final routines = await tester.runAsync(
     () => RoutinesRepository().getAllRoutines(),
   );
   expect(routines!.single.name, 'Rutina de verificación');
   await tester.ensureVisible(find.text('Rutina de verificación'));
+  await tester.pumpAndSettle();
   await tester.tap(find.text('Rutina de verificación'));
-  await _ready(tester, find.text('Iniciar rutina'));
-  await tester.tap(find.text('Iniciar rutina'));
+  await _ready(tester, find.text('Iniciar entrenamiento'));
+  await tester.tap(find.text('Iniciar entrenamiento'));
   await _ready(tester, find.text('Tu sesión'));
   await _ready(tester, find.text('Press banca').first);
   await tester.tap(find.text('Press banca').first);
@@ -80,11 +81,11 @@ Future<void> runWorkoutDeviceJourney(
   await tester.pumpAndSettle();
   // Back must flush the latest keystroke before navigating away.
   await tester.tap(find.byType(BackButton));
-  await _ready(tester, find.text('Iniciar rutina'));
+  await _ready(tester, find.text('Iniciar entrenamiento'));
   final rich = WorkoutRepository();
   final draft = await tester.runAsync(rich.loadDraftExercises);
   expect(draft!.single.sets.first.reps, 9);
-  await tester.tap(find.text('Iniciar rutina'));
+  await tester.tap(find.text('Iniciar entrenamiento'));
   await _ready(tester, find.text('Tu sesión'));
   await tester.tap(find.text('Pausar sesión'));
   await _ready(tester, find.text('Reanudar sesión'));
@@ -111,7 +112,7 @@ Future<void> runWorkoutDeviceJourney(
   await tester.scrollUntilVisible(find.text('Volver al inicio'), 400);
   await tester.tap(find.text('Volver al inicio'));
   await tester.pumpAndSettle();
-  await tester.drag(find.byType(ListView).first, const Offset(0, 1200));
+  await tester.drag(find.byType(CustomScrollView).first, const Offset(0, 1200));
   await _ready(tester, find.text('Hoy: sesión registrada'));
   await tester.tap(find.byTooltip('Historial'));
   await _ready(tester, find.text('Actividad semanal'));

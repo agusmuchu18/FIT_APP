@@ -62,12 +62,12 @@ void main() {
       first.saveRoutine(
         name: 'A',
         workoutType: WorkoutType.strength,
-        exercises: [],
+        exercises: [WorkoutExercise(id: 'bench_press', name: 'Press banca')],
       ),
       second.saveRoutine(
         name: 'B',
         workoutType: WorkoutType.strength,
-        exercises: [],
+        exercises: [WorkoutExercise(id: 'bench_press', name: 'Press banca')],
       ),
     ]);
     expect((await first.getAllRoutines()).map((routine) => routine.name), [
@@ -88,7 +88,7 @@ void main() {
       await guestRoutines.saveRoutine(
         name: 'Invitado',
         workoutType: WorkoutType.strength,
-        exercises: [],
+        exercises: [WorkoutExercise(id: 'bench_press', name: 'Press banca')],
       );
       AccountStorageScope.current = AccountStorageScope.forUser('A');
       final accountA = WorkoutRepository();
@@ -103,7 +103,7 @@ void main() {
       await routinesA.saveRoutine(
         name: 'A',
         workoutType: WorkoutType.strength,
-        exercises: [],
+        exercises: [WorkoutExercise(id: 'bench_press', name: 'Press banca')],
       );
       AccountStorageScope.current = AccountStorageScope.forUser('B');
       expect(await WorkoutRepository().loadDraftExercises(), isNull);
@@ -116,7 +116,7 @@ void main() {
       await guestRoutines.saveRoutine(
         name: 'Invitado tardío',
         workoutType: WorkoutType.strength,
-        exercises: [],
+        exercises: [WorkoutExercise(id: 'bench_press', name: 'Press banca')],
       );
       expect(await WorkoutRepository().loadDraftExercises(), isNull);
       expect((await accountA.loadDraftIdentity())!.sessionId, 'A-draft');

@@ -1,3 +1,4 @@
+import 'package:fit_app/features/workout/training_home/exercise_configuration_sheet.dart';
 import 'package:fit_app/features/workout/application/workout_session_controller.dart';
 import 'package:fit_app/features/workout/data/workout_repository.dart';
 import 'package:fit_app/features/workout/pro/models/workout_models.dart';
@@ -16,7 +17,12 @@ seedRoutine() async {
     name: 'Fuerza A',
     workoutType: WorkoutType.strength,
     exercises: [
-      WorkoutExercise(id: 'bench_press', name: 'Press banca', targetSets: 3),
+      WorkoutExercise(
+        id: 'bench_press',
+        name: 'Press banca',
+        targetSets: 3,
+        targetLoadType: RoutineExerciseLoadType.weightedKg,
+      ),
     ],
   );
   final controller = TrainingHomeController();
@@ -83,19 +89,38 @@ void main() {
       ),
     );
 
+    await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField).first, 'Fuerza renovada');
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Press banca'));
     await tester.tap(find.text('Press banca'));
     await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.widgetWithText(TextField, 'Series'),
+      180,
+      scrollable: find
+          .descendant(
+            of: find.byType(ExerciseConfigurationSheet),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    await tester.pumpAndSettle();
     await tester.enterText(find.widgetWithText(TextField, 'Series'), '4');
+    await tester.tap(find.text('Fijas'));
+    await tester.pumpAndSettle();
     await tester.enterText(
       find.widgetWithText(TextField, 'Repeticiones objetivo'),
       '10',
     );
-    await tester.enterText(
-      find.widgetWithText(TextField, 'Descanso (segundos)'),
-      '90',
+    final inherit = find.widgetWithText(
+      SwitchListTile,
+      'Heredar descanso de la sesión',
     );
-    await tester.tap(find.text('Aplicar'));
+    await tester.ensureVisible(inherit);
+    await tester.tap(inherit);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Guardar configuración'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Guardar cambios'));
     await tester.pumpAndSettle();
@@ -119,15 +144,19 @@ void main() {
       ),
     );
 
-    await tester.tap(find.text('Agregar ejercicio'));
     await tester.pumpAndSettle();
-    await tester.enterText(
-      find.widgetWithText(TextField, 'Buscar ejercicio'),
-      'pecho en maquina',
-    );
+    await tester.tap(find.text('Agregar'));
     await tester.pumpAndSettle();
-    await tester.tap(
-      find.widgetWithText(ListTile, 'Press de pecho en máquina'),
+    await tester.enterText(find.byType(TextField).first, 'pecho en maquina');
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.tap(find.byTooltip('Agregar Press de pecho en máquina'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Listo'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byTooltip('Opciones de Press de pecho en máquina'),
+      250,
+      scrollable: find.byType(Scrollable).first,
     );
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Opciones de Press de pecho en máquina'));
@@ -173,26 +202,53 @@ void main() {
       ),
     );
 
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Press banca'));
     await tester.tap(find.text('Press banca'));
     await tester.pumpAndSettle();
-    await tester.enterText(find.widgetWithText(TextField, 'Series'), '0');
-    await tester.tap(find.text('Aplicar'));
+    await tester.scrollUntilVisible(
+      find.widgetWithText(TextField, 'Series'),
+      180,
+      scrollable: find
+          .descendant(
+            of: find.byType(ExerciseConfigurationSheet),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
     await tester.pumpAndSettle();
-    expect(find.textContaining('Revisá las series'), findsOneWidget);
+    await tester.enterText(find.widgetWithText(TextField, 'Series'), '0');
+    await tester.tap(find.text('Guardar configuración'));
+    await tester.pumpAndSettle();
+    expect(find.text('Usá un entero entre 1 y 30'), findsOneWidget);
     await tester.enterText(find.widgetWithText(TextField, 'Series'), '3');
-    await tester.enterText(
-      find.widgetWithText(TextField, 'Repeticiones objetivo'),
-      '',
+    await tester.tap(find.text('Rango'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(
+      find.widgetWithText(TextField, 'Carga externa objetivo (kg)'),
+    );
+    await tester.scrollUntilVisible(
+      find.widgetWithText(TextField, 'Carga externa objetivo (kg)'),
+      150,
+      scrollable: find
+          .descendant(
+            of: find.byType(ExerciseConfigurationSheet),
+            matching: find.byType(Scrollable),
+          )
+          .first,
     );
     await tester.enterText(
-      find.widgetWithText(TextField, 'Carga objetivo (kg)'),
+      find.widgetWithText(TextField, 'Carga externa objetivo (kg)'),
       '',
     );
-    await tester.enterText(
-      find.widgetWithText(TextField, 'Descanso (segundos)'),
-      '',
+    final inherit = find.widgetWithText(
+      SwitchListTile,
+      'Heredar descanso de la sesión',
     );
-    await tester.tap(find.text('Aplicar'));
+    await tester.ensureVisible(inherit);
+    await tester.tap(inherit);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Guardar configuración'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Guardar cambios'));
     await tester.pumpAndSettle();
@@ -203,39 +259,42 @@ void main() {
     expect(saved.exercises.single.restSeconds, isNull);
   });
 
-  testWidgets('duplicate catalog exercises expand independently in preview', (
-    tester,
-  ) async {
-    final seeded = await seedRoutine();
-    addTearDown(seeded.controller.dispose);
-    final repeated = WorkoutTemplate(
-      id: seeded.routine.id,
-      name: seeded.routine.name,
-      type: seeded.routine.type,
-      origin: seeded.routine.origin,
-      exercises: [
-        seeded.routine.exercises.single,
-        seeded.routine.exercises.single.copyWith(targetSets: 4),
-      ],
-    );
-    await tester.pumpWidget(
-      MaterialApp(
-        home: RoutinePreviewScreen(
-          routine: repeated,
-          controller: seeded.controller,
-          typeLabel: 'Fuerza',
-          lastUsedLabel: 'Nunca',
+  testWidgets(
+    'duplicate catalog exercises show independent saved configurations in preview',
+    (tester) async {
+      final seeded = await seedRoutine();
+      addTearDown(seeded.controller.dispose);
+      final repeated = WorkoutTemplate(
+        id: seeded.routine.id,
+        name: seeded.routine.name,
+        type: seeded.routine.type,
+        origin: seeded.routine.origin,
+        exercises: [
+          seeded.routine.exercises.single,
+          seeded.routine.exercises.single.copyWith(targetSets: 4),
+        ],
+      );
+      await seeded.controller.updateRoutine(repeated);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: RoutinePreviewScreen(
+            routine: repeated,
+            controller: seeded.controller,
+            typeLabel: 'Fuerza',
+            lastUsedLabel: 'Nunca',
+          ),
         ),
-      ),
-    );
+      );
 
-    await tester.tap(find.widgetWithText(ListTile, 'Press banca').first);
-    await tester.pumpAndSettle();
-    expect(find.text('Sets: 3'), findsOneWidget);
-    expect(find.text('Sets: 4'), findsNothing);
-    await tester.tap(find.widgetWithText(ListTile, 'Press banca').last);
-    await tester.pumpAndSettle();
-    expect(find.text('Sets: 3'), findsNothing);
-    expect(find.text('Sets: 4'), findsOneWidget);
-  });
+      expect(find.textContaining('3 series ·'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.textContaining('4 series ·'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.textContaining('4 series ·'), findsOneWidget);
+      expect(find.text('Press banca'), findsWidgets);
+      expect(tester.takeException(), isNull);
+    },
+  );
 }

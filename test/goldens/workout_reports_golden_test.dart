@@ -69,6 +69,38 @@ void main() {
             context,
           );
         }
+        for (final category in [
+          'push',
+          'pull',
+          'legs',
+          'arms',
+          'mobility',
+          'mixed',
+        ]) {
+          await precacheImage(
+            ResizeImage(
+              AssetImage('assets/images/workout/history_$category.webp'),
+              width: 160,
+            ),
+            context,
+          );
+        }
+        for (final id in [
+          'bench_press',
+          'pull_up',
+          'back_squat',
+          'deadlift',
+          'military_press',
+          'plank',
+        ]) {
+          await precacheImage(
+            ResizeImage(
+              AssetImage('assets/images/workout/exercises/$id.webp'),
+              width: 160,
+            ),
+            context,
+          );
+        }
       });
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);

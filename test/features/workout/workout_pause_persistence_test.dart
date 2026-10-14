@@ -73,9 +73,9 @@ void main() {
       workoutId: 'session-clock',
     );
     final prefs = await SharedPreferences.getInstance();
-    final json =
-        jsonDecode(prefs.getString(WorkoutRepository.draftKey)!)
-            as Map<String, dynamic>;
+    final json = jsonDecode(
+      prefs.getString(WorkoutRepository.draftKey)!,
+    ) as Map<String, dynamic>;
     json['isPaused'] = true;
     json['pausedAt'] = start.add(const Duration(minutes: 4)).toIso8601String();
     json['accumulatedPausedSeconds'] = 60;

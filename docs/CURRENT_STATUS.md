@@ -1,6 +1,6 @@
 # Current status
 
-**Actualizado:** 2026-10-12
+**Actualizado:** 2026-10-13
 **Base auditada:** `9f61c68ff4a362d48f97265d300f7ae54de64edc`
 **Carpeta local:** `D:\Datos User\Escritorio\fitness\fit_app`
 
@@ -11,7 +11,7 @@
 | SDK | Flutter 3.47.3 / Dart 3.13.3; actualización estable aplicada |
 | `dart format` | Base de 158 archivos; cambios posteriores formateados por archivo |
 | `flutter analyze --fatal-infos` | 0 problemas |
-| `flutter test --no-pub` | 142/142 aprobadas, incluido el ensayo del recorrido móvil con Hive en disco |
+| `flutter test --no-pub` | 170/170 aprobadas, incluido el ensayo del recorrido móvil con Hive en disco y el sistema de rutinas/fútbol |
 | Web release `/FIT_APP/` | Compila con fuente e imágenes locales; dry run Wasm aprobado |
 | YAML de GitHub | Sintaxis válida |
 | APK Android | Debug recompilado con dependencias/assets actuales; falta ejecución en dispositivo físico. Release anterior no valida este corte |
@@ -19,11 +19,23 @@
 
 La ampliación previa de alimentación/USDA está en la carpeta original y sigue
 pendiente de commit. Entrenamiento tiene commits locales en
-`codex/workout-redesign-20261012`; no se hizo push ni despliegue. Las comprobaciones
+`codex/workout-redesign-20261012` y `codex/routine-system-20261012`; no se hizo push ni despliegue. Las comprobaciones
 corresponden a la carpeta de trabajo actual, que conserva cambios previos de otros
 módulos; no equivalen a validar un checkout limpio de esos commits.
 
 ## Entrenamiento · corte actual
+
+El corte de rutinas está en `docs/plans/ROUTINE_SYSTEM_2026_10_12.md`: borrador único
+recuperable por cuenta, ficha/configuración compartida, biblioteca con slivers,
+preview guardado, objetivos por serie, lastre y fútbol en seis modalidades/14
+actividades. El catálogo conserva 297 IDs. Se generaron seis ilustraciones WebP
+específicas (71.974 bytes); las otras 291 usan categorías genéricas con cobertura
+pendiente registrada en el manifiesto. Guardado/error/reintento/doble toque,
+carpetas, registros deportivos e inset de teclado están comprobados en host.
+Análisis estricto: 0 problemas; suite: 170/170; web release y APK debug compilados.
+No se realizó ejecución Android/iPhone, prueba de lectores nativos ni perfilado.
+
+El párrafo siguiente describe el corte previo del rediseño de sesiones.
 
 El rediseño autorizado del 12/10 está documentado en
 `docs/plans/WORKOUT_REDESIGN_2026_10_12.md`, con entrega A–J y comprobaciones.

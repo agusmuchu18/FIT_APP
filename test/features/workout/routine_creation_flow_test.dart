@@ -1,3 +1,5 @@
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:fit_app/features/workout/domain/sport_activity.dart';
 import 'package:fit_app/features/workout/pro/data/exercise_definition.dart';
 import 'package:fit_app/features/workout/pro/models/workout_models.dart';
 import 'package:fit_app/features/workout/training_home/routine_draft_controller.dart';
@@ -16,6 +18,9 @@ class FakeRoutinesRepository extends RoutinesRepository {
     required List<WorkoutExercise> exercises,
     String? activityName,
     String? folderId,
+    String? routineId,
+    String? notes,
+    FootballMode? footballMode,
   }) async {
     saveCalled = true;
     return WorkoutTemplate(
@@ -31,6 +36,7 @@ class FakeRoutinesRepository extends RoutinesRepository {
 }
 
 void main() {
+  setUp(() => SharedPreferences.setMockInitialValues({}));
   testWidgets(
     'con selección, Listo navega a review y Guardar llama saveRoutine',
     (tester) async {
@@ -79,7 +85,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 260));
       await tester.tap(find.text('Curl clásico'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Agregar'));
+      await tester.tap(find.text('Agregar a rutina'));
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Listo'));
@@ -88,7 +94,7 @@ void main() {
 
       await tester.enterText(find.byType(TextField).first, 'Upper A');
       await tester.pump();
-      await tester.tap(find.text('Guardar'));
+      await tester.tap(find.text('Guardar rutina'));
       await tester.pumpAndSettle();
 
       expect(repo.saveCalled, isTrue);

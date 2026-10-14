@@ -782,3 +782,22 @@ y `WORKOUT_ASSET_PROMPTS_2026_10_12.json`.
 
 Figma no se modifica en este encargo. La validación móvil y el tema claro siguen
 sin certificación; las capturas de Windows no los sustituyen.
+
+## Aplicación autorizada · Sistema de rutinas, 2026-10-13
+
+El nuevo prompt maestro autoriza el flujo Flutter de creación, revisión, biblioteca,
+preview y fútbol. Conserva la paleta/Inter y los radios ya definidos, con acento
+de Entrenamiento también en sus controles. No modifica Figma ni añade otra paleta.
+
+Las miniaturas de ejercicio usan 72 unidades, dentro del intervalo 64–80 pedido;
+la ficha muestra media de 180 y el preview de 120. Reutilizan shape.control=12,
+target mínimo 48, spacing 8/12/16/24 y motion.normal=200 ms. Las tres entradas
+fotográficas aprobadas mantienen su composición y ancho completo.
+
+A texto ampliado, miniatura/acciones y texto se reorganizan para conservar el ancho
+de lectura. La biblioteca muestra tarjetas completas y el guardado permanece por
+encima del teclado. Las imágenes específicas y genéricas se distinguen por el
+registro de cobertura y la ficha; un placeholder conserva la función del ejercicio.
+El inventario está en `EXERCISE_ART_MANIFEST.json` y la evidencia en
+`../plans/ROUTINE_SYSTEM_2026_10_12.md`. Estos tamaños son reglas del componente
+autorizado; el registro de tokens existente no se duplica.

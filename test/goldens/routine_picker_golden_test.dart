@@ -28,12 +28,13 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.dark,
+        debugShowCheckedModeBanner: false,
         home: const TemplateExercisePickerScreen(),
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('Explorá ejercicios'), findsOneWidget);
-    expect(find.byType(ExerciseExpandableCard), findsWidgets);
+    expect(find.text('Explorar ejercicios'), findsOneWidget);
+    expect(find.byType(ExerciseBrowserCard), findsWidgets);
     await expectLater(
       find.byType(Scaffold),
       matchesGoldenFile('routine_picker_default.png'),

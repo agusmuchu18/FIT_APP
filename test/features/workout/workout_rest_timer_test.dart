@@ -72,9 +72,9 @@ void main() {
     await Future<void>.delayed(const Duration(milliseconds: 20));
 
     final prefs = await SharedPreferences.getInstance();
-    final draft =
-        jsonDecode(prefs.getString(WorkoutRepository.draftKey)!)
-            as Map<String, dynamic>;
+    final draft = jsonDecode(
+      prefs.getString(WorkoutRepository.draftKey)!,
+    ) as Map<String, dynamic>;
     final pausedAt = DateTime.now();
     draft['isPaused'] = true;
     draft['pausedAt'] = pausedAt.toIso8601String();

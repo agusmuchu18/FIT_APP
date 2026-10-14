@@ -59,12 +59,22 @@ FitnessIntegrationManager -> servicios externos -> FitnessRepository
 Nutrition UI -> controladores -> FoodRepository -> catálogo offline + FdcClient/proxy
 Workout UI -> controladores -> WorkoutRepository/RoutinesRepository -> Hive + preferencias
 WorkoutSessionController -> FitnessRepository.saveWorkout -> Home/Rachas
+Explorador/ficha/revisión/edición -> RoutineDraftController -> borrador por cuenta
+RoutinesRepository -> WorkoutTemplate con planes por serie/fútbol -> sesión con resultados separados
 workout_completion_recovery.dart -> repara proyección de sesión rica al arrancar
 ```
 
 El estado no está unificado: conviven `Provider`/`ChangeNotifier`,
 `InheritedWidget`, controladores singleton y estado local de widgets. Ver límites
 en `ARCHITECTURE.md`.
+
+Para rutinas: `training_home/template_exercise_picker_screen.dart`,
+`exercise_configuration_sheet.dart`, `routine_review_screen.dart` y
+`routine_draft_controller.dart`. Fútbol/validación: `domain/sport_activity.dart`
+y `routine_plan_validation.dart`. Evidencia e inventario:
+`docs/plans/ROUTINE_SYSTEM_2026_10_12.md`; cobertura de imágenes:
+`docs/design/EXERCISE_ART_MANIFEST.json`. Buscar el símbolo relevante antes de
+leer el catálogo completo de 297 ejercicios.
 
 ## Pruebas
 
