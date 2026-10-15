@@ -118,9 +118,10 @@ class TrainingHomeController extends ChangeNotifier {
     final last = latestSession;
     if (last == null) return false;
     final now = DateTime.now();
-    return now.year == last.date.year &&
-        now.month == last.date.month &&
-        now.day == last.date.day;
+    final localDate = last.date.toLocal();
+    return now.year == localDate.year &&
+        now.month == localDate.month &&
+        now.day == localDate.day;
   }
 
   RoutineMetadata metadataFor(String routineId) {

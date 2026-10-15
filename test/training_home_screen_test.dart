@@ -56,6 +56,35 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  for (final daysAgo in [0, 2]) {
+    testWidgets('fecha UTC se compara con el día local ($daysAgo días)', (
+      tester,
+    ) async {
+      final date = DateTime.now().subtract(Duration(days: daysAgo)).toUtc();
+      SharedPreferences.setMockInitialValues({
+        'pro_workout_templates': jsonEncode([]),
+        'pro_workout_sessions': jsonEncode([
+          {
+            'id': 'utc-session',
+            'type': 'strength',
+            'date': date.toIso8601String(),
+            'exercises': [],
+            'durationSeconds': 60,
+          },
+        ]),
+      });
+      await pumpHome(tester);
+      expect(
+        find.text(
+          daysAgo == 0
+              ? 'Hoy: sesión registrada'
+              : 'Hoy: sin sesión registrada',
+        ),
+        findsOneWidget,
+      );
+    });
+  }
+
   testWidgets(
     'renderiza estado vacío con entrada fotográfica y acciones claras',
     (tester) async {
