@@ -1,6 +1,6 @@
 # Current status
 
-**Actualizado:** 2026-10-13
+**Actualizado:** 2026-10-14
 **Base auditada:** `9f61c68ff4a362d48f97265d300f7ae54de64edc`
 **Carpeta local:** `D:\Datos User\Escritorio\fitness\fit_app`
 
@@ -11,21 +11,33 @@
 | SDK | Flutter 3.47.3 / Dart 3.13.3; actualización estable aplicada |
 | `dart format` | Base de 158 archivos; cambios posteriores formateados por archivo |
 | `flutter analyze --fatal-infos` | 0 problemas |
-| `flutter test --no-pub` | 170/170 aprobadas, incluido el ensayo del recorrido móvil con Hive en disco y el sistema de rutinas/fútbol |
+| `flutter test --no-pub` | 195/195 aprobadas, incluido el ensayo host con Hive, rutinas/fútbol y el ajuste UX inline |
 | Web release `/FIT_APP/` | Compila con fuente e imágenes locales; dry run Wasm aprobado |
 | YAML de GitHub | Sintaxis válida |
-| APK Android | Debug recompilado con dependencias/assets actuales; falta ejecución en dispositivo físico. Release anterior no valida este corte |
+| APK Android | Debug compilado el 13/10, anterior al ajuste inline del 14/10. Este último corte no se recompiló ni ejecutó en Android |
 | Integración móvil local | APK de prueba compilado; recorrido compartido ensayado en host. No ejecutado en Android/iPhone |
 
 La ampliación previa de alimentación/USDA está en la carpeta original y sigue
 pendiente de commit. Entrenamiento tiene commits locales en
-`codex/workout-redesign-20261012` y `codex/routine-system-20261012`; no se hizo push ni despliegue. Las comprobaciones
+`codex/workout-redesign-20261012`, `codex/routine-system-20261012` y
+`codex/routine-inline-ux-20261014`; no se hizo push ni despliegue. Las comprobaciones
 corresponden a la carpeta de trabajo actual, que conserva cambios previos de otros
 módulos; no equivalen a validar un checkout limpio de esos commits.
 
 ## Entrenamiento · corte actual
 
-El corte de rutinas está en `docs/plans/ROUTINE_SYSTEM_2026_10_12.md`: borrador único
+El ajuste del 14/10 está en `docs/plans/ROUTINE_INLINE_UX_2026_10_14.md`: configuración
+inline reutilizada, ficha técnica sólo desde el nombre y + independiente. Conserva
+valores temporales al contraer/desmontar filas; los valores válidos seleccionados
+actualizan el borrador por cuenta. Filtros vectoriales de 40 dp con selección
+múltiple, traducciones y taxonomía separada sin alterar IDs. Corregida la comparación
+UTC/local de «sesión hoy». Verificados 195 tests, análisis estricto sin problemas,
+web release compilada y nueve capturas nuevas revisadas; incluye 320 px/200%,
+teclado, anclaje con movimiento y fallback. El tema de Entrenamiento sigue siendo
+oscuro también cuando el contenedor usa un tema claro. Android/iPhone, lectores
+nativos y perfilado siguen pendientes; el APK anterior no verifica este cambio.
+
+El corte anterior de rutinas está en `docs/plans/ROUTINE_SYSTEM_2026_10_12.md`: borrador único
 recuperable por cuenta, ficha/configuración compartida, biblioteca con slivers,
 preview guardado, objetivos por serie, lastre y fútbol en seis modalidades/14
 actividades. El catálogo conserva 297 IDs. Se generaron seis ilustraciones WebP

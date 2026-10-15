@@ -801,3 +801,19 @@ registro de cobertura y la ficha; un placeholder conserva la función del ejerci
 El inventario está en `EXERCISE_ART_MANIFEST.json` y la evidencia en
 `../plans/ROUTINE_SYSTEM_2026_10_12.md`. Estos tamaños son reglas del componente
 autorizado; el registro de tokens existente no se duplica.
+
+## Aplicación autorizada · Explorador inline, 2026-10-14
+
+El cuerpo de la tarjeta expande un configurador compacto, sin otra tarjeta ni
+imagen grande. El nombre con indicador de información abre la ficha técnica
+(ilustración 240); el botón circular + agrega sin alterar la expansión. Una sola
+tarjeta abierta, transición de 200 ms y omisión de movimiento cuando se solicita.
+Las opciones por serie se agrupan como avanzadas; la barra inferior reserva
+espacio. A texto ampliado, rótulos completos sobre campos, carga en varias líneas
+y acciones en disposición vertical. No se incorporan estilos arbitrarios nuevos.
+
+Filtros: ilustración circular vectorial de 40, fila táctil completa con checkbox,
+selección visible y secciones por taxonomía. Se reutilizan paleta, Inter, radios y
+contrastes del tema de Entrenamiento. El inventario gráfico es código local en
+`routine_filter_artwork.dart`; no añade tokens ni dependencias. Evidencia y límites:
+`../plans/ROUTINE_INLINE_UX_2026_10_14.md`.

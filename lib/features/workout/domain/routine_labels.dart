@@ -15,7 +15,48 @@ class RoutineLabels {
     'other': 'Otro',
     'bench': 'Banco',
     'smith': 'Máquina Smith',
+    'medicine_ball': 'Balón medicinal',
+    'rope': 'Cuerda',
+    'sled': 'Trineo de entrenamiento',
+    'carry': 'Transporte con carga',
   };
+  static const categories = {
+    'cardio',
+    'estabilidad',
+    'movilidad',
+    'cuerpo completo',
+    'full_body',
+    'full body',
+  };
+  static const muscleNames = {
+    'core': 'Zona media',
+    'pantorrilla': 'Pantorrillas',
+    'antebrazo': 'Antebrazos',
+    'hombro anterior': 'Deltoides anteriores',
+    'full_body': 'Cuerpo completo',
+    'full body': 'Cuerpo completo',
+  };
+  static String muscleName(String value) {
+    final text = muscleNames[value.toLowerCase()] ?? value.replaceAll('_', ' ');
+    return text.isEmpty
+        ? 'Sin datos'
+        : '${text[0].toUpperCase()}${text.substring(1)}';
+  }
+
+  static String muscles(List<String> values) =>
+      values.isEmpty ? 'Sin datos' : values.map(muscleName).join(', ');
+  static String pattern(String value) =>
+      const {
+        'push': 'Empuje',
+        'pull': 'Tracción',
+        'hinge': 'Bisagra de cadera',
+        'squat': 'Sentadilla',
+        'core': 'Zona media',
+        'carry': 'Transporte con carga',
+        'isolation': 'Aislamiento',
+        'general': 'General',
+      }[value] ??
+      muscleName(value);
   static String equipmentName(String? value) =>
       equipment[value?.toLowerCase()] ?? value ?? 'Sin equipamiento';
   static String load(RoutineExerciseLoadType value) => switch (value) {

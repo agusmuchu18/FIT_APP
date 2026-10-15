@@ -76,6 +76,12 @@ y `routine_plan_validation.dart`. Evidencia e inventario:
 `docs/design/EXERCISE_ART_MANIFEST.json`. Buscar el símbolo relevante antes de
 leer el catálogo completo de 297 ejercicios.
 
+Ajuste inline del explorador: `exercise_configuration_sheet.dart` comparte formulario
+con la edición; `exercise_technical_screen.dart` abre sólo desde el nombre.
+Filtros: `routine_filter_sheet.dart`, `presentation/widgets/routine_filter_artwork.dart`
+y traducciones en `domain/routine_labels.dart`. Evidencia del comportamiento y
+taxonomía heredada: `docs/plans/ROUTINE_INLINE_UX_2026_10_14.md`.
+
 ## Pruebas
 
 | Ruta | Cobertura principal |

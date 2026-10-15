@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../../app/theme/app_theme.dart';
 
 import '../domain/routine_labels.dart';
+import '../domain/routine_plan_validation.dart';
+import '../domain/exercise_technique.dart';
 import '../domain/sport_activity.dart';
 import '../pro/data/exercise_definition.dart';
 import '../pro/models/workout_models.dart';
@@ -37,6 +39,18 @@ Future<WorkoutExercise?> showExerciseConfiguration(
   ),
 );
 
+/// Ephemeral raw form state. Valid selected values belong to RoutineDraftController.
+/// Kept by the explorer, so lazy rows may unmount without losing unfinished input.
+class ExerciseConfigurationMemory {
+  WorkoutExercise? value;
+  bool? range;
+  List<RoutineSetTarget>? targets;
+  final raw = <String, String>{};
+  final sport = SportMeasurementsDraft();
+  bool valid = true;
+  bool? advanced;
+}
+
 class ExerciseConfigurationSheet extends StatefulWidget {
   const ExerciseConfigurationSheet({
     super.key,
@@ -44,11 +58,17 @@ class ExerciseConfigurationSheet extends StatefulWidget {
     this.definition,
     required this.action,
     this.sportGym = false,
+    this.inline = false,
+    this.memory,
+    this.onChanged,
   });
   final WorkoutExercise exercise;
   final ExerciseDefinition? definition;
   final String action;
   final bool sportGym;
+  final bool inline;
+  final ExerciseConfigurationMemory? memory;
+  final ValueChanged<WorkoutExercise?>? onChanged;
   @override
   State<ExerciseConfigurationSheet> createState() =>
       _ExerciseConfigurationSheetState();
@@ -57,23 +77,33 @@ class ExerciseConfigurationSheet extends StatefulWidget {
 class _ExerciseConfigurationSheetState
     extends State<ExerciseConfigurationSheet> {
   final _form = GlobalKey<FormState>();
-  late WorkoutExercise _value = widget.exercise;
-  late final _sets = TextEditingController(text: '${_value.targetSets}');
-  late final _reps = TextEditingController(text: '${_value.targetReps ?? 10}');
-  late final _min = TextEditingController(text: '${_value.targetRepsMin ?? 8}');
+  late final _memory = widget.memory ?? ExerciseConfigurationMemory();
+  late WorkoutExercise _value = _memory.value ?? widget.exercise;
+  late final _sets = TextEditingController(
+    text: _memory.raw['sets'] ?? '${_value.targetSets}',
+  );
+  late final _reps = TextEditingController(
+    text: _memory.raw['reps'] ?? '${_value.targetReps ?? 10}',
+  );
+  late final _min = TextEditingController(
+    text: _memory.raw['min'] ?? '${_value.targetRepsMin ?? 8}',
+  );
   late final _max = TextEditingController(
-    text: '${_value.targetRepsMax ?? 12}',
+    text: _memory.raw['max'] ?? '${_value.targetRepsMax ?? 12}',
   );
   late final _seconds = TextEditingController(
-    text: '${_value.targetDurationSeconds ?? 30}',
+    text: _memory.raw['seconds'] ?? '${_value.targetDurationSeconds ?? 30}',
   );
   late final _weight = TextEditingController(
-    text: _value.targetWeightKg?.toString() ?? '',
+    text: _memory.raw['weight'] ?? _value.targetWeightKg?.toString() ?? '',
   );
-  late bool _range = _value.targetReps == null;
-  late List<RoutineSetTarget> _targets = [..._value.setTargets];
+  late bool _range = _memory.range ?? (_value.targetReps == null);
+  late List<RoutineSetTarget> _targets = [
+    ...?_memory.targets,
+    if (_memory.targets == null) ..._value.setTargets,
+  ];
   SportMeasurements? _sportTargets;
-  bool _invalidSport = false;
+  late bool _invalidSport = _value.sportPlan != null && !_memory.valid;
   @override
   void dispose() {
     for (final c in [_sets, _reps, _min, _max, _seconds, _weight]) {
@@ -82,13 +112,88 @@ class _ExerciseConfigurationSheetState
     super.dispose();
   }
 
+  void _change(VoidCallback update) {
+    setState(update);
+    _memory.value = _value;
+    _memory.range = _range;
+    _memory.targets = [..._targets];
+    for (final entry in {
+      'sets': _sets,
+      'reps': _reps,
+      'min': _min,
+      'max': _max,
+      'seconds': _seconds,
+      'weight': _weight,
+    }.entries) {
+      _memory.raw[entry.key] = entry.value.text;
+    }
+    final candidate = _validValue;
+    _memory.valid = candidate != null;
+    widget.onChanged?.call(candidate);
+  }
+
+  WorkoutExercise? get _validValue {
+    if (_invalidSport) return null;
+    if (_value.sportPlan case final plan?) {
+      final value = _value.copyWith(
+        sportPlan: SportActivityPlan(
+          activityId: plan.activityId,
+          mode: plan.mode,
+          targets: _sportTargets ?? plan.targets,
+          objective: plan.objective,
+        ),
+      );
+      return RoutinePlanValidation.error(value) == null ? value : null;
+    }
+    if (_positive(_sets.text, max: 30) != null ||
+        (_value.isTimed
+            ? _positive(_seconds.text) != null
+            : _range
+            ? _positive(_min.text) != null || _positive(_max.text) != null
+            : _positive(_reps.text) != null)) {
+      return null;
+    }
+    bool validWeight(String raw) {
+      final n = double.tryParse(raw.replaceAll(',', '.'));
+      return raw.trim().isEmpty || (n != null && n.isFinite && n >= 0);
+    }
+
+    if (_value.targetLoadType != RoutineExerciseLoadType.bodyweight &&
+        !validWeight(_weight.text)) {
+      return null;
+    }
+    for (final entry in _memory.raw.entries.where(
+      (e) => e.key.startsWith('series:'),
+    )) {
+      if (entry.key.contains(':weight')
+          ? _value.targetLoadType != RoutineExerciseLoadType.bodyweight &&
+                !validWeight(entry.value)
+          : _positive(entry.value) != null) {
+        return null;
+      }
+    }
+    final value = _preview.copyWith(
+      targetRepsMin: _range
+          ? int.tryParse(_min.text)
+          : int.tryParse(_reps.text),
+      targetRepsMax: _range
+          ? int.tryParse(_max.text)
+          : int.tryParse(_reps.text),
+      clearTargetWeightKg:
+          _value.targetLoadType == RoutineExerciseLoadType.bodyweight ||
+          _weight.text.trim().isEmpty,
+    );
+    return RoutinePlanValidation.error(value) == null ? value : null;
+  }
+
   WorkoutExercise get _preview => _value.copyWith(
     targetSets: int.tryParse(_sets.text),
     targetReps: _range || _value.isTimed ? null : int.tryParse(_reps.text),
     clearTargetReps: _range || _value.isTimed,
     targetRepsMin: int.tryParse(_min.text),
     targetRepsMax: int.tryParse(_max.text),
-    targetDurationSeconds: int.tryParse(_seconds.text),
+    targetDurationSeconds: _value.isTimed ? int.tryParse(_seconds.text) : null,
+    clearTargetDuration: !_value.isTimed,
     targetWeightKg: double.tryParse(_weight.text.replaceAll(',', '.')),
     clearTargetWeightKg: _weight.text.isEmpty,
     setTargets: _targets,
@@ -101,15 +206,38 @@ class _ExerciseConfigurationSheetState
         : 'Usá un entero entre 1 y $max';
   }
 
+  Widget _labeled(String label, Widget Function(InputDecoration) field) {
+    final large = MediaQuery.textScalerOf(context).scale(16) > 24;
+    final input = field(
+      InputDecoration(
+        labelText: large ? null : label,
+        hintText: large ? label : null,
+      ),
+    );
+    return large
+        ? Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(label, style: Theme.of(context).textTheme.bodySmall),
+              const SizedBox(height: 8),
+              Semantics(label: label, child: input),
+            ],
+          )
+        : input;
+  }
+
   Widget _number(String label, TextEditingController c, {int max = 9999}) =>
       Padding(
         padding: const EdgeInsets.only(bottom: 12),
-        child: TextFormField(
-          controller: c,
-          keyboardType: TextInputType.number,
-          decoration: InputDecoration(labelText: label),
-          validator: (v) => _positive(v, max: max),
-          onChanged: (_) => setState(() {}),
+        child: _labeled(
+          label,
+          (decoration) => TextFormField(
+            controller: c,
+            keyboardType: TextInputType.number,
+            decoration: decoration,
+            validator: (v) => _positive(v, max: max),
+            onChanged: (_) => _change(() {}),
+          ),
         ),
       );
   @override
@@ -118,152 +246,166 @@ class _ExerciseConfigurationSheetState
     final activity = footballActivities
         .where((e) => e.id == _value.sportPlan?.activityId)
         .firstOrNull;
-    return SizedBox(
-      height: MediaQuery.sizeOf(context).height * .92,
-      child: Form(
-        key: _form,
-        child: Column(
-          children: [
-            Expanded(
-              child: ListView(
-                padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
-                children: [
-                  Center(child: ExerciseThumbnail(exercise: _value, size: 180)),
-                  const SizedBox(height: 16),
-                  Text(
-                    RoutineLabels.exerciseName(_value.name),
-                    style: Theme.of(context).textTheme.headlineSmall,
+    final content = Form(
+      key: _form,
+      autovalidateMode: widget.inline
+          ? AutovalidateMode.onUserInteraction
+          : AutovalidateMode.disabled,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _configurationBody(context, [
+            if (!widget.inline) ...[
+              Center(child: ExerciseThumbnail(exercise: _value, size: 180)),
+              const SizedBox(height: 16),
+              Text(
+                RoutineLabels.exerciseName(_value.name),
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+              if (!ExerciseArtRegistry.specific.contains(_value.id))
+                const Text(
+                  'Ilustración genérica de categoría',
+                  style: TextStyle(fontSize: 12),
+                ),
+            ],
+            if (definition != null) ...[
+              if (!widget.inline)
+                Text(
+                  'Principales: ${RoutineLabels.muscles(definition.primaryMuscles)}',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              if (definition.secondaryMuscles.isNotEmpty)
+                Text(
+                  'Secundarios: ${RoutineLabels.muscles(definition.secondaryMuscles)}',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              const SizedBox(height: 8),
+              Text(
+                exerciseTechniques[_value.id]?.summary ?? 'Configurá tus objetivos. La técnica ampliada está disponible desde el nombre.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+            SizedBox(height: widget.inline ? 16 : 24),
+            Text(
+              widget.inline ? 'Configuración rápida' : 'Objetivos de la rutina',
+              style: widget.inline
+                  ? Theme.of(context).textTheme.titleMedium
+                  : Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 12),
+            if (activity != null) ...[
+              Text(activity.description),
+              const SizedBox(height: 12),
+              TextFormField(
+                initialValue: _value.sportPlan!.objective,
+                decoration: const InputDecoration(
+                  labelText: 'Objetivo / descripción',
+                ),
+                onChanged: (v) => _change(
+                  () => _value = _value.copyWith(
+                    sportPlan: SportActivityPlan(
+                      activityId: activity.id,
+                      mode: activity.mode,
+                      targets: _sportTargets ?? _value.sportPlan!.targets,
+                      objective: v,
+                    ),
                   ),
-                  Text(
-                    activity != null
-                        ? 'Fútbol · ${activity.mode.label}'
-                        : '${definition?.primaryMuscles.join(', ') ?? _value.muscleGroup ?? 'Músculo sin datos'} · ${RoutineLabels.equipmentName(_value.equipment)}',
+                ),
+              ),
+              const SizedBox(height: 12),
+              SportMeasurementsFields(
+                activity: activity,
+                initial: _value.sportPlan!.targets,
+                draft: _memory.sport,
+                onChanged: (v) => _change(() {
+                  _sportTargets = v;
+                  _invalidSport = v == null;
+                  if (v != null) {
+                    _value = _value.copyWith(
+                      sportPlan: SportActivityPlan(
+                        activityId: activity.id,
+                        mode: activity.mode,
+                        targets: v,
+                        objective: _value.sportPlan!.objective,
+                      ),
+                    );
+                  }
+                }),
+              ),
+            ] else ...[
+              if (widget.sportGym) ...[
+                DropdownButtonFormField<FootballGymPurpose>(
+                  initialValue: _value.sportPurpose,
+                  decoration: const InputDecoration(
+                    labelText: 'Objetivo deportivo (opcional)',
                   ),
-                  if (!ExerciseArtRegistry.specific.contains(_value.id))
-                    const Text(
-                      'Ilustración genérica de categoría',
-                      style: TextStyle(fontSize: 12),
-                    ),
-                  if (definition != null) ...[
-                    const SizedBox(height: 16),
-                    Text(
-                      'Músculos',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    Text(
-                      'Principales: ${definition.primaryMuscles.isEmpty ? 'Sin datos' : definition.primaryMuscles.join(', ')}',
-                    ),
-                    Text(
-                      'Secundarios: ${definition.secondaryMuscles.isEmpty ? 'Sin datos' : definition.secondaryMuscles.join(', ')}',
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Técnica',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    Text(
-                      _technique[_value.id] ?? 'El catálogo no incluye una ficha técnica revisada para este ejercicio. Consultá una demostración profesional antes de practicar un movimiento nuevo.',
-                    ),
+                  isExpanded: true,
+                  items: [
+                    for (final p in FootballGymPurpose.values)
+                      DropdownMenuItem(value: p, child: Text(p.label)),
                   ],
-                  const SizedBox(height: 24),
-                  Text(
-                    'Objetivos de la rutina',
-                    style: Theme.of(context).textTheme.titleLarge,
+                  onChanged: (p) =>
+                      _change(() => _value = _value.copyWith(sportPurpose: p)),
+                ),
+                const Text(
+                  'Esta etiqueta organiza tu plan; no estima beneficios ni rendimiento.',
+                ),
+                const SizedBox(height: 16),
+              ],
+              Row(
+                children: [
+                  IconButton(
+                    onPressed: () {
+                      final n = int.tryParse(_sets.text) ?? 3;
+                      if (n > 1) _change(() => _sets.text = '${n - 1}');
+                    },
+                    tooltip: 'Quitar una serie',
+                    icon: const Icon(Icons.remove_circle_outline),
                   ),
-                  const SizedBox(height: 12),
-                  if (activity != null) ...[
-                    Text(activity.description),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      initialValue: _value.sportPlan!.objective,
-                      decoration: const InputDecoration(
-                        labelText: 'Objetivo / descripción',
-                      ),
-                      onChanged: (v) => _value = _value.copyWith(
-                        sportPlan: SportActivityPlan(
-                          activityId: activity.id,
-                          mode: activity.mode,
-                          targets: _sportTargets ?? _value.sportPlan!.targets,
-                          objective: v,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    SportMeasurementsFields(
-                      activity: activity,
-                      initial: _value.sportPlan!.targets,
-                      onChanged: (v) {
-                        _sportTargets = v;
-                        _invalidSport = v == null;
-                      },
-                    ),
-                  ] else ...[
-                    if (widget.sportGym) ...[
-                      DropdownButtonFormField<FootballGymPurpose>(
-                        initialValue: _value.sportPurpose,
-                        decoration: const InputDecoration(
-                          labelText: 'Objetivo deportivo (opcional)',
-                        ),
-                        isExpanded: true,
-                        items: [
-                          for (final p in FootballGymPurpose.values)
-                            DropdownMenuItem(value: p, child: Text(p.label)),
-                        ],
-                        onChanged: (p) => setState(
-                          () => _value = _value.copyWith(sportPurpose: p),
-                        ),
-                      ),
-                      const Text(
-                        'Esta etiqueta organiza tu plan; no estima beneficios ni rendimiento.',
-                      ),
-                      const SizedBox(height: 16),
-                    ],
-                    Row(
-                      children: [
-                        IconButton(
-                          onPressed: () {
-                            final n = int.tryParse(_sets.text) ?? 3;
-                            if (n > 1) setState(() => _sets.text = '${n - 1}');
-                          },
-                          tooltip: 'Quitar una serie',
-                          icon: const Icon(Icons.remove_circle_outline),
-                        ),
-                        Expanded(child: _number('Series', _sets, max: 30)),
-                        IconButton(
-                          onPressed: () {
-                            final n = int.tryParse(_sets.text) ?? 3;
-                            if (n < 30) setState(() => _sets.text = '${n + 1}');
-                          },
-                          tooltip: 'Agregar una serie',
-                          icon: const Icon(Icons.add_circle_outline),
-                        ),
-                      ],
-                    ),
-                    if (_value.isTimed)
-                      _number('Duración objetivo (segundos)', _seconds)
-                    else ...[
-                      SegmentedButton<bool>(
-                        segments: const [
-                          ButtonSegment(value: false, label: Text('Fijas')),
-                          ButtonSegment(value: true, label: Text('Rango')),
-                        ],
-                        selected: {_range},
-                        onSelectionChanged: (v) =>
-                            setState(() => _range = v.first),
-                      ),
-                      const SizedBox(height: 12),
-                      if (_range) ...[
-                        _number('Mínimo de repeticiones', _min),
-                        _number('Máximo de repeticiones', _max),
-                      ] else
-                        _number('Repeticiones objetivo', _reps),
-                    ],
+                  Expanded(child: _number('Series', _sets, max: 30)),
+                  IconButton(
+                    onPressed: () {
+                      final n = int.tryParse(_sets.text) ?? 3;
+                      if (n < 30) _change(() => _sets.text = '${n + 1}');
+                    },
+                    tooltip: 'Agregar una serie',
+                    icon: const Icon(Icons.add_circle_outline),
+                  ),
+                ],
+              ),
+              if (_value.isTimed)
+                _number('Duración objetivo (segundos)', _seconds)
+              else ...[
+                SegmentedButton<bool>(
+                  direction: MediaQuery.textScalerOf(context).scale(16) > 24
+                      ? Axis.vertical
+                      : Axis.horizontal,
+                  segments: const [
+                    ButtonSegment(value: false, label: Text('Fijas')),
+                    ButtonSegment(value: true, label: Text('Rango')),
+                  ],
+                  selected: {_range},
+                  onSelectionChanged: (v) => _change(() => _range = v.first),
+                ),
+                const SizedBox(height: 12),
+                if (_range) ...[
+                  _number('Mínimo de repeticiones', _min),
+                  _number('Máximo de repeticiones', _max),
+                ] else
+                  _number('Repeticiones objetivo', _reps),
+              ],
+              _labeled(
+                'Tipo de carga',
+                (decoration) =>
                     DropdownButtonFormField<RoutineExerciseLoadType>(
                       initialValue: _value.targetLoadType,
                       isExpanded: true,
-                      decoration: const InputDecoration(
-                        labelText: 'Tipo de carga',
-                      ),
+                      decoration: decoration,
+                      isDense: MediaQuery.textScalerOf(context).scale(16) <= 24,
+                      itemHeight:
+                          MediaQuery.textScalerOf(context).scale(16) > 24
+                          ? null
+                          : kMinInteractiveDimension,
                       items: [
                         for (final type in RoutineExerciseLoadType.values)
                           DropdownMenuItem(
@@ -273,7 +415,7 @@ class _ExerciseConfigurationSheetState
                       ],
                       onChanged: (type) {
                         if (type != null) {
-                          setState(() {
+                          _change(() {
                             _value = _value.copyWith(
                               targetLoadType: type,
                               clearTargetWeightKg:
@@ -286,94 +428,82 @@ class _ExerciseConfigurationSheetState
                         }
                       },
                     ),
-                    if (_value.targetLoadType !=
-                        RoutineExerciseLoadType.bodyweight) ...[
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: _weight,
-                        onChanged: (_) => setState(() {}),
-                        keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true,
-                        ),
-                        decoration: InputDecoration(
-                          labelText:
-                              '${RoutineLabels.load(_value.targetLoadType)} objetivo (kg)',
-                        ),
-                        validator: (v) {
-                          if (v?.trim().isEmpty != false) return null;
-                          final n = double.tryParse(v!.replaceAll(',', '.'));
-                          return n != null && n.isFinite && n >= 0
-                              ? null
-                              : 'Carga inválida';
-                        },
-                      ),
-                    ],
-                    const SizedBox(height: 16),
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text('Objetivos por serie'),
-                      subtitle: const Text(
-                        'Los objetivos individuales se conservan al cambiar los generales.',
-                      ),
-                      value: _targets.isNotEmpty,
-                      onChanged: (enabled) => setState(
-                        () => _targets = enabled
-                            ? List.generate(
-                                int.tryParse(_sets.text)?.clamp(1, 30) ?? 3,
-                                (_) => RoutineSetTarget(
-                                  reps: _range || _value.isTimed
-                                      ? null
-                                      : int.tryParse(_reps.text),
-                                  repsMin: _range && !_value.isTimed
-                                      ? int.tryParse(_min.text)
-                                      : null,
-                                  repsMax: _range && !_value.isTimed
-                                      ? int.tryParse(_max.text)
-                                      : null,
-                                  weightKg: double.tryParse(
-                                    _weight.text.replaceAll(',', '.'),
-                                  ),
-                                  durationSeconds: _value.isTimed
-                                      ? int.tryParse(_seconds.text)
-                                      : null,
-                                ),
-                              )
-                            : [],
-                      ),
+              ),
+              if (_value.targetLoadType !=
+                  RoutineExerciseLoadType.bodyweight) ...[
+                const SizedBox(height: 12),
+                _labeled(
+                  '${RoutineLabels.load(_value.targetLoadType)} objetivo (kg)',
+                  (decoration) => TextFormField(
+                    controller: _weight,
+                    onChanged: (_) => _change(() {}),
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
                     ),
-                    for (var i = 0; i < _targets.length; i++) _individual(i),
-                  ],
-                  const SizedBox(height: 16),
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: const Text('Heredar descanso de la sesión'),
-                    value:
-                        _value.restSeconds == null &&
-                        _value.restEnabled != false,
-                    onChanged: (inherit) => setState(
-                      () => _value = _value.copyWith(
-                        restEnabled: true,
-                        restSeconds: inherit ? null : 90,
-                        clearRestSeconds: inherit,
-                      ),
-                    ),
+                    decoration: decoration,
+                    validator: (v) {
+                      if (v?.trim().isEmpty != false) return null;
+                      final n = double.tryParse(v!.replaceAll(',', '.'));
+                      return n != null && n.isFinite && n >= 0
+                          ? null
+                          : 'Carga inválida';
+                    },
                   ),
-                  if (_value.restSeconds != null || _value.restEnabled == false)
-                    WorkoutRestSelector(
-                      enabled: _value.restEnabled != false,
-                      seconds: _value.restSeconds ?? 90,
-                      onToggle: (v) => setState(
-                        () => _value = _value.copyWith(restEnabled: v),
-                      ),
-                      onChanged: (v) => setState(
-                        () => _value = _value.copyWith(restSeconds: v),
-                      ),
-                    ),
-                  const SizedBox(height: 16),
-                  Text(RoutineLabels.summary(_preview)),
-                ],
+                ),
+              ],
+              const SizedBox(height: 16),
+              if (widget.inline)
+                ExpansionTile(
+                  tilePadding: EdgeInsets.zero,
+                  childrenPadding: EdgeInsets.zero,
+                  title: const Text('Opciones avanzadas'),
+                  initiallyExpanded: _memory.advanced ?? _targets.isNotEmpty,
+                  maintainState: true,
+                  expansionAnimationStyle:
+                      MediaQuery.disableAnimationsOf(context)
+                      ? AnimationStyle.noAnimation
+                      : const AnimationStyle(
+                          duration: Duration(milliseconds: 200),
+                        ),
+                  onExpansionChanged: (value) => _memory.advanced = value,
+                  children: _seriesOptions(),
+                )
+              else
+                ..._seriesOptions(),
+            ],
+            const SizedBox(height: 16),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Heredar descanso de la sesión'),
+              value: _value.restSeconds == null && _value.restEnabled != false,
+              onChanged: (inherit) => _change(
+                () => _value = _value.copyWith(
+                  restEnabled: true,
+                  restSeconds: inherit ? null : 90,
+                  clearRestSeconds: inherit,
+                ),
               ),
             ),
+            if (_value.restSeconds != null || _value.restEnabled == false)
+              WorkoutRestSelector(
+                enabled: _value.restEnabled != false,
+                seconds: _value.restSeconds ?? 90,
+                onToggle: (v) =>
+                    _change(() => _value = _value.copyWith(restEnabled: v)),
+                onChanged: (v) =>
+                    _change(() => _value = _value.copyWith(restSeconds: v)),
+              ),
+            const SizedBox(height: 16),
+            Text(RoutineLabels.summary(_preview)),
+            if (widget.inline && !_memory.valid)
+              const Padding(
+                padding: EdgeInsets.only(top: 8),
+                child: Text(
+                  'Revisá los valores. Se conserva la última configuración válida.',
+                ),
+              ),
+          ]),
+          if (!widget.inline)
             SafeArea(
               top: false,
               child: Padding(
@@ -387,21 +517,80 @@ class _ExerciseConfigurationSheetState
                 ),
               ),
             ),
-          ],
-        ),
+        ],
+      ),
+    );
+    return widget.inline
+        ? content
+        : SizedBox(
+            height: MediaQuery.sizeOf(context).height * .92,
+            child: content,
+          );
+  }
+
+  Widget _configurationBody(BuildContext context, List<Widget> children) {
+    if (widget.inline) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: children,
+      );
+    }
+    return Expanded(
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        children: children,
       ),
     );
   }
+
+  List<Widget> _seriesOptions() => [
+    SwitchListTile(
+      contentPadding: EdgeInsets.zero,
+      title: const Text('Objetivos por serie'),
+      subtitle: const Text(
+        'Los objetivos individuales se conservan al cambiar los generales.',
+      ),
+      value: _targets.isNotEmpty,
+      onChanged: (enabled) => _change(() {
+        _memory.raw.removeWhere((key, _) => key.startsWith('series:'));
+        _targets = enabled
+            ? List.generate(
+                int.tryParse(_sets.text)?.clamp(1, 30) ?? 3,
+                (_) => RoutineSetTarget(
+                  reps: _range || _value.isTimed
+                      ? null
+                      : int.tryParse(_reps.text),
+                  repsMin: _range && !_value.isTimed
+                      ? int.tryParse(_min.text)
+                      : null,
+                  repsMax: _range && !_value.isTimed
+                      ? int.tryParse(_max.text)
+                      : null,
+                  weightKg: double.tryParse(_weight.text.replaceAll(',', '.')),
+                  durationSeconds: _value.isTimed
+                      ? int.tryParse(_seconds.text)
+                      : null,
+                ),
+              )
+            : [];
+      }),
+    ),
+    for (var i = 0; i < _targets.length; i++) _individual(i),
+  ];
 
   Widget _individual(int index) {
     final target = _targets[index];
     Widget number(String label, int? value, void Function(int?) change) =>
         TextFormField(
-          initialValue: value?.toString() ?? '',
+          initialValue:
+              _memory.raw['series:$index:$label'] ?? value?.toString() ?? '',
           decoration: InputDecoration(labelText: '$label · serie ${index + 1}'),
           keyboardType: TextInputType.number,
           validator: _positive,
-          onChanged: (v) => setState(() => change(int.tryParse(v))),
+          onChanged: (v) => _change(() {
+            _memory.raw['series:$index:$label'] = v;
+            change(int.tryParse(v));
+          }),
         );
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
@@ -448,7 +637,10 @@ class _ExerciseConfigurationSheetState
             ),
           if (_value.targetLoadType != RoutineExerciseLoadType.bodyweight)
             TextFormField(
-              initialValue: target.weightKg?.toString() ?? '',
+              initialValue:
+                  _memory.raw['series:$index:weight'] ??
+                  target.weightKg?.toString() ??
+                  '',
               decoration: InputDecoration(
                 labelText:
                     '${RoutineLabels.load(_value.targetLoadType)} (kg) · serie ${index + 1}',
@@ -463,15 +655,16 @@ class _ExerciseConfigurationSheetState
                     ? null
                     : 'Carga inválida';
               },
-              onChanged: (v) => setState(
-                () => _targets[index] = RoutineSetTarget(
+              onChanged: (v) => _change(() {
+                _memory.raw['series:$index:weight'] = v;
+                _targets[index] = RoutineSetTarget(
                   reps: target.reps,
                   repsMin: target.repsMin,
                   repsMax: target.repsMax,
                   durationSeconds: target.durationSeconds,
                   weightKg: double.tryParse(v.replaceAll(',', '.')),
-                ),
-              ),
+                );
+              }),
             ),
         ],
       ),
@@ -479,81 +672,16 @@ class _ExerciseConfigurationSheetState
   }
 
   void _apply() {
-    if (!_form.currentState!.validate() || _invalidSport) return;
-    if (_value.sportPlan != null) {
-      final p = _value.sportPlan!;
-      Navigator.pop(
-        context,
-        _value.copyWith(
-          sportPlan: SportActivityPlan(
-            activityId: p.activityId,
-            mode: p.mode,
-            targets: _sportTargets ?? p.targets,
-            objective: p.objective,
-          ),
-        ),
-      );
-      return;
-    }
-    if (_range &&
-        !_value.isTimed &&
-        int.parse(_max.text) < int.parse(_min.text)) {
+    if (!_form.currentState!.validate()) return;
+    final result = _validValue;
+    if (result == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('El máximo no puede ser menor que el mínimo.'),
+          content: Text('Revisá los objetivos y los rangos de cada serie.'),
         ),
       );
       return;
     }
-    if (_targets.any(
-      (t) =>
-          t.repsMin != null && (t.repsMax == null || t.repsMax! < t.repsMin!),
-    )) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Revisá el rango de repeticiones de cada serie.'),
-        ),
-      );
-      return;
-    }
-    final sets = int.parse(_sets.text);
-    if (_targets.isNotEmpty && _targets.length != sets) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'La cantidad de series debe coincidir con los objetivos individuales.',
-          ),
-        ),
-      );
-      return;
-    }
-    Navigator.pop(
-      context,
-      _value.copyWith(
-        targetSets: sets,
-        targetReps: _range || _value.isTimed ? null : int.parse(_reps.text),
-        clearTargetReps: _range || _value.isTimed,
-        targetRepsMin: _range ? int.parse(_min.text) : int.parse(_reps.text),
-        targetRepsMax: _range ? int.parse(_max.text) : int.parse(_reps.text),
-        targetDurationSeconds: _value.isTimed ? int.parse(_seconds.text) : null,
-        targetWeightKg:
-            _value.targetLoadType == RoutineExerciseLoadType.bodyweight
-            ? null
-            : double.tryParse(_weight.text.replaceAll(',', '.')),
-        clearTargetWeightKg:
-            _value.targetLoadType == RoutineExerciseLoadType.bodyweight ||
-            _weight.text.isEmpty,
-        setTargets: _targets,
-      ),
-    );
+    Navigator.pop(context, result);
   }
 }
-
-const _technique = {
-  'bench_press': 'Inicio: acostado en banco, pies apoyados y agarre estable. Ejecución: bajá la barra de forma controlada y empujá. Evitá rebotar la barra; usá soportes y asistencia adecuados.',
-  'pull_up': 'Inicio: agarre prono de la barra. Ejecución: elevá el cuerpo de forma controlada y descendé sin dejarte caer. Evitá balanceos para completar repeticiones.',
-  'back_squat': 'Inicio: barra apoyada en la parte alta de la espalda y pies firmes. Ejecución: flexioná cadera y rodillas con control; volvé a extender. Mantené una profundidad que puedas controlar.',
-  'deadlift': 'Inicio: barra cerca de las piernas y agarre firme. Ejecución: extendé cadera y rodillas manteniendo la barra próxima al cuerpo. Evitá tirones y movimientos bruscos.',
-  'military_press': 'Inicio: de pie, barra delante de los hombros. Ejecución: empujá por encima de la cabeza y bajá con control. Evitá compensar con una extensión excesiva del tronco.',
-  'plank': 'Inicio: antebrazos y puntas de pies apoyados. Mantené el cuerpo alineado y respiración regular. Finalizá cuando no puedas sostener una posición controlada.',
-};

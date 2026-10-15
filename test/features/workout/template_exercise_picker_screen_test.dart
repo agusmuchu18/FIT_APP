@@ -63,7 +63,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Explorar ejercicios'), findsOneWidget);
-      expect(find.text('Curl clásico'), findsOneWidget);
+      expect(find.text('Curl clásico', findRichText: true), findsOneWidget);
       expect(find.byType(ExerciseBrowserCard), findsOneWidget);
 
       await tester.tap(find.byTooltip('Agregar Curl clásico'));
@@ -88,9 +88,7 @@ void main() {
       await tester.enterText(find.byType(TextField).first, 'curl');
       await tester.pump(const Duration(milliseconds: 260));
 
-      await tester.tap(find.text('Curl clásico'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Agregar a rutina'));
+      await tester.tap(find.byTooltip('Agregar Curl clásico'));
       await tester.pumpAndSettle();
 
       expect(find.textContaining('agregado'), findsNothing);

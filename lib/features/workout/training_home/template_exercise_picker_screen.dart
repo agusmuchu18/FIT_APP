@@ -19,6 +19,8 @@ import '../domain/routine_labels.dart';
 import '../domain/sport_activity.dart';
 import '../presentation/widgets/exercise_thumbnail.dart';
 import 'exercise_configuration_sheet.dart';
+import 'exercise_technical_screen.dart';
+import 'routine_filter_sheet.dart';
 
 class ExercisePickerController extends ChangeNotifier {
   ExercisePickerController({
@@ -208,6 +210,8 @@ class ExercisePickerController extends ChangeNotifier {
       exercise.equipment,
       RoutineLabels.equipmentName(exercise.equipment),
       RoutineLabels.exerciseName(exercise.name),
+      ...exercise.primaryMuscles.map(RoutineLabels.muscleName),
+      ...exercise.secondaryMuscles.map(RoutineLabels.muscleName),
     ].map(_normalize);
 
     return searchable.any((field) => field.contains(normalizedQuery));
@@ -262,6 +266,14 @@ class _TemplateExercisePickerScreenState
   late final RoutineDraftController _draftController;
   late final RoutinesRepository _repository;
   late final Map<String, ExerciseDefinition> _exercisesById;
+  final _scroll = ScrollController();
+  final _rowHeaders = <String, GlobalKey>{};
+  ({String id, double y})? _scrollAnchor;
+  Timer? _anchorTimer;
+  bool _anchorScheduled = false;
+  final _configurationMemory = <String, ExerciseConfigurationMemory>{};
+  final _pendingConfigurations = <String, WorkoutExercise>{};
+  final _invalidConfigurations = <String>{};
   bool _allowPop = false;
   String _sportQuery = "";
   int _modeRevision = 0;
@@ -287,6 +299,8 @@ class _TemplateExercisePickerScreenState
 
   @override
   void dispose() {
+    _anchorTimer?.cancel();
+    _scroll.dispose();
     if (_ownedController) {
       _controller.dispose();
     }
@@ -308,7 +322,6 @@ class _TemplateExercisePickerScreenState
         listenable: Listenable.merge([_controller, _draftController]),
         builder: (context, _) {
           final hasSelection = _draftController.selectedCount > 0;
-          final miniBarHeight = hasSelection ? 72.0 : 0.0;
           final overlayPadding = hasInProgressBar ? 76.0 : 0.0;
           return PopScope(
             canPop: _allowPop || !hasSelection,
@@ -395,244 +408,246 @@ class _TemplateExercisePickerScreenState
                         ),
                       ),
                     )
-                  : Stack(
+                  : Column(
                       children: [
-                        CustomScrollView(
-                          slivers: [
-                            SliverToBoxAdapter(
-                              child: Padding(
-                                padding: const EdgeInsets.fromLTRB(
-                                  16,
-                                  12,
-                                  16,
-                                  8,
-                                ),
-                                child: Column(
-                                  children: [
-                                    WorkoutTypeSegment(
-                                      selected: _draftController.workoutType,
-                                      onChanged: (type) => _changeMode(
-                                        type,
-                                        _draftController.footballMode,
-                                      ),
-                                    ),
-                                    if (_draftController.workoutType ==
-                                        TemplateWorkoutType.sport) ...[
-                                      const SizedBox(height: 12),
-                                      const Text('Fútbol'),
-                                      DropdownButtonFormField<FootballMode>(
-                                        key: ValueKey(_modeRevision),
-                                        initialValue:
-                                            _draftController.footballMode,
-                                        isExpanded: true,
-                                        decoration: const InputDecoration(
-                                          labelText: 'Modalidad',
-                                        ),
-                                        items: [
-                                          for (final mode
-                                              in FootballMode.values)
-                                            DropdownMenuItem(
-                                              value: mode,
-                                              child: Text(mode.label),
-                                            ),
-                                        ],
-                                        onChanged: (mode) {
-                                          if (mode != null) {
-                                            _changeMode(
-                                              TemplateWorkoutType.sport,
-                                              mode,
-                                            );
-                                          }
-                                        },
-                                      ),
-                                    ],
-                                    const SizedBox(height: 12),
-                                    ExerciseSearchField(
-                                      key: ValueKey(
-                                        '${_draftController.workoutType}_${_draftController.footballMode}',
-                                      ),
-                                      onChanged: (value) {
-                                        if (_isSportActivities) {
-                                          setState(
-                                            () => _sportQuery = value
-                                                .trim()
-                                                .toLowerCase(),
-                                          );
-                                        } else {
-                                          _controller.setQueryDebounced(value);
-                                        }
-                                      },
-                                    ),
-                                    const SizedBox(height: 12),
-                                    if (!_isSportActivities)
-                                      FilterPillsRow(
-                                        equipmentCount:
-                                            _controller.equipmentFilters.length,
-                                        muscleCount:
-                                            _controller.muscleFilters.length,
-                                        onTapEquipment: () => _showFilterSheet(
-                                          context,
-                                          title: 'Equipamiento',
-                                          options: _controller.allEquipment,
-                                          initialSelection:
-                                              _controller.equipmentFilters,
-                                          onApply:
-                                              _controller.setEquipmentFilters,
-                                        ),
-                                        onTapMuscle: () => _showFilterSheet(
-                                          context,
-                                          title: 'Músculo',
-                                          options: _controller.allMuscles,
-                                          initialSelection:
-                                              _controller.muscleFilters,
-                                          onApply: _controller.setMuscleFilters,
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            SliverToBoxAdapter(
-                              child: Padding(
-                                padding: const EdgeInsets.fromLTRB(
-                                  16,
-                                  12,
-                                  16,
-                                  8,
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    SectionHeader(
-                                      title: _isSportActivities
-                                          ? 'Explorar actividades'
-                                          : 'Explorar ejercicios',
-                                    ),
-                                    if (_controller.hasActiveFilters &&
-                                        !_isSportActivities)
-                                      TextButton(
-                                        onPressed: () {
-                                          _controller.setEquipmentFilters({});
-                                          _controller.setMuscleFilters({});
-                                        },
-                                        child: const Text('Limpiar filtros'),
-                                      ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            if (_isSportActivities && _sportItems.isEmpty)
-                              const SliverFillRemaining(
-                                hasScrollBody: false,
-                                child: _NoResultsState(),
-                              )
-                            else if (_isSportActivities)
-                              SliverList.builder(
-                                itemCount: _sportItems.length,
-                                itemBuilder: (context, i) {
-                                  final activity = _sportItems[i];
-                                  final e = WorkoutExercise(
-                                    id: activity.id,
-                                    name: activity.name,
-                                    targetSets: 1,
-                                    measurement: 'seconds',
-                                    sportPlan: SportActivityPlan(
-                                      activityId: activity.id,
-                                      mode: activity.mode,
-                                    ),
-                                  );
-                                  return Padding(
-                                    padding: const EdgeInsets.fromLTRB(
-                                      16,
-                                      0,
-                                      16,
-                                      12,
-                                    ),
-                                    child: ExerciseBrowserCard(
-                                      exercise: e,
-                                      selected: _draftController.contains(e.id),
-                                      subtitle:
-                                          'Fútbol · ${activity.mode.label}',
-                                      onOpen: () => _openConfiguration(e),
-                                      onAdd: () => _draftController.add(e),
-                                    ),
-                                  );
-                                },
-                              )
-                            else if (_controller.totalCount == 0)
-                              const SliverFillRemaining(
-                                hasScrollBody: false,
-                                child: _NoResultsState(),
-                              )
-                            else ...[
-                              SliverList.builder(
-                                itemCount: _controller.itemsVisible.length,
-                                itemBuilder: (context, index) {
-                                  final exercise =
-                                      _controller.itemsVisible[index];
-                                  return Padding(
-                                    padding: const EdgeInsets.fromLTRB(
-                                      16,
-                                      0,
-                                      16,
-                                      10,
-                                    ),
-                                    child: ExerciseBrowserCard(
-                                      exercise:
-                                          _draftController.configFor(
-                                            exercise.id,
-                                          ) ??
-                                          RoutineLabels.defaults(exercise),
-                                      subtitle:
-                                          '${exercise.primaryMuscles.join(', ')} · ${RoutineLabels.equipmentName(exercise.equipment)}',
-                                      selected: _draftController.contains(
-                                        exercise.id,
-                                      ),
-                                      onOpen: () => _openConfiguration(
-                                        _draftController.configFor(
-                                              exercise.id,
-                                            ) ??
-                                            RoutineLabels.defaults(exercise),
-                                      ),
-                                      onAdd: () => _draftController.add(
-                                        RoutineLabels.defaults(exercise),
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                              if (_controller.canShowMore)
+                        Expanded(
+                          child: NotificationListener<ScrollStartNotification>(
+                            onNotification: (notification) {
+                              if (notification.dragDetails != null) {
+                                _cancelScrollAnchor();
+                              }
+                              return false;
+                            },
+                            child: CustomScrollView(
+                              controller: _scroll,
+                              keyboardDismissBehavior:
+                                  ScrollViewKeyboardDismissBehavior.onDrag,
+                              slivers: [
                                 SliverToBoxAdapter(
                                   child: Padding(
                                     padding: const EdgeInsets.fromLTRB(
                                       16,
-                                      4,
-                                      16,
                                       12,
+                                      16,
+                                      8,
                                     ),
-                                    child: Center(
-                                      child: OutlinedButton(
-                                        onPressed: _controller.showMore,
-                                        child: const Text('Mostrar más'),
-                                      ),
+                                    child: Column(
+                                      children: [
+                                        WorkoutTypeSegment(
+                                          selected:
+                                              _draftController.workoutType,
+                                          onChanged: (type) => _changeMode(
+                                            type,
+                                            _draftController.footballMode,
+                                          ),
+                                        ),
+                                        if (_draftController.workoutType ==
+                                            TemplateWorkoutType.sport) ...[
+                                          const SizedBox(height: 12),
+                                          const Text('Fútbol'),
+                                          DropdownButtonFormField<FootballMode>(
+                                            key: ValueKey(_modeRevision),
+                                            initialValue:
+                                                _draftController.footballMode,
+                                            isExpanded: true,
+                                            decoration: const InputDecoration(
+                                              labelText: 'Modalidad',
+                                            ),
+                                            items: [
+                                              for (final mode
+                                                  in FootballMode.values)
+                                                DropdownMenuItem(
+                                                  value: mode,
+                                                  child: Text(mode.label),
+                                                ),
+                                            ],
+                                            onChanged: (mode) {
+                                              if (mode != null) {
+                                                _changeMode(
+                                                  TemplateWorkoutType.sport,
+                                                  mode,
+                                                );
+                                              }
+                                            },
+                                          ),
+                                        ],
+                                        const SizedBox(height: 12),
+                                        ExerciseSearchField(
+                                          key: ValueKey(
+                                            '${_draftController.workoutType}_${_draftController.footballMode}',
+                                          ),
+                                          onChanged: (value) {
+                                            if (_isSportActivities) {
+                                              setState(
+                                                () => _sportQuery = value
+                                                    .trim()
+                                                    .toLowerCase(),
+                                              );
+                                            } else {
+                                              _controller.setQueryDebounced(
+                                                value,
+                                              );
+                                            }
+                                          },
+                                        ),
+                                        const SizedBox(height: 12),
+                                        if (!_isSportActivities)
+                                          FilterPillsRow(
+                                            equipmentCount: _controller
+                                                .equipmentFilters
+                                                .length,
+                                            muscleCount: _controller
+                                                .muscleFilters
+                                                .length,
+                                            onTapEquipment: () =>
+                                                _showFilterSheet(
+                                                  context,
+                                                  title: 'Equipamiento',
+                                                  options:
+                                                      _controller.allEquipment,
+                                                  initialSelection: _controller
+                                                      .equipmentFilters,
+                                                  onApply: _controller
+                                                      .setEquipmentFilters,
+                                                ),
+                                            onTapMuscle: () => _showFilterSheet(
+                                              context,
+                                              title: 'Músculos',
+                                              muscle: true,
+                                              options: _controller.allMuscles,
+                                              initialSelection:
+                                                  _controller.muscleFilters,
+                                              onApply:
+                                                  _controller.setMuscleFilters,
+                                            ),
+                                          ),
+                                      ],
                                     ),
                                   ),
                                 ),
-                            ],
-                            SliverToBoxAdapter(
-                              child: SizedBox(
-                                height:
-                                    bottomInset +
-                                    miniBarHeight +
-                                    overlayPadding +
-                                    20,
-                              ),
+                                SliverToBoxAdapter(
+                                  child: Padding(
+                                    padding: const EdgeInsets.fromLTRB(
+                                      16,
+                                      12,
+                                      16,
+                                      8,
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        SectionHeader(
+                                          title: _isSportActivities
+                                              ? 'Explorar actividades'
+                                              : 'Explorar ejercicios',
+                                        ),
+                                        if (_controller.hasActiveFilters &&
+                                            !_isSportActivities)
+                                          TextButton(
+                                            onPressed: () {
+                                              _controller.setEquipmentFilters(
+                                                {},
+                                              );
+                                              _controller.setMuscleFilters({});
+                                            },
+                                            child: const Text(
+                                              'Limpiar filtros',
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                if (_isSportActivities && _sportItems.isEmpty)
+                                  const SliverFillRemaining(
+                                    hasScrollBody: false,
+                                    child: _NoResultsState(),
+                                  )
+                                else if (_isSportActivities)
+                                  SliverList.builder(
+                                    itemCount: _sportItems.length,
+                                    itemBuilder: (context, i) {
+                                      final activity = _sportItems[i];
+                                      final e = WorkoutExercise(
+                                        id: activity.id,
+                                        name: activity.name,
+                                        targetSets: 1,
+                                        measurement: 'seconds',
+                                        sportPlan: SportActivityPlan(
+                                          activityId: activity.id,
+                                          mode: activity.mode,
+                                        ),
+                                      );
+                                      return Padding(
+                                        padding: const EdgeInsets.fromLTRB(
+                                          16,
+                                          0,
+                                          16,
+                                          12,
+                                        ),
+                                        child: _browserCard(
+                                          e,
+                                          'Fútbol · ${activity.mode.label}',
+                                        ),
+                                      );
+                                    },
+                                  )
+                                else if (_controller.totalCount == 0)
+                                  const SliverFillRemaining(
+                                    hasScrollBody: false,
+                                    child: _NoResultsState(),
+                                  )
+                                else ...[
+                                  SliverList.builder(
+                                    itemCount: _controller.itemsVisible.length,
+                                    itemBuilder: (context, index) {
+                                      final exercise =
+                                          _controller.itemsVisible[index];
+                                      return Padding(
+                                        padding: const EdgeInsets.fromLTRB(
+                                          16,
+                                          0,
+                                          16,
+                                          10,
+                                        ),
+                                        child: _browserCard(
+                                          _draftController.configFor(
+                                                exercise.id,
+                                              ) ??
+                                              RoutineLabels.defaults(exercise),
+                                          '${RoutineLabels.muscles(exercise.primaryMuscles)} · ${RoutineLabels.equipmentName(exercise.equipment)}',
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                  if (_controller.canShowMore)
+                                    SliverToBoxAdapter(
+                                      child: Padding(
+                                        padding: const EdgeInsets.fromLTRB(
+                                          16,
+                                          4,
+                                          16,
+                                          12,
+                                        ),
+                                        child: Center(
+                                          child: OutlinedButton(
+                                            onPressed: _controller.showMore,
+                                            child: const Text('Mostrar más'),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                                SliverToBoxAdapter(
+                                  child: SizedBox(height: 20 + overlayPadding),
+                                ),
+                              ],
                             ),
-                          ],
+                          ),
                         ),
-                        Align(
-                          alignment: Alignment.bottomCenter,
-                          child: _SelectionMiniBar(
+                        if (hasSelection)
+                          _SelectionMiniBar(
                             visible: hasSelection,
                             count: _draftController.selectedCount,
                             selectedExerciseNames: _draftController
@@ -644,7 +659,6 @@ class _TemplateExercisePickerScreenState
                             onClear: _confirmClear,
                             extraBottomPadding: bottomInset + overlayPadding,
                           ),
-                        ),
                       ],
                     ),
               backgroundColor: theme.scaffoldBackgroundColor,
@@ -691,6 +705,12 @@ class _TemplateExercisePickerScreenState
       ),
     );
     if (remove == true) {
+      _configurationMemory.clear();
+      _pendingConfigurations.clear();
+      _invalidConfigurations.clear();
+      if (_controller.expandedExerciseId case final id?) {
+        _controller.toggleExpanded(id);
+      }
       _draftController.clearExercises();
     }
   }
@@ -733,28 +753,145 @@ class _TemplateExercisePickerScreenState
     });
   }
 
-  Future<void> _openConfiguration(WorkoutExercise e) async {
-    final exists = _draftController.contains(e.id);
-    final configured = _draftController.configFor(e.id) ?? e;
-    final updated = await showExerciseConfiguration(
-      context,
-      configured,
-      definition: _exercisesById[e.id],
-      sportGym:
-          _draftController.workoutType == TemplateWorkoutType.sport &&
-          _draftController.footballMode == FootballMode.gym,
-      action: exists ? 'Guardar configuración' : 'Agregar a rutina',
-    );
-    if (updated == null || !mounted) return;
-    if (exists) {
-      _draftController.update(configured.instanceId!, updated);
-    } else {
-      _draftController.add(updated);
+  WorkoutExercise _currentConfiguration(WorkoutExercise e) =>
+      _draftController.configFor(e.id) ?? _pendingConfigurations[e.id] ?? e;
+
+  void _toggleInline(String id) {
+    FocusManager.instance.primaryFocus?.unfocus();
+    _anchorTimer?.cancel();
+    final box = _rowHeaders[id]?.currentContext?.findRenderObject();
+    _scrollAnchor = box is RenderBox && box.attached
+        ? (id: id, y: box.localToGlobal(Offset.zero).dy)
+        : null;
+    _controller.toggleExpanded(id);
+    final animate = !MediaQuery.disableAnimationsOf(context);
+    if (animate) {
+      // AnimatedSize may restart as lazy neighbours are measured. Keep the
+      // tapped header anchored through that settling; the size motion is 200 ms.
+      _anchorTimer = Timer(
+        const Duration(milliseconds: 600),
+        () => _scrollAnchor = null,
+      );
     }
+    _maintainScrollAnchor(repeat: animate);
+  }
+
+  void _maintainScrollAnchor({required bool repeat}) {
+    if (_anchorScheduled) return;
+    _anchorScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _anchorScheduled = false;
+      if (!mounted || _scrollAnchor == null || !_scroll.hasClients) return;
+      final anchor = _scrollAnchor!;
+      final box = _rowHeaders[anchor.id]?.currentContext?.findRenderObject();
+      if (box is RenderBox && box.attached) {
+        final delta = box.localToGlobal(Offset.zero).dy - anchor.y;
+        final target = (_scroll.offset + delta).clamp(
+          _scroll.position.minScrollExtent,
+          _scroll.position.maxScrollExtent,
+        );
+        if ((target - _scroll.offset).abs() > .5) _scroll.jumpTo(target);
+      }
+      if (repeat) {
+        _maintainScrollAnchor(repeat: true);
+      } else {
+        _scrollAnchor = null;
+      }
+    });
+  }
+
+  void _cancelScrollAnchor() {
+    _anchorTimer?.cancel();
+    _scrollAnchor = null;
+  }
+
+  Widget _browserCard(WorkoutExercise exercise, String subtitle) {
+    final e = _currentConfiguration(exercise);
+    final expanded = _controller.expandedExerciseId == e.id;
+    return ExerciseBrowserCard(
+      key: ValueKey('browser:${e.id}'),
+      headerKey: _rowHeaders.putIfAbsent(e.id, GlobalKey.new),
+      onExpansionEnd: () => _maintainScrollAnchor(repeat: true),
+      exercise: e,
+      subtitle: subtitle,
+      selected: _draftController.contains(e.id),
+      expanded: expanded,
+      onOpen: () => _toggleInline(e.id),
+      onDetails: () {
+        _cancelScrollAnchor();
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => ExerciseTechnicalScreen(
+              exercise: e,
+              definition: _exercisesById[e.id],
+            ),
+          ),
+        );
+      },
+      onAdd: () {
+        if (_invalidConfigurations.contains(e.id)) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Revisá los valores antes de agregar el ejercicio.',
+              ),
+            ),
+          );
+          return;
+        }
+        _draftController.add(_currentConfiguration(e));
+      },
+      configuration: expanded
+          ? ExerciseConfigurationSheet(
+              key: ValueKey('inline:${e.id}'),
+              inline: true,
+              exercise: e,
+              definition: _exercisesById[e.id],
+              action: '',
+              memory: _configurationMemory.putIfAbsent(
+                e.id,
+                ExerciseConfigurationMemory.new,
+              ),
+              sportGym:
+                  _draftController.workoutType == TemplateWorkoutType.sport &&
+                  _draftController.footballMode == FootballMode.gym,
+              onChanged: (value) {
+                if (value == null) {
+                  _invalidConfigurations.add(e.id);
+                  return;
+                }
+                _invalidConfigurations.remove(e.id);
+                _pendingConfigurations[e.id] = value;
+                final selected = _draftController.configFor(e.id);
+                if (selected != null) {
+                  _draftController.update(selected.instanceId!, value);
+                }
+              },
+            )
+          : null,
+    );
   }
 
   Future<void> _openReview() async {
+    _cancelScrollAnchor();
     if (_draftController.selectedCount == 0) return;
+    final invalidSelected = _draftController.selectedExerciseIds
+        .where(_invalidConfigurations.contains)
+        .firstOrNull;
+    if (invalidSelected != null) {
+      if (_controller.expandedExerciseId != invalidSelected) {
+        _controller.toggleExpanded(invalidSelected);
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Revisá la configuración pendiente antes de continuar.',
+          ),
+        ),
+      );
+      return;
+    }
+    FocusManager.instance.primaryFocus?.unfocus();
     if (widget.selectionOnly) {
       try {
         await _draftController.flush();
@@ -775,6 +912,7 @@ class _TemplateExercisePickerScreenState
       Navigator.pop(context);
       return;
     }
+    final selectedBeforeReview = _draftController.selectedExerciseIds.toSet();
     final result = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
         builder: (_) => RoutineReviewScreen(
@@ -786,6 +924,18 @@ class _TemplateExercisePickerScreenState
         ),
       ),
     );
+    if (!mounted) return;
+    for (final id in {
+      ...selectedBeforeReview,
+      ..._draftController.selectedExerciseIds,
+    }) {
+      _configurationMemory.remove(id);
+      _pendingConfigurations.remove(id);
+      _invalidConfigurations.remove(id);
+    }
+    if (_controller.expandedExerciseId case final id?) {
+      _controller.toggleExpanded(id);
+    }
     if (result == true && mounted) {
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text('Rutina guardada')));
@@ -799,71 +949,26 @@ class _TemplateExercisePickerScreenState
     required List<String> options,
     required Set<String> initialSelection,
     required ValueChanged<Set<String>> onApply,
+    bool muscle = false,
   }) async {
-    final selection = Set<String>.from(initialSelection);
+    _cancelScrollAnchor();
+    FocusManager.instance.primaryFocus?.unfocus();
     final applied = await showModalBottomSheet<Set<String>>(
       context: context,
       showDragHandle: true,
       isScrollControlled: true,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            return SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(title, style: Theme.of(context).textTheme.titleMedium),
-                    const SizedBox(height: 12),
-                    Flexible(
-                      child: ListView.builder(
-                        shrinkWrap: true,
-                        itemCount: options.length,
-                        itemBuilder: (context, index) {
-                          final option = options[index];
-                          return CheckboxListTile(
-                            value: selection.contains(option),
-                            title: Text(RoutineLabels.equipmentName(option)),
-                            onChanged: (value) {
-                              setModalState(() {
-                                if (value ?? false) {
-                                  selection.add(option);
-                                } else {
-                                  selection.remove(option);
-                                }
-                              });
-                            },
-                          );
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        TextButton(
-                          onPressed: () => setModalState(selection.clear),
-                          child: const Text('Limpiar'),
-                        ),
-                        const Spacer(),
-                        FilledButton(
-                          onPressed: () => Navigator.of(context).pop(selection),
-                          child: const Text('Aplicar'),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
+      useSafeArea: true,
+      builder: (_) => Theme(
+        data: AppTheme.workout,
+        child: RoutineFilterSheet(
+          title: title,
+          options: options,
+          initialSelection: initialSelection,
+          muscle: muscle,
+        ),
+      ),
     );
-
-    if (applied != null) {
-      onApply(applied);
-    }
+    if (applied != null && mounted) onApply(applied);
   }
 }
 
@@ -875,24 +980,50 @@ class ExerciseBrowserCard extends StatelessWidget {
     required this.selected,
     required this.onOpen,
     required this.onAdd,
+    required this.onDetails,
+    this.expanded = false,
+    this.configuration,
+    this.headerKey,
+    this.onExpansionEnd,
   });
   final WorkoutExercise exercise;
   final String subtitle;
-  final bool selected;
-  final VoidCallback onOpen, onAdd;
+  final bool selected, expanded;
+  final VoidCallback onOpen, onAdd, onDetails;
+  final Widget? configuration;
+  final Key? headerKey;
+  final VoidCallback? onExpansionEnd;
+
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    Widget text() => Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          RoutineLabels.exerciseName(exercise.name),
-          style: Theme.of(context).textTheme.titleMedium,
+    final large = MediaQuery.textScalerOf(context).scale(16) > 24;
+    Widget title() => Semantics(
+      button: true,
+      onTap: onDetails,
+      excludeSemantics: true,
+      label: 'Ver ficha de ${RoutineLabels.exerciseName(exercise.name)}',
+      child: InkWell(
+        key: ValueKey('details:${exercise.id}'),
+        onTap: onDetails,
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(
+                child: Text(
+                  RoutineLabels.exerciseName(exercise.name),
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ),
+              const SizedBox(width: 6),
+              const ExcludeSemantics(child: Icon(Icons.info_outline, size: 16)),
+            ],
+          ),
         ),
-        const SizedBox(height: 4),
-        Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
-      ],
+      ),
     );
     Widget add() => IconButton.filled(
       onPressed: selected ? null : onAdd,
@@ -909,58 +1040,81 @@ class ExerciseBrowserCard extends StatelessWidget {
         color: selected ? colors.onSurface : colors.onPrimary,
       ),
     );
+    final thumbnail = Semantics(
+      button: true,
+      expanded: expanded,
+      label:
+          '${expanded ? 'Contraer' : 'Configurar'} ${RoutineLabels.exerciseName(exercise.name)}',
+      child: InkWell(
+        key: ValueKey('expand:${exercise.id}'),
+        onTap: onOpen,
+        borderRadius: BorderRadius.circular(12),
+        child: ExerciseThumbnail(exercise: exercise),
+      ),
+    );
+    final body = configuration == null
+        ? const SizedBox(width: double.infinity)
+        : Padding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [const Divider(height: 24), configuration!],
+            ),
+          );
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final large = MediaQuery.textScalerOf(context).scale(16) > 24;
-            if (large) {
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: InkWell(
-                          onTap: onOpen,
-                          child: Align(
-                            alignment: Alignment.centerLeft,
-                            child: ExerciseThumbnail(exercise: exercise),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          InkWell(
+            key: headerKey,
+            onTap: onOpen,
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: large
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(children: [thumbnail, const Spacer(), add()]),
+                        title(),
+                        Text(
+                          subtitle,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                    )
+                  : Row(
+                      children: [
+                        thumbnail,
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              title(),
+                              Text(
+                                subtitle,
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                            ],
                           ),
                         ),
-                      ),
-                      add(),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  InkWell(
-                    onTap: onOpen,
-                    child: SizedBox(width: double.infinity, child: text()),
-                  ),
-                ],
-              );
-            }
-            return Row(
-              children: [
-                Expanded(
-                  child: InkWell(
-                    onTap: onOpen,
-                    borderRadius: BorderRadius.circular(12),
-                    child: Row(
-                      children: [
-                        ExerciseThumbnail(exercise: exercise),
-                        const SizedBox(width: 12),
-                        Expanded(child: text()),
+                        add(),
                       ],
                     ),
-                  ),
-                ),
-                add(),
-              ],
-            );
-          },
-        ),
+            ),
+          ),
+          if (MediaQuery.disableAnimationsOf(context))
+            body
+          else
+            AnimatedSize(
+              duration: const Duration(milliseconds: 200),
+              onEnd: onExpansionEnd,
+              alignment: Alignment.topCenter,
+              curve: Curves.easeInOut,
+              child: body,
+            ),
+        ],
       ),
     );
   }
@@ -1010,57 +1164,79 @@ class _SelectionMiniBar extends StatelessWidget {
               child: InkWell(
                 onTap: onTap,
                 borderRadius: BorderRadius.circular(16),
-                child: Container(
-                  height: 64,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: Row(
-                            children: [
-                              for (final name in selectedExerciseNames.take(3))
-                                Padding(
-                                  padding: const EdgeInsets.only(right: 6),
-                                  child: Chip(
-                                    label: SizedBox(
-                                      width: 108,
-                                      child: Text(
-                                        name,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                    visualDensity: VisualDensity.compact,
-                                    materialTapTargetSize:
-                                        MaterialTapTargetSize.shrinkWrap,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  child: MediaQuery.textScalerOf(context).scale(16) > 24
+                      ? Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Text(
+                              '$count ${count == 1 ? 'ejercicio' : 'ejercicios'}',
+                            ),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                IconButton(
+                                  onPressed: onClear,
+                                  icon: const Icon(Icons.close),
+                                  tooltip: 'Limpiar selección',
+                                ),
+                                Expanded(
+                                  child: FilledButton.tonal(
+                                    onPressed: onTap,
+                                    child: Text('Ver ($count)'),
                                   ),
                                 ),
-                              if (count > 3)
-                                Chip(
-                                  label: Text('+${count - 3}'),
-                                  visualDensity: VisualDensity.compact,
-                                  materialTapTargetSize:
-                                      MaterialTapTargetSize.shrinkWrap,
+                              ],
+                            ),
+                          ],
+                        )
+                      : Row(
+                          children: [
+                            Expanded(
+                              child: SingleChildScrollView(
+                                scrollDirection: Axis.horizontal,
+                                child: Row(
+                                  children: [
+                                    for (final name
+                                        in selectedExerciseNames.take(3))
+                                      Padding(
+                                        padding: const EdgeInsets.only(
+                                          right: 6,
+                                        ),
+                                        child: Chip(
+                                          label: SizedBox(
+                                            width: 108,
+                                            child: Text(
+                                              name,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    if (count > 3)
+                                      Chip(label: Text('+${count - 3}')),
+                                  ],
                                 ),
-                            ],
-                          ),
+                              ),
+                            ),
+                            IconButton(
+                              onPressed: onClear,
+                              icon: const Icon(Icons.close),
+                              tooltip: 'Limpiar selección',
+                            ),
+                            const SizedBox(width: 6),
+                            FilledButton.tonal(
+                              onPressed: onTap,
+                              child: Text('Ver ($count)'),
+                            ),
+                          ],
                         ),
-                      ),
-                      IconButton(
-                        onPressed: onClear,
-                        icon: const Icon(Icons.close),
-                        visualDensity: VisualDensity.compact,
-                        tooltip: 'Limpiar selección',
-                      ),
-                      const SizedBox(width: 6),
-                      FilledButton.tonal(
-                        onPressed: onTap,
-                        child: Text('Ver ($count)'),
-                      ),
-                    ],
-                  ),
                 ),
               ),
             ),

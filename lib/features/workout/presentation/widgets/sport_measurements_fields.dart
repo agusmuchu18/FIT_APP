@@ -2,13 +2,20 @@ import 'package:flutter/material.dart';
 
 import '../../domain/sport_activity.dart';
 
+class SportMeasurementsDraft {
+  Map<SportMetric, String>? raw;
+  String? position, notes;
+}
+
 class SportMeasurementsFields extends StatefulWidget {
   const SportMeasurementsFields({
     super.key,
     required this.activity,
     required this.initial,
     required this.onChanged,
+    this.draft,
   });
+  final SportMeasurementsDraft? draft;
   final FootballActivity activity;
   final SportMeasurements initial;
   final ValueChanged<SportMeasurements?> onChanged;
@@ -18,12 +25,15 @@ class SportMeasurementsFields extends StatefulWidget {
 }
 
 class _SportMeasurementsFieldsState extends State<SportMeasurementsFields> {
-  late final Map<SportMetric, String> _raw = {
-    for (final e in widget.initial.values.entries) e.key: '${e.value}',
-  };
-  late String _position = widget.initial.position,
-      _notes = widget.initial.notes;
+  late final Map<SportMetric, String> _raw =
+      widget.draft?.raw ??
+      {for (final e in widget.initial.values.entries) e.key: '${e.value}'};
+  late String _position = widget.draft?.position ?? widget.initial.position,
+      _notes = widget.draft?.notes ?? widget.initial.notes;
   void _emit() {
+    widget.draft?.raw = _raw;
+    widget.draft?.position = _position;
+    widget.draft?.notes = _notes;
     final values = <SportMetric, double>{};
     for (final e in _raw.entries) {
       if (e.value.trim().isEmpty) continue;
