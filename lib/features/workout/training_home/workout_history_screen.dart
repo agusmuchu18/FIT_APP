@@ -8,7 +8,9 @@ import '../../common/theme/app_layout.dart';
 import '../data/workout_repository.dart';
 import '../domain/workout_analytics.dart';
 import '../presentation/widgets/workout_report_widgets.dart';
+import '../presentation/widgets/workout_units_host.dart';
 import '../presentation/workout_history_detail_screen.dart';
+import '../presentation/workout_insights_screen.dart';
 export '../presentation/workout_history_detail_screen.dart';
 
 class WorkoutHistoryScreen extends StatefulWidget {
@@ -31,13 +33,23 @@ class _WorkoutHistoryScreenState extends State<WorkoutHistoryScreen> {
   Object? _error;
   bool _loading = true;
   static const labels = ['7 días', '30 días', '3 meses', 'Todo'];
+  int _loadGeneration = 0;
   @override
   void initState() {
     super.initState();
+    _repository.historyRevision.addListener(_load);
     _load();
   }
 
+  @override
+  void dispose() {
+    _loadGeneration++;
+    _repository.historyRevision.removeListener(_load);
+    super.dispose();
+  }
+
   Future<void> _load() async {
+    final generation = ++_loadGeneration;
     try {
       final prefs = await ScopedPreferences.getInstance(scope: _scope);
       final saved = prefs.getString('workout_history_period');
@@ -46,7 +58,7 @@ class _WorkoutHistoryScreenState extends State<WorkoutHistoryScreen> {
         orElse: () => WorkoutHistoryPeriod.month,
       );
       final sessions = await _repository.listAllSessions();
-      if (!mounted) return;
+      if (!mounted || generation != _loadGeneration) return;
       _prefs = prefs;
       _source = sessions.map(WorkoutReport.new).toList(growable: false);
       setState(() {
@@ -55,7 +67,7 @@ class _WorkoutHistoryScreenState extends State<WorkoutHistoryScreen> {
         _aggregate();
       });
     } catch (error) {
-      if (mounted) {
+      if (mounted && generation == _loadGeneration) {
         setState(() {
           _error = error;
           _loading = false;
@@ -106,9 +118,25 @@ class _WorkoutHistoryScreenState extends State<WorkoutHistoryScreen> {
 
   @override
   Widget build(BuildContext context) => Theme(
-    data: AppTheme.workout,
+    data: AppTheme.workoutFor(Theme.of(context)),
     child: Scaffold(
-      appBar: AppBar(title: const Text('Historial')),
+      appBar: AppBar(
+        title: const Text('Historial'),
+        actions: [
+          IconButton(
+            tooltip: 'Análisis, músculos y calendario',
+            icon: const Icon(Icons.insights_outlined),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => WorkoutInsightsScreen(
+                  repository: _repository,
+                  now: widget.now,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
       body: Builder(
         builder: (context) {
           if (_loading) return const Center(child: CircularProgressIndicator());
@@ -163,7 +191,10 @@ class _WorkoutHistoryScreenState extends State<WorkoutHistoryScreen> {
                               ('Sesiones', '${report.sessions.length}'),
                               (
                                 'Volumen externo',
-                                '${workoutNumber(report.externalVolume)} kg',
+                                (WorkoutUnits.of(context).valueWithUnit(
+                                  'kg·rep',
+                                  report.externalVolume,
+                                )),
                               ),
                               (
                                 'Duración registrada',
@@ -182,8 +213,8 @@ class _WorkoutHistoryScreenState extends State<WorkoutHistoryScreen> {
                           Text(
                             'Frecuencia: ${report.sessions.length} sesiones × 7 / ${report.periodDays} días calendario.',
                           ),
-                          const Text(
-                            'Volumen: suma de kg externos × repeticiones de series válidas; excluye peso corporal y asistencia.',
+                          Text(
+                            'Volumen: suma de ${WorkoutUnits.of(context).weight.label} externos × repeticiones de series válidas; excluye peso corporal y asistencia.',
                           ),
                           if (report.missingDurations > 0)
                             Text(
@@ -309,7 +340,7 @@ class _WorkoutHistoryScreenState extends State<WorkoutHistoryScreen> {
                                       ),
                                       if (session.externalVolume > 0)
                                         Text(
-                                          '${workoutNumber(session.externalVolume)} kg externos',
+                                          '${WorkoutUnits.of(context).valueWithUnit('kg·rep', session.externalVolume)} externos',
                                         ),
                                       if (session.mainMuscles.isNotEmpty)
                                         Text(session.mainMuscles.join(' · ')),

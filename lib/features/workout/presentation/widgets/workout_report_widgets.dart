@@ -8,6 +8,8 @@ import '../../domain/sport_activity.dart';
 import '../../pro/models/workout_models.dart';
 import 'exercise_thumbnail.dart';
 import 'workout_artwork.dart';
+import 'workout_units_host.dart';
+import '../../domain/training_units.dart';
 export 'workout_artwork.dart';
 
 String workoutNumber(num v) => NumberFormat('#,##0.#', 'es').format(v);
@@ -41,17 +43,23 @@ String workoutMonth(DateTime d) {
   return '${months[date.month - 1]} ${date.year}';
 }
 
-String workoutDominantValue(WorkoutReport report) => report.externalVolume > 0
-    ? '${workoutNumber(report.externalVolume)} kg'
+String workoutDominantValue(
+  WorkoutReport report, [
+  TrainingUnits units = const TrainingUnits(),
+]) => report.externalVolume > 0
+    ? units.valueWithUnit('kg·rep', report.externalVolume)
     : (report.session.distanceKm ?? 0) > 0
-    ? '${workoutNumber(report.session.distanceKm!)} km'
+    ? units.valueWithUnit('km', report.session.distanceKm!)
     : report.duration != null
     ? workoutDuration(report.duration)
     : report.reps > 0
     ? '${report.reps} reps'
     : '${report.performedSets} series';
-String workoutDominantLabel(WorkoutReport report) => report.externalVolume > 0
-    ? 'Volumen externo · kg × repeticiones'
+String workoutDominantLabel(
+  WorkoutReport report, [
+  TrainingUnits units = const TrainingUnits(),
+]) => report.externalVolume > 0
+    ? 'Volumen externo · ${units.weight.label} × repeticiones'
     : (report.session.distanceKm ?? 0) > 0
     ? 'Distancia registrada'
     : report.duration != null
@@ -155,10 +163,18 @@ class WorkoutReportHero extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          workoutDominantValue(report),
+                          workoutDominantValue(
+                            report,
+                            WorkoutUnits.of(context),
+                          ),
                           style: Theme.of(context).textTheme.headlineMedium,
                         ),
-                        Text(workoutDominantLabel(report)),
+                        Text(
+                          workoutDominantLabel(
+                            report,
+                            WorkoutUnits.of(context),
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -170,10 +186,10 @@ class WorkoutReportHero extends StatelessWidget {
       const SizedBox(height: AppSpacing.lg),
       if (MediaQuery.textScalerOf(context).scale(1) > 1.3) ...[
         Text(
-          workoutDominantValue(report),
+          workoutDominantValue(report, WorkoutUnits.of(context)),
           style: Theme.of(context).textTheme.headlineMedium,
         ),
-        Text(workoutDominantLabel(report)),
+        Text(workoutDominantLabel(report, WorkoutUnits.of(context))),
         const SizedBox(height: AppSpacing.lg),
       ],
       if (saved)
@@ -233,12 +249,18 @@ class WorkoutReportStatistics extends StatelessWidget {
 }
 
 class WorkoutMuscleReport extends StatelessWidget {
-  const WorkoutMuscleReport({super.key, required this.report});
-  final WorkoutReport report;
+  const WorkoutMuscleReport({super.key, required this.report})
+    : valuesByMuscle = null;
+  const WorkoutMuscleReport.distribution({
+    super.key,
+    required this.valuesByMuscle,
+  }) : report = null;
+  final WorkoutReport? report;
+  final Map<String, double>? valuesByMuscle;
   @override
   Widget build(BuildContext context) {
     final values = WorkoutAnalytics.muscles
-        .map((m) => report.muscleDistribution[m] ?? 0)
+        .map((m) => (valuesByMuscle ?? report!.muscleDistribution)[m] ?? 0)
         .toList();
     final color = Theme.of(context).colorScheme.primary;
     return ReportPanel(
@@ -249,7 +271,7 @@ class WorkoutMuscleReport extends StatelessWidget {
             'Distribución muscular',
             style: Theme.of(context).textTheme.titleLarge,
           ),
-          if (report.mainMuscles.isEmpty)
+          if (values.every((v) => v == 0))
             const Padding(
               padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
               child: Text('Sin ejercicios con grupo muscular conocido.'),
@@ -353,7 +375,7 @@ class WorkoutComparisonPanel extends StatelessWidget {
             const SizedBox(height: AppSpacing.md),
             if (v.current.externalVolume > 0 || v.previous.externalVolume > 0)
               Text(
-                'Volumen externo: ${signed(v.volumeDelta)} kg${v.volumePercent == null ? '' : ' (${signed(v.volumePercent!)} %)'}',
+                'Volumen externo: ${signed(WorkoutUnits.of(context).weight.fromKg(v.volumeDelta))} ${WorkoutUnits.of(context).weight.label}·rep${v.volumePercent == null ? '' : ' (${signed(v.volumePercent!)} %)'}',
               ),
             Text(
               'Series: ${signed(v.setsDelta)} · Repeticiones: ${signed(v.repsDelta)}',
@@ -373,20 +395,30 @@ class WorkoutComparisonPanel extends StatelessWidget {
   }
 }
 
-String workoutSetLabel(int index, WorkoutExercise e, SetEntry s) {
+String workoutSetLabel(
+  int index,
+  WorkoutExercise e,
+  SetEntry s, [
+  TrainingUnits units = const TrainingUnits(),
+]) {
   final parts = <String>['Serie $index'];
   if (s.reps != null) parts.add('${s.reps} repeticiones');
   if (s.externalLoadKg != null) {
     parts.add(
-      '${workoutNumber(s.externalLoadKg!)} kg${s.loadIsAmbiguous ? ' (carga antigua sin clasificar)' : ' externos'}',
+      '${units.valueWithUnit('kg', s.externalLoadKg!)}${s.loadIsAmbiguous ? ' (carga antigua sin clasificar)' : ' externos'}',
     );
+  }
+  if (s.distanceMeters != null) {
+    parts.add(units.valueWithUnit('m', s.distanceMeters!));
   }
   if (s.durationSeconds != null) parts.add('${s.durationSeconds} s');
   if (s.assistanceKg != null) {
-    parts.add('${workoutNumber(s.assistanceKg!)} kg de asistencia');
+    parts.add('${units.valueWithUnit('kg', s.assistanceKg!)} de asistencia');
   }
   if (s.bodyweightKg != null) {
-    parts.add('Peso corporal registrado: ${workoutNumber(s.bodyweightKg!)} kg');
+    parts.add(
+      'Peso corporal registrado: ${units.valueWithUnit('kg', s.bodyweightKg!)}',
+    );
   }
   if (s.externalLoadKg == null &&
       s.assistanceKg == null &&
@@ -433,7 +465,7 @@ class WorkoutExerciseReportCard extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.sm),
         Text(
-          '${report.performed.length}/${report.exercise.sets.length} series · ${workoutNumber(report.externalVolume)} kg externos',
+          '${report.performed.length}/${report.exercise.sets.length} series · ${WorkoutUnits.of(context).valueWithUnit('kg·rep', report.externalVolume)} externos',
         ),
         Text(
           WorkoutAnalytics.isTimed(report.exercise)
@@ -445,7 +477,11 @@ class WorkoutExerciseReportCard extends StatelessWidget {
             const SizedBox(height: AppSpacing.md),
             const Text('Resultados de la actividad'),
             for (final e in result.values.entries)
-              Text('${e.key.label}: ${workoutNumber(e.value)}'),
+              Text(
+                e.key == SportMetric.distanceMeters
+                    ? 'Distancia: ${WorkoutUnits.of(context).valueWithUnit('m', e.value)}'
+                    : '${e.key.label}: ${workoutNumber(e.value)}',
+              ),
             if (result.position.isNotEmpty)
               Text('Posición: ${result.position}'),
             if (result.notes.isNotEmpty) Text('Observaciones: ${result.notes}'),
@@ -468,6 +504,7 @@ class WorkoutExerciseReportCard extends StatelessWidget {
                   i + 1,
                   report.exercise,
                   report.exercise.sets[i],
+                  WorkoutUnits.of(context),
                 ),
               ),
             ),

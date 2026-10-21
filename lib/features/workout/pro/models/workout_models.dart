@@ -1,6 +1,20 @@
+import '../../domain/training_program.dart';
+
 import 'dart:convert';
 
 import '../../domain/sport_activity.dart';
+
+enum LoadConvention { recorded, total, perImplement }
+
+LoadConvention decodeLoadConvention(Object? raw) {
+  if (raw == null) return LoadConvention.recorded;
+  for (final value in LoadConvention.values) {
+    if (value.name == raw) return value;
+  }
+  throw const FormatException(
+    'Convención de carga desconocida; se conserva el registro original.',
+  );
+}
 
 enum WorkoutType { strength, cardio, functional, sport, custom }
 
@@ -54,9 +68,19 @@ class SetEntry {
     this.bodyweightKg, // snapshot del peso del usuario
     this.bodyweightFactor, // factor (lagartijas)
     this.loadIsAmbiguous = false,
+    this.loadConvention = LoadConvention.recorded,
+    this.implementCount,
+    this.distanceMeters,
+    this.note,
+    this.performedAt,
   });
 
   final String id;
+  final LoadConvention loadConvention;
+  final int? implementCount;
+  final double? distanceMeters;
+  final String? note;
+  final DateTime? performedAt;
 
   final int? reps;
   final int? durationSeconds;
@@ -84,9 +108,19 @@ class SetEntry {
     double? bodyweightKg,
     double? bodyweightFactor,
     bool? loadIsAmbiguous,
+    LoadConvention? loadConvention,
+    int? implementCount,
+    double? distanceMeters,
+    String? note,
+    DateTime? performedAt,
   }) {
     return SetEntry(
       id: id ?? this.id,
+      loadConvention: loadConvention ?? this.loadConvention,
+      implementCount: implementCount ?? this.implementCount,
+      distanceMeters: distanceMeters ?? this.distanceMeters,
+      note: note ?? this.note,
+      performedAt: performedAt ?? this.performedAt,
       reps: reps ?? this.reps,
       durationSeconds: durationSeconds ?? this.durationSeconds,
       rir: rir ?? this.rir,
@@ -102,6 +136,11 @@ class SetEntry {
 
   Map<String, dynamic> toJson() => {
     'id': id,
+    'loadConvention': loadConvention.name,
+    'implementCount': implementCount,
+    'distanceMeters': distanceMeters,
+    'note': note,
+    'performedAt': performedAt?.toUtc().toIso8601String(),
     'reps': reps,
     'durationSeconds': durationSeconds,
     'rir': rir,
@@ -119,6 +158,11 @@ class SetEntry {
 
     return SetEntry(
       id: json['id'] as String,
+      loadConvention: decodeLoadConvention(json['loadConvention']),
+      implementCount: json['implementCount'] as int?,
+      distanceMeters: (json['distanceMeters'] as num?)?.toDouble(),
+      note: json['note'] as String?,
+      performedAt: DateTime.tryParse(json['performedAt'] as String? ?? ''),
       reps: json['reps'] as int?,
       durationSeconds: json['durationSeconds'] as int?,
       rir: json['rir'] as int?,
@@ -463,6 +507,7 @@ class WorkoutSession {
     this.totalDurationSeconds,
     this.startedAt,
     this.sourceSessionId,
+    this.programExecution,
     this.distanceKm,
     this.pace,
     this.rpe,
@@ -490,6 +535,7 @@ class WorkoutSession {
   final int? totalDurationSeconds;
   final DateTime? startedAt;
   final String? sourceSessionId;
+  final ProgramExecutionRef? programExecution;
   final double? distanceKm;
   final String? pace;
   final int? rpe;
@@ -515,6 +561,7 @@ class WorkoutSession {
     'totalDurationSeconds': totalDurationSeconds,
     'startedAt': startedAt?.toUtc().toIso8601String(),
     'sourceSessionId': sourceSessionId,
+    'programExecution': programExecution?.toJson(),
     'distanceKm': distanceKm,
     'pace': pace,
     'rpe': rpe,
@@ -543,6 +590,11 @@ class WorkoutSession {
     totalDurationSeconds: json['totalDurationSeconds'] as int?,
     startedAt: DateTime.tryParse(json['startedAt'] as String? ?? ''),
     sourceSessionId: json['sourceSessionId'] as String?,
+    programExecution: json['programExecution'] is Map
+        ? ProgramExecutionRef.fromJson(
+            Map<String, dynamic>.from(json['programExecution'] as Map),
+          )
+        : null,
     distanceKm: (json['distanceKm'] as num?)?.toDouble(),
     pace: json['pace'] as String?,
     rpe: json['rpe'] as int?,

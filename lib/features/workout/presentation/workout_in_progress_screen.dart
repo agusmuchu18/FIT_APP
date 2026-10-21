@@ -1,3 +1,5 @@
+import '../domain/training_program.dart';
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -9,6 +11,9 @@ import '../application/workout_session_controller.dart';
 import '../pro/data/exercise_library.dart';
 import '../pro/data/exercise_definition.dart';
 import '../training_home/workout_settings_screen.dart';
+import '../training_home/exercise_technical_screen.dart';
+import '../domain/session_models.dart';
+import '../domain/workout_analytics.dart';
 import 'widgets/exercise_card.dart';
 import 'widgets/sport_session_card.dart';
 import 'widgets/workout_in_progress_header.dart';
@@ -48,7 +53,10 @@ class _WorkoutInProgressScreenState extends State<WorkoutInProgressScreen>
     final map = args is Map
         ? Map<String, dynamic>.from(args)
         : const <String, dynamic>{};
-    _controller.initialize(templateId: map['templateId'] as String?);
+    _controller.initialize(
+      templateId: map['templateId'] as String?,
+      programExecution: map['programExecution'] as ProgramExecutionRef?,
+    );
   }
 
   @override
@@ -68,7 +76,7 @@ class _WorkoutInProgressScreenState extends State<WorkoutInProgressScreen>
   @override
   Widget build(BuildContext context) {
     return Theme(
-      data: AppTheme.workout,
+      data: AppTheme.workoutFor(Theme.of(context)),
       child: ChangeNotifierProvider.value(
         value: _controller,
         child: const _WorkoutInProgressView(),
@@ -290,6 +298,33 @@ class _WorkoutInProgressViewState extends State<_WorkoutInProgressView> {
                                   )
                                 : ExerciseCard(
                                     exercise: exercise,
+                                    onDuplicate: () => controller
+                                        .duplicateExercise(exercise.id),
+                                    onReplace: () =>
+                                        _replaceExercise(context, exercise),
+                                    onDetails: () => Navigator.of(context).push(
+                                      MaterialPageRoute<void>(
+                                        builder: (_) => ExerciseTechnicalScreen(
+                                          exercise: WorkoutAnalytics.fromLive([
+                                            exercise,
+                                          ]).single,
+                                        ),
+                                      ),
+                                    ),
+                                    onLoadTypeChanged: (type) => controller
+                                        .updateLoadType(exercise.id, type),
+                                    expandedSetId: controller.expandedSetId,
+                                    onSetExpansion:
+                                        controller.toggleSetExpansion,
+                                    onSetDetailsChanged: (details) => controller
+                                        .updateSetDetails(exercise.id, details),
+                                    onDistanceChanged: (id, distance) =>
+                                        controller.updateSet(
+                                          exercise.id,
+                                          id,
+                                          distanceMeters: distance,
+                                          clearDistance: distance == null,
+                                        ),
                                     isExpanded:
                                         controller.expandedExerciseId ==
                                         exercise.id,
@@ -379,7 +414,39 @@ class _WorkoutInProgressViewState extends State<_WorkoutInProgressView> {
     );
   }
 
-  Future<void> _openAddExerciseSheet(BuildContext context) async {
+  Future<void> _replaceExercise(
+    BuildContext context,
+    ExerciseInSession exercise,
+  ) async {
+    if (exercise.sets.any((s) => s.done)) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialog) => AlertDialog(
+          title: const Text('Reemplazar ejercicio'),
+          content: const Text(
+            'El reemplazo elimina las series registradas de este ejercicio en la sesión actual. El historial guardado se conserva.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialog, false),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialog, true),
+              child: const Text('Reemplazar'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true || !context.mounted) return;
+    }
+    await _openAddExerciseSheet(context, replaceExerciseId: exercise.id);
+  }
+
+  Future<void> _openAddExerciseSheet(
+    BuildContext context, {
+    String? replaceExerciseId,
+  }) async {
     final controller = context.read<WorkoutSessionController>();
     final query = ValueNotifier('');
 
@@ -437,6 +504,14 @@ class _WorkoutInProgressViewState extends State<_WorkoutInProgressView> {
                               ),
                               onTap: () async {
                                 Navigator.of(sheetContext).pop();
+                                if (replaceExerciseId != null) {
+                                  controller.replaceExercise(
+                                    replaceExerciseId,
+                                    exerciseId: exercise.id,
+                                    name: exercise.name,
+                                  );
+                                  return;
+                                }
                                 unawaited(
                                   controller.addExercise(
                                     exerciseId: exercise.id,

@@ -1,3 +1,4 @@
+import '../workout/presentation/workout_records_panel.dart';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -34,11 +35,7 @@ class ProfileSocialScreen extends StatelessWidget {
     ProfileStatItem(label: 'Recuperación', value: 'Óptima'),
   ];
 
-  static const List<ProfilePRItem> _prs = [
-    ProfilePRItem(exercise: 'Sentadilla', value: '140 kg', detail: '5 reps · Hace 4 días', icon: Icons.fitness_center_rounded),
-    ProfilePRItem(exercise: 'Press banca', value: '105 kg', detail: '3 reps · Hace 1 semana', icon: Icons.sports_gymnastics_rounded),
-    ProfilePRItem(exercise: 'Peso muerto', value: '180 kg', detail: '2 reps · Hace 9 días', icon: Icons.bolt_rounded),
-  ];
+
 
   @override
   Widget build(BuildContext context) {
@@ -132,7 +129,7 @@ class ProfileSocialScreen extends StatelessWidget {
                 children: [
                   _PhotosTab(photos: _photos),
                   _StatsTab(metrics: _metrics),
-                  _PRsTab(items: _prs),
+                  const WorkoutRecordsPanel(),
                 ],
               ),
             ),
@@ -225,31 +222,6 @@ class _StatsTabState extends State<_StatsTab> with AutomaticKeepAliveClientMixin
           return MinimalMetricCard(item: metric);
         },
       ),
-    );
-  }
-}
-
-class _PRsTab extends StatefulWidget {
-  const _PRsTab({required this.items});
-
-  final List<ProfilePRItem> items;
-
-  @override
-  State<_PRsTab> createState() => _PRsTabState();
-}
-
-class _PRsTabState extends State<_PRsTab> with AutomaticKeepAliveClientMixin {
-  @override
-  bool get wantKeepAlive => true;
-
-  @override
-  Widget build(BuildContext context) {
-    super.build(context);
-    return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(16, 18, 16, 24),
-      itemCount: widget.items.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
-      itemBuilder: (context, index) => ProfilePRCard(item: widget.items[index]),
     );
   }
 }

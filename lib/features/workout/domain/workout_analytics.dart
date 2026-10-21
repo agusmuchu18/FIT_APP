@@ -5,6 +5,9 @@ import '../pro/data/exercise_definition.dart';
 import '../pro/models/workout_models.dart';
 import 'session_models.dart';
 
+part 'exercise_performance.dart';
+part 'training_statistics.dart';
+
 enum WorkoutHistoryPeriod { week, month, quarter, all }
 
 enum WorkoutArtCategory {
@@ -64,8 +67,14 @@ class WorkoutReport {
       exercises.where((report) => report.performed.isNotEmpty).length;
   bool get legacyCompletionUnknown =>
       session.exercises.any((e) => e.sets.any((s) => s.done == null));
-  bool get ambiguousLoad =>
-      session.exercises.any((e) => e.sets.any((s) => s.loadIsAmbiguous));
+  bool get ambiguousLoad => session.exercises.any(
+    (e) => e.sets.any(
+      (s) =>
+          s.loadIsAmbiguous ||
+          (s.externalLoadKg != null &&
+              WorkoutAnalytics.externalLoadForVolume(s) == null),
+    ),
+  );
   Duration? get duration {
     final seconds =
         session.durationSeconds ??
@@ -255,7 +264,11 @@ class WorkoutAnalytics {
           (set.externalLoadKg!.isFinite && set.externalLoadKg! >= 0)) &&
       (set.assistanceKg == null ||
           (set.assistanceKg!.isFinite && set.assistanceKg! >= 0)) &&
-      (isTimed(exercise)
+      (exercise.measurement == 'distance'
+          ? (set.distanceMeters != null &&
+                set.distanceMeters!.isFinite &&
+                set.distanceMeters! > 0)
+          : isTimed(exercise)
           ? (set.durationSeconds ?? 0) > 0
           : (set.reps ?? 0) > 0);
   static double totalExternalVolume(List<WorkoutExercise> exercises) =>
@@ -268,7 +281,7 @@ class WorkoutAnalytics {
                 .fold(0.0, (partial, set) => partial + externalVolume(set)),
       );
   static double externalVolume(SetEntry set) {
-    final kg = set.externalLoadKg;
+    final kg = externalLoadForVolume(set);
     final reps = set.reps;
     if (set.loadIsAmbiguous ||
         kg == null ||
@@ -281,6 +294,18 @@ class WorkoutAnalytics {
     return kg * reps;
   }
 
+  /// Historical recorded loads retain their original convention. Multiplication
+  /// is allowed only with an explicit per-implement convention and count.
+  static double? externalLoadForVolume(SetEntry set) {
+    final kg = set.externalLoadKg;
+    if (set.loadIsAmbiguous || kg == null || !kg.isFinite || kg < 0) {
+      return null;
+    }
+    if (set.loadConvention != LoadConvention.perImplement) return kg;
+    final count = set.implementCount;
+    return count != null && count > 0 && count <= 2 ? kg * count : null;
+  }
+
   static List<WorkoutExercise> fromLive(List<ExerciseInSession> exercises) =>
       exercises
           .map(
@@ -289,13 +314,17 @@ class WorkoutAnalytics {
               name: e.name,
               notes: e.notes,
               targetSets: e.sets.length,
-              instanceId: e.plan?.instanceId,
+              instanceId: e.plan?.instanceId ?? e.id,
               setTargets: e.plan?.setTargets ?? const [],
               sportPlan: e.sportPlan,
               sportPurpose: e.plan?.sportPurpose,
               sportResult: e.sportResult,
               restEnabled: e.restEnabled,
-              measurement: e.isTimed ? 'seconds' : 'reps',
+              measurement: e.isDistance
+                  ? 'distance'
+                  : e.isTimed
+                  ? 'seconds'
+                  : 'reps',
               targetLoadType:
                   e.plan?.targetLoadType ??
                   (e.isAssisted
@@ -314,6 +343,12 @@ class WorkoutAnalytics {
                       durationSeconds: s.durationSeconds,
                       externalLoadKg: s.kg,
                       assistanceKg: s.assistanceKg,
+                      distanceMeters: s.distanceMeters,
+                      loadConvention: s.loadConvention,
+                      implementCount: s.implementCount,
+                      rir: s.rir,
+                      note: s.note,
+                      performedAt: s.performedAt,
                     ),
                   )
                   .toList(),
@@ -461,7 +496,13 @@ class WorkoutAnalytics {
       final key =
           definition(e.exercise)?.id ??
           ExerciseLibraryIndex.normalizeQuery(e.exercise.name);
-      return '$key|${isTimed(e.exercise)}|${kinds.join(',')}';
+      final conventions =
+          e.performed
+              .map((s) => exerciseLoadKey(e.exercise, s))
+              .toSet()
+              .toList()
+            ..sort();
+      return '$key|${isTimed(e.exercise)}|${kinds.join(',')}|${conventions.join(',')}';
     }).toList()..sort();
     return entries.join(';');
   }

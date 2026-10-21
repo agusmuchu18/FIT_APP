@@ -1,3 +1,5 @@
+import '../presentation/widgets/workout_units_host.dart';
+
 import 'package:flutter/material.dart';
 
 import '../../../app/theme/app_theme.dart';
@@ -23,7 +25,7 @@ class RoutinePreviewScreen extends StatelessWidget {
   final String typeLabel, lastUsedLabel;
   @override
   Widget build(BuildContext context) => Theme(
-    data: AppTheme.workout,
+    data: AppTheme.workoutFor(Theme.of(context)),
     child: AnimatedBuilder(
       animation: controller,
       builder: (context, _) {
@@ -118,7 +120,12 @@ class RoutinePreviewScreen extends StatelessWidget {
                                           .titleMedium,
                                     ),
                                     const SizedBox(height: 8),
-                                    Text(RoutineLabels.summary(e)),
+                                    Text(
+                                      RoutineLabels.summary(
+                                        e,
+                                        units: WorkoutUnits.of(context),
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ),
@@ -134,7 +141,7 @@ class RoutinePreviewScreen extends StatelessWidget {
                           ],
                           for (var i = 0; i < e.setTargets.length; i++)
                             Text(
-                              'Serie ${i + 1}: ${e.setTargets[i].durationSeconds == null ? '${e.setTargets[i].reps ?? '${e.setTargets[i].repsMin}–${e.setTargets[i].repsMax}'} repeticiones' : '${e.setTargets[i].durationSeconds}s'}${e.setTargets[i].weightKg == null ? '' : ' · ${e.setTargets[i].weightKg} kg (${RoutineLabels.load(e.targetLoadType)})'}',
+                              'Serie ${i + 1}: ${e.setTargets[i].durationSeconds == null ? '${e.setTargets[i].reps ?? '${e.setTargets[i].repsMin}–${e.setTargets[i].repsMax}'} repeticiones' : '${e.setTargets[i].durationSeconds}s'}${e.setTargets[i].weightKg == null ? '' : ' · ${WorkoutUnits.of(context).valueWithUnit('kg', e.setTargets[i].weightKg!)} (${RoutineLabels.load(e.targetLoadType)})'}',
                             ),
                           if (e.notes?.isNotEmpty == true) Text(e.notes!),
                         ],

@@ -1,3 +1,7 @@
+import 'dart:io';
+
+import 'package:hive/hive.dart';
+
 import 'dart:ui' as ui;
 
 import 'package:fit_app/app/theme/app_theme.dart';
@@ -14,6 +18,24 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  late Directory trainingTemporary;
+  setUpAll(() async {
+    trainingTemporary = await Directory.systemTemp.createTemp(
+      'fit-training-ui-',
+    );
+    Hive.init(trainingTemporary.path);
+    await Hive.openBox<String>('fit_training_library_v1');
+  });
+  tearDownAll(() async {
+    await Hive.close();
+    if (!trainingTemporary.absolute.path.startsWith(
+          Directory.systemTemp.absolute.path,
+        ) ||
+        !trainingTemporary.path.contains('fit-training-ui-')) {
+      throw StateError('Ruta temporal inesperada');
+    }
+    await trainingTemporary.delete(recursive: true);
+  });
   setUp(() => SharedPreferences.setMockInitialValues({}));
   Future<void> mount(
     WidgetTester tester,
@@ -222,6 +244,8 @@ void main() {
           definition: d,
         ),
       );
+      await tester.tap(find.text('Técnica'));
+      await tester.pumpAndSettle();
       await capture(tester, 'routine_technical_visual.png');
     },
   );

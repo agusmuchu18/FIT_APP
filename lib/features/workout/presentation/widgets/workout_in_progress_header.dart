@@ -2,6 +2,9 @@ import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+
+import 'workout_units_host.dart';
+
 import 'package:intl/intl.dart';
 
 import '../../domain/workout_live_metrics.dart';
@@ -115,7 +118,8 @@ class _WorkoutInProgressHeaderState extends State<WorkoutInProgressHeader>
     final progress = widget.totalSets == 0
         ? 0.0
         : (widget.completedSets / widget.totalSets).clamp(0.0, 1.0);
-    final formattedVolume = formatVolume(widget.totalVolume);
+    final formattedVolume = WorkoutUnits.of(context)
+        .valueWithUnit('kg·rep', widget.totalVolume);
     final currentValues = WorkoutLiveMetrics.radarMuscles
         .map(
           (muscle) =>
@@ -153,7 +157,7 @@ class _WorkoutInProgressHeaderState extends State<WorkoutInProgressHeader>
                 ),
               ),
               const SizedBox(height: 12),
-              Text('Carga externa · $formattedVolume kg'),
+              Text('Volumen externo · $formattedVolume'),
               const SizedBox(height: 12),
               Text(
                 '${widget.completedSets} de ${widget.totalSets} series completadas',
@@ -268,7 +272,7 @@ class _WorkoutInProgressHeaderState extends State<WorkoutInProgressHeader>
                           transitionBuilder: (child, animation) =>
                               FadeTransition(opacity: animation, child: child),
                           child: Text(
-                            '$formattedVolume kg',
+                            formattedVolume,
                             key: ValueKey(formattedVolume),
                             maxLines: 1,
                             softWrap: false,

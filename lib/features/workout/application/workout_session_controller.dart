@@ -1,3 +1,5 @@
+import '../domain/training_program.dart';
+
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
@@ -34,9 +36,11 @@ class WorkoutSessionController extends ChangeNotifier {
   final Uuid _uuid = const Uuid();
   String _sessionId = const Uuid().v4();
   String? _sourceSessionId;
+  ProgramExecutionRef? _programExecution;
 
   List<ExerciseInSession> _exercises = [];
   String? _expandedExerciseId;
+  String? _expandedSetId;
   Timer? _autosaveTimer;
   Future<void> _pendingAutosave = Future<void>.value();
   String? _routineId;
@@ -61,11 +65,53 @@ class WorkoutSessionController extends ChangeNotifier {
   Object? _initializationError;
   Object? _saveError;
   final Map<String, Future<List<PreviousSet>>> _previousRequests = {};
+  final Set<String> _touchedSetFields = {};
   Map<String, double>? _previousMuscleDistribution;
   WorkoutPreferences _preferences = const WorkoutPreferences();
 
   List<ExerciseInSession> get exercises => _exercises;
   String? get expandedExerciseId => _expandedExerciseId;
+  String? get expandedSetId => _expandedSetId;
+  void toggleSetExpansion(String id) {
+    _expandedSetId = _expandedSetId == id ? null : id;
+    notifyListeners();
+  }
+
+  void updateSetDetails(String exerciseId, SetInSession details) {
+    if (!canEdit) return;
+    final exercise = _findExercise(exerciseId);
+    final original = exercise?.sets
+        .where((s) => s.id == details.id)
+        .firstOrNull;
+    if (exercise == null || original == null || original.done) return;
+    if (details.rir != null && (details.rir! < 0 || details.rir! > 10)) {
+      throw ArgumentError('RIR inválido');
+    }
+    if (details.implementCount != null &&
+        details.implementCount != 1 &&
+        details.implementCount != 2) {
+      throw ArgumentError('Cantidad de implementos inválida');
+    }
+    _exercises = _replaceExercise(
+      exercise.copyWith(
+        sets: [
+          for (final s in exercise.sets)
+            s.id == details.id
+                ? s.copyWith(
+                    loadConvention: details.loadConvention,
+                    implementCount: details.implementCount,
+                    rir: details.rir,
+                    clearRir: details.rir == null,
+                    note: details.note,
+                  )
+                : s,
+        ],
+      ),
+    );
+    notifyListeners();
+    _scheduleAutosave();
+  }
+
   DateTime get sessionStart => _sessionStart;
   bool get isPaused => _isPaused;
   DateTime? get pausedAt => _pausedAt;
@@ -85,7 +131,14 @@ class WorkoutSessionController extends ChangeNotifier {
     (sum, e) =>
         sum +
         e.sets
-            .where((set) => set.done && set.hasValidResult(isTimed: e.isTimed))
+            .where(
+              (set) =>
+                  set.done &&
+                  set.hasValidResult(
+                    isTimed: e.isTimed,
+                    isDistance: e.isDistance,
+                  ),
+            )
             .length,
   );
   bool get allSetsCompleted =>
@@ -97,7 +150,9 @@ class WorkoutSessionController extends ChangeNotifier {
   }
 
   Future<void> reloadPreferences() async {
-    final preferences = await WorkoutPreferences.load();
+    final preferences = await WorkoutPreferences.load(
+      scope: _repository.storageScope,
+    );
     if (_disposed) return;
     _preferences = preferences;
   }
@@ -175,13 +230,16 @@ class WorkoutSessionController extends ChangeNotifier {
   Future<void> initialize({
     List<ExerciseInSession>? initialExercises,
     String? templateId,
+    ProgramExecutionRef? programExecution,
   }) async {
     if (_initializing || _initialized || _disposed) return;
     _initializing = true;
     _initializationError = null;
     notifyListeners();
     try {
-      _preferences = await WorkoutPreferences.load();
+      _preferences = await WorkoutPreferences.load(
+        scope: _repository.storageScope,
+      );
       final draft = await _repository.loadDraftExercises();
       if (draft != null) {
         _exercises = draft.map((exercise) {
@@ -208,6 +266,7 @@ class WorkoutSessionController extends ChangeNotifier {
         final identity = await _repository.loadDraftIdentity();
         _sessionId = identity?.sessionId ?? _sessionId;
         _sourceSessionId = identity?.sourceSessionId;
+        _programExecution = identity?.programExecution;
         _routineId = identity?.routineId;
         _routineName = identity?.routineName;
         _workoutType = identity?.workoutType ?? WorkoutType.strength;
@@ -222,6 +281,7 @@ class WorkoutSessionController extends ChangeNotifier {
       } else {
         _sessionStart = DateTime.now();
         _routineId = templateId;
+        _programExecution = programExecution;
         if (templateId != null) {
           final routines = await RoutinesRepository().getAllRoutines();
           for (final routine in routines) {
@@ -321,6 +381,7 @@ class WorkoutSessionController extends ChangeNotifier {
         startTime: _sessionStart,
         workoutId: _sessionId,
         sourceSessionId: _sourceSessionId,
+        programExecution: _programExecution,
         routineId: _routineId,
         routineName: _routineName,
         workoutType: _workoutType,
@@ -358,6 +419,7 @@ class WorkoutSessionController extends ChangeNotifier {
       exerciseId: exerciseId,
       name: name,
       isTimed: _definitions[exerciseId]?.isTimed ?? false,
+      isDistance: _definitions[exerciseId]?.defaultMeasurement == 'distance',
       isAssisted:
           _definitions[exerciseId]?.loadType == LoadType.assistedBodyweight,
       restEnabled: _preferences.defaultRestEnabled,
@@ -371,6 +433,100 @@ class WorkoutSessionController extends ChangeNotifier {
     notifyListeners();
     _scheduleAutosave();
     await _ensurePreviousForExercise(newExercise.id);
+    _scheduleAutosave();
+  }
+
+  void duplicateExercise(String exerciseId) {
+    if (!canEdit) return;
+    final original = _findExercise(exerciseId);
+    if (original == null) return;
+    final duplicate = ExerciseInSession(
+      id: _uuid.v4(),
+      exerciseId: original.exerciseId,
+      name: original.name,
+      isTimed: original.isTimed,
+      isDistance: original.isDistance,
+      isAssisted: original.isAssisted,
+      restEnabled: original.restEnabled,
+      restSeconds: original.restSeconds,
+      plan: original.plan?.copyWith(instanceId: _uuid.v4(), sets: []),
+      sets: [
+        for (var i = 0; i < original.sets.length; i++)
+          SetInSession(
+            id: _uuid.v4(),
+            index: i + 1,
+            kg: original.sets[i].kg,
+            assistanceKg: original.sets[i].assistanceKg,
+            reps: original.sets[i].reps,
+            durationSeconds: original.sets[i].durationSeconds,
+            distanceMeters: original.sets[i].distanceMeters,
+            loadConvention: original.sets[i].loadConvention,
+            implementCount: original.sets[i].implementCount,
+          ),
+      ],
+    );
+    final index = _exercises.indexWhere((e) => e.id == exerciseId);
+    _exercises = [..._exercises]..insert(index + 1, duplicate);
+    _expandedExerciseId = duplicate.id;
+    _expandedSetId = null;
+    notifyListeners();
+    _scheduleAutosave();
+    unawaited(_ensurePreviousForExercise(duplicate.id));
+  }
+
+  void replaceExercise(
+    String instanceId, {
+    required String exerciseId,
+    required String name,
+  }) {
+    if (!canEdit) return;
+    final original = _findExercise(instanceId);
+    if (original == null) return;
+    final definition = _definitions[exerciseId];
+    final replacement = ExerciseInSession(
+      id: _uuid.v4(),
+      exerciseId: exerciseId,
+      name: name,
+      notes: original.notes,
+      restEnabled: original.restEnabled,
+      restSeconds: original.restSeconds,
+      isTimed: definition?.isTimed ?? false,
+      isDistance: definition?.defaultMeasurement == 'distance',
+      isAssisted: definition?.loadType == LoadType.assistedBodyweight,
+      sets: [SetInSession(id: _uuid.v4(), index: 1)],
+    );
+    if (original.sets.any((s) => s.id == _restSourceSetId)) _clearRest();
+    _exercises = [
+      for (final e in _exercises) e.id == instanceId ? replacement : e,
+    ];
+    _expandedExerciseId = replacement.id;
+    _expandedSetId = null;
+    notifyListeners();
+    _scheduleAutosave();
+    unawaited(_ensurePreviousForExercise(replacement.id));
+  }
+
+  void updateLoadType(String exerciseId, RoutineExerciseLoadType type) {
+    if (!canEdit) return;
+    final exercise = _findExercise(exerciseId);
+    if (exercise == null || exercise.sets.any((s) => s.done)) return;
+    final plan =
+        exercise.plan ??
+        WorkoutExercise(id: exercise.exerciseId, name: exercise.name);
+    _exercises = _replaceExercise(
+      exercise.copyWith(
+        isAssisted: type == RoutineExerciseLoadType.assistedKg,
+        plan: plan.copyWith(targetLoadType: type),
+        sets: [
+          for (final s in exercise.sets)
+            s.copyWith(clearKg: true, clearAssistance: true),
+        ],
+      ),
+    );
+    for (final s in exercise.sets) {
+      _touchedSetFields.add('$exerciseId|${s.id}|load');
+    }
+    notifyListeners();
     _scheduleAutosave();
   }
 
@@ -488,6 +644,8 @@ class WorkoutSessionController extends ChangeNotifier {
     bool clearReps = false,
     int? durationSeconds,
     bool clearDuration = false,
+    double? distanceMeters,
+    bool clearDistance = false,
     bool? done,
   }) {
     if (!canEdit) return;
@@ -498,6 +656,10 @@ class WorkoutSessionController extends ChangeNotifier {
     if (durationSeconds != null && durationSeconds < 1) {
       throw ArgumentError.value(durationSeconds, 'durationSeconds');
     }
+    if (distanceMeters != null &&
+        (!distanceMeters.isFinite || distanceMeters <= 0)) {
+      throw ArgumentError.value(distanceMeters, 'distanceMeters');
+    }
     final exerciseIndex = _exercises.indexWhere(
       (item) => item.id == exerciseId,
     );
@@ -505,6 +667,15 @@ class WorkoutSessionController extends ChangeNotifier {
     final originalExercise = _exercises[exerciseIndex];
     final setIndex = originalExercise.sets.indexWhere((set) => set.id == setId);
     if (setIndex < 0) return;
+    final prefix = '$exerciseId|$setId|';
+    if (kg != null || clearKg) _touchedSetFields.add('${prefix}load');
+    if (reps != null || clearReps) _touchedSetFields.add('${prefix}reps');
+    if (durationSeconds != null || clearDuration) {
+      _touchedSetFields.add('${prefix}duration');
+    }
+    if (distanceMeters != null || clearDistance) {
+      _touchedSetFields.add('${prefix}distance');
+    }
     final wasDone = originalExercise.sets[setIndex].done;
     _exercises = _exercises.map((exercise) {
       if (exercise.id != exerciseId) return exercise;
@@ -520,6 +691,11 @@ class WorkoutSessionController extends ChangeNotifier {
                     clearReps: clearReps,
                     durationSeconds: durationSeconds,
                     clearDuration: clearDuration,
+                    distanceMeters: distanceMeters,
+                    clearDistance: clearDistance,
+                    performedAt: done == true && !set.done
+                        ? DateTime.now().toUtc()
+                        : null,
                     done: done ?? set.done,
                   )
                 : set,
@@ -529,7 +705,10 @@ class WorkoutSessionController extends ChangeNotifier {
     }).toList();
     final updatedSet = _exercises[exerciseIndex].sets[setIndex];
     if (updatedSet.done &&
-        (!updatedSet.hasValidResult(isTimed: originalExercise.isTimed) ||
+        (!updatedSet.hasValidResult(
+              isTimed: originalExercise.isTimed,
+              isDistance: originalExercise.isDistance,
+            ) ||
             (originalExercise.sportPlan != null &&
                 !originalExercise.sportPlan!.resultValid(
                   originalExercise.sportResult,
@@ -568,7 +747,32 @@ class WorkoutSessionController extends ChangeNotifier {
     final exercise = _findExercise(exerciseId);
     if (exercise == null) return;
     final setNumber = exercise.sets.length + 1;
-    final newSet = SetInSession(id: _uuid.v4(), index: setNumber);
+    final previous = exercise.sets.lastOrNull;
+    final newSet = SetInSession(
+      id: _uuid.v4(),
+      index: setNumber,
+      kg: previous?.kg != null && previous!.kg!.isFinite && previous.kg! >= 0
+          ? previous.kg
+          : null,
+      assistanceKg:
+          previous?.assistanceKg != null &&
+              previous!.assistanceKg!.isFinite &&
+              previous.assistanceKg! >= 0
+          ? previous.assistanceKg
+          : null,
+      reps: (previous?.reps ?? 0) > 0 ? previous!.reps : null,
+      durationSeconds: (previous?.durationSeconds ?? 0) > 0
+          ? previous!.durationSeconds
+          : null,
+      distanceMeters:
+          previous?.distanceMeters != null &&
+              previous!.distanceMeters!.isFinite &&
+              previous.distanceMeters! > 0
+          ? previous.distanceMeters
+          : null,
+      loadConvention: previous?.loadConvention ?? LoadConvention.recorded,
+      implementCount: previous?.implementCount,
+    );
     final updatedExercise = exercise.copyWith(sets: [...exercise.sets, newSet]);
     _exercises = _replaceExercise(updatedExercise);
     notifyListeners();
@@ -634,6 +838,81 @@ class WorkoutSessionController extends ChangeNotifier {
     );
     notifyListeners();
     _scheduleAutosave();
+    await _suggestHistoryValues(exerciseId);
+  }
+
+  Future<void> _suggestHistoryValues(String exerciseId) async {
+    final requested = _findExercise(exerciseId);
+    if (requested == null) return;
+    try {
+      final suggestions = await _repository.getCompatibleSuggestions(requested);
+      if (!canEdit || suggestions.isEmpty) return;
+      final current = _findExercise(exerciseId);
+      if (current == null) return;
+      final sets = <SetInSession>[];
+      for (var i = 0; i < current.sets.length; i++) {
+        final set = current.sets[i],
+            source =
+                suggestions[i < suggestions.length
+                    ? i
+                    : suggestions.length - 1];
+        final prefix = '$exerciseId|${set.id}|';
+        final load = current.isAssisted
+            ? source.assistanceKg
+            : source.externalLoadKg;
+        final safeLoad =
+            !source.loadIsAmbiguous &&
+            load != null &&
+            load.isFinite &&
+            load >= 0;
+        final fillLoad =
+            !set.done &&
+            !_touchedSetFields.contains('${prefix}load') &&
+            safeLoad;
+        sets.add(
+          set.done
+              ? set
+              : set.copyWith(
+                  kg: fillLoad && !current.isAssisted && set.kg == null
+                      ? load
+                      : null,
+                  assistanceKg:
+                      fillLoad && current.isAssisted && set.assistanceKg == null
+                      ? load
+                      : null,
+                  reps:
+                      !current.isTimed &&
+                          !current.isDistance &&
+                          set.reps == null &&
+                          !_touchedSetFields.contains('${prefix}reps') &&
+                          (source.reps ?? 0) > 0
+                      ? source.reps
+                      : null,
+                  durationSeconds:
+                      current.isTimed &&
+                          set.durationSeconds == null &&
+                          !_touchedSetFields.contains('${prefix}duration') &&
+                          (source.durationSeconds ?? 0) > 0
+                      ? source.durationSeconds
+                      : null,
+                  distanceMeters:
+                      current.isDistance &&
+                          set.distanceMeters == null &&
+                          !_touchedSetFields.contains('${prefix}distance') &&
+                          source.distanceMeters != null &&
+                          source.distanceMeters!.isFinite &&
+                          source.distanceMeters! > 0
+                      ? source.distanceMeters
+                      : null,
+                ),
+        );
+      }
+      _exercises = _replaceExercise(current.copyWith(sets: sets));
+      notifyListeners();
+      _scheduleAutosave();
+    } catch (_) {
+      /* Optional suggestions cannot block recording or clear edits. */
+    }
   }
 
   Future<void> discardWorkout() async {
@@ -670,7 +949,12 @@ class WorkoutSessionController extends ChangeNotifier {
     if (!isReady || _disposed) return false;
     final hasValidCompletedSet = _exercises.any(
       (exercise) => exercise.sets.any(
-        (set) => set.done && set.hasValidResult(isTimed: exercise.isTimed),
+        (set) =>
+            set.done &&
+            set.hasValidResult(
+              isTimed: exercise.isTimed,
+              isDistance: exercise.isDistance,
+            ),
       ),
     );
     if (!hasValidCompletedSet) throw const IncompleteWorkoutException();
@@ -704,6 +988,7 @@ class WorkoutSessionController extends ChangeNotifier {
               ? Duration.zero
               : completedAt.difference(_sessionStart),
           sourceSessionId: _sourceSessionId,
+          programExecution: _programExecution,
           clearDraftAfterSave: false,
         );
       }
@@ -787,6 +1072,7 @@ class WorkoutSessionController extends ChangeNotifier {
             startTime: startTime,
             workoutId: sessionId,
             sourceSessionId: _sourceSessionId,
+            programExecution: _programExecution,
             routineId: routineId,
             routineName: routineName,
             workoutType: workoutType,

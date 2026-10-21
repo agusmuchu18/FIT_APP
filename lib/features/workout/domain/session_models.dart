@@ -1,5 +1,6 @@
 import '../pro/models/workout_models.dart';
 import 'sport_activity.dart';
+import 'training_units.dart';
 
 class PreviousSet {
   const PreviousSet({
@@ -14,17 +15,15 @@ class PreviousSet {
   final int? durationSeconds;
   final double? assistanceKg;
 
-  String get label {
+  String get label => labelFor(const TrainingUnits());
+  String labelFor(TrainingUnits units) {
     if (durationSeconds != null) return '${durationSeconds}s';
     if (assistanceKg != null && reps != null) {
-      return '${assistanceKg!.toStringAsFixed(0)} kg asist. × $reps';
+      return '${units.valueWithUnit('kg', assistanceKg!)} asist. × $reps';
     }
     if (reps == null) return '—';
     if (kg == null || kg == 0) return '$reps reps';
-    final kgLabel = kg == kg!.roundToDouble()
-        ? kg!.toStringAsFixed(0)
-        : kg!.toStringAsFixed(1);
-    return '$kgLabel x $reps';
+    return '${units.valueWithUnit('kg', kg!)} × $reps';
   }
 
   Map<String, dynamic> toJson() => {
@@ -54,9 +53,20 @@ class SetInSession {
     this.assistanceKg,
     this.done = false,
     this.previous,
+    this.loadConvention = LoadConvention.recorded,
+    this.implementCount,
+    this.distanceMeters,
+    this.rir,
+    this.note,
+    this.performedAt,
   });
 
   final String id;
+  final LoadConvention loadConvention;
+  final int? implementCount, rir;
+  final double? distanceMeters;
+  final String? note;
+  final DateTime? performedAt;
   final int index;
   final double? kg;
   final int? reps;
@@ -78,9 +88,25 @@ class SetInSession {
     bool clearAssistance = false,
     bool? done,
     PreviousSet? previous,
+    LoadConvention? loadConvention,
+    int? implementCount,
+    double? distanceMeters,
+    bool clearDistance = false,
+    int? rir,
+    bool clearRir = false,
+    String? note,
+    DateTime? performedAt,
   }) {
     return SetInSession(
       id: id ?? this.id,
+      loadConvention: loadConvention ?? this.loadConvention,
+      implementCount: implementCount ?? this.implementCount,
+      distanceMeters: clearDistance
+          ? null
+          : distanceMeters ?? this.distanceMeters,
+      rir: clearRir ? null : rir ?? this.rir,
+      note: note ?? this.note,
+      performedAt: performedAt ?? this.performedAt,
       index: index ?? this.index,
       kg: clearKg ? null : (kg ?? this.kg),
       reps: clearReps ? null : (reps ?? this.reps),
@@ -97,6 +123,12 @@ class SetInSession {
 
   Map<String, dynamic> toJson() => {
     'id': id,
+    'loadConvention': loadConvention.name,
+    'implementCount': implementCount,
+    'distanceMeters': distanceMeters,
+    'rir': rir,
+    'note': note,
+    'performedAt': performedAt?.toUtc().toIso8601String(),
     'index': index,
     'kg': kg,
     'reps': reps,
@@ -110,6 +142,12 @@ class SetInSession {
     final previousJson = json['previous'];
     return SetInSession(
       id: json['id'] as String,
+      loadConvention: decodeLoadConvention(json['loadConvention']),
+      implementCount: json['implementCount'] as int?,
+      distanceMeters: (json['distanceMeters'] as num?)?.toDouble(),
+      rir: json['rir'] as int?,
+      note: json['note'] as String?,
+      performedAt: DateTime.tryParse(json['performedAt'] as String? ?? ''),
       index: (json['index'] as int?) ?? 1,
       kg: (json['kg'] as num?)?.toDouble(),
       reps: json['reps'] as int?,
@@ -122,11 +160,20 @@ class SetInSession {
     );
   }
 
-  bool hasValidResult({required bool isTimed}) =>
+  bool hasValidResult({required bool isTimed, bool isDistance = false}) =>
+      (loadConvention != LoadConvention.perImplement ||
+          implementCount == 1 ||
+          implementCount == 2) &&
       (kg == null || (kg!.isFinite && kg! >= 0)) &&
       (assistanceKg == null ||
           (assistanceKg!.isFinite && assistanceKg! >= 0)) &&
-      (isTimed ? (durationSeconds ?? 0) > 0 : (reps ?? 0) > 0);
+      (isDistance
+          ? distanceMeters != null &&
+                distanceMeters!.isFinite &&
+                distanceMeters! > 0
+          : isTimed
+          ? (durationSeconds ?? 0) > 0
+          : (reps ?? 0) > 0);
 }
 
 class ExerciseInSession {
@@ -139,6 +186,7 @@ class ExerciseInSession {
     this.restSeconds,
     this.previousLoaded = false,
     this.isTimed = false,
+    this.isDistance = false,
     this.isAssisted = false,
     this.sets = const [],
     this.plan,
@@ -153,6 +201,7 @@ class ExerciseInSession {
   final int? restSeconds;
   final bool previousLoaded;
   final bool isTimed;
+  final bool isDistance;
   final bool isAssisted;
   final List<SetInSession> sets;
   final WorkoutExercise? plan;
@@ -170,6 +219,7 @@ class ExerciseInSession {
     bool clearRestSeconds = false,
     bool? previousLoaded,
     bool? isTimed,
+    bool? isDistance,
     bool? isAssisted,
     List<SetInSession>? sets,
     WorkoutExercise? plan,
@@ -185,6 +235,7 @@ class ExerciseInSession {
       restSeconds: clearRestSeconds ? null : (restSeconds ?? this.restSeconds),
       previousLoaded: previousLoaded ?? this.previousLoaded,
       isTimed: isTimed ?? this.isTimed,
+      isDistance: isDistance ?? this.isDistance,
       isAssisted: isAssisted ?? this.isAssisted,
       sets: sets ?? this.sets,
       plan: plan ?? this.plan,
@@ -205,6 +256,7 @@ class ExerciseInSession {
     'restSeconds': restSeconds,
     'previousLoaded': previousLoaded,
     'isTimed': isTimed,
+    'isDistance': isDistance,
     'isAssisted': isAssisted,
     'sets': sets.map((set) => set.toJson()).toList(),
   };
@@ -227,6 +279,7 @@ class ExerciseInSession {
       restSeconds: json['restSeconds'] as int?,
       previousLoaded: json['previousLoaded'] as bool? ?? false,
       isTimed: json['isTimed'] as bool? ?? false,
+      isDistance: json['isDistance'] as bool? ?? false,
       isAssisted: json['isAssisted'] as bool? ?? false,
       sets: (json['sets'] as List<dynamic>? ?? [])
           .map(

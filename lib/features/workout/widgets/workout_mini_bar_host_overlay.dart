@@ -3,11 +3,16 @@ import 'package:flutter/material.dart';
 
 import '../workout_in_progress_controller.dart';
 import 'workout_mini_bar.dart';
+import '../presentation/widgets/workout_units_host.dart';
+import '../../../core/data/account_storage_scope.dart';
 
 final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
 
 Widget workoutMiniBarAppBuilder(BuildContext context, Widget? child) {
-  return _WorkoutAppOverlay(child: child);
+  return WorkoutUnitsHost(
+    key: ValueKey(AccountStorageScope.current),
+    child: _WorkoutAppOverlay(child: child),
+  );
 }
 
 class _WorkoutAppOverlay extends StatefulWidget {
@@ -58,10 +63,13 @@ class WorkoutMiniBarOverlayController {
 
   final ValueNotifier<bool> bottomNavVisible = ValueNotifier(true);
   final ValueNotifier<String?> currentRouteName = ValueNotifier(null);
+  final ValueNotifier<bool> modalVisible = ValueNotifier(false);
 
   String? _lastOverlayStateLog;
 
-  bool get shouldHideMiniBar => currentRouteName.value == '/workout/session';
+  bool get shouldHideMiniBar =>
+      modalVisible.value ||
+      !const {'/', '/home', '/workout'}.contains(currentRouteName.value);
 
   void updateFromRoute(Route<dynamic>? route) {
     updateFromRouteName(route?.settings.name);
@@ -72,12 +80,7 @@ class WorkoutMiniBarOverlayController {
       currentRouteName.value = routeName;
     }
 
-    // Mantener robustez ante cambios de rutas:
-    // por defecto asumimos que la bottom nav está visible, excepto en rutas full-screen.
-    const fullScreenRoutesWithoutBottomNav = <String>{'/workout/session'};
-    final showBottomNav =
-        routeName == null ||
-        !fullScreenRoutesWithoutBottomNav.contains(routeName);
+    final showBottomNav = const {'/', '/home'}.contains(routeName);
     if (bottomNavVisible.value != showBottomNav) {
       bottomNavVisible.value = showBottomNav;
     }
@@ -97,28 +100,45 @@ class WorkoutMiniBarRouteObserver extends NavigatorObserver {
   WorkoutMiniBarRouteObserver();
 
   final controller = WorkoutMiniBarOverlayController.instance;
+  final _routes = <Route<dynamic>>[];
+  void _sync() {
+    controller.modalVisible.value = _routes.any((r) => r is PopupRoute);
+    controller.updateFromRoute(_routes.whereType<PageRoute>().lastOrNull);
+  }
 
   @override
   void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    controller.updateFromRoute(route);
+    if (previousRoute == null) _routes.clear();
+    _routes.add(route);
+    _sync();
     super.didPush(route, previousRoute);
   }
 
   @override
   void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    controller.updateFromRoute(previousRoute);
+    _routes.remove(route);
+    _sync();
     super.didPop(route, previousRoute);
   }
 
   @override
   void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
-    controller.updateFromRoute(newRoute);
+    final index = oldRoute == null ? -1 : _routes.indexOf(oldRoute);
+    if (index >= 0) {
+      if (newRoute == null) {
+        _routes.removeAt(index);
+      } else {
+        _routes[index] = newRoute;
+      }
+    }
+    _sync();
     super.didReplace(newRoute: newRoute, oldRoute: oldRoute);
   }
 
   @override
   void didRemove(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    controller.updateFromRoute(previousRoute);
+    _routes.remove(route);
+    _sync();
     super.didRemove(route, previousRoute);
   }
 }
@@ -149,7 +169,9 @@ class _WorkoutMiniBarHostOverlayState extends State<WorkoutMiniBarHostOverlay> {
         return;
       }
       final routeName = ModalRoute.of(context)?.settings.name;
-      WorkoutMiniBarOverlayController.instance.updateFromRouteName(routeName);
+      if (routeName != null) {
+        WorkoutMiniBarOverlayController.instance.updateFromRouteName(routeName);
+      }
     });
   }
 
@@ -163,11 +185,16 @@ class _WorkoutMiniBarHostOverlayState extends State<WorkoutMiniBarHostOverlay> {
         return ValueListenableBuilder<bool>(
           valueListenable: overlayController.bottomNavVisible,
           builder: (context, bottomNavVisible, _) {
-            return ValueListenableBuilder<String?>(
-              valueListenable: overlayController.currentRouteName,
-              builder: (context, _, _) {
+            return ListenableBuilder(
+              listenable: Listenable.merge([
+                overlayController.currentRouteName,
+                overlayController.modalVisible,
+              ]),
+              builder: (context, _) {
                 final hidden =
-                    draft == null || overlayController.shouldHideMiniBar;
+                    draft == null ||
+                    overlayController.shouldHideMiniBar ||
+                    MediaQuery.viewInsetsOf(context).bottom > 0;
                 final bottomInset = MediaQuery.of(context).padding.bottom;
                 final bottomOffset =
                     (bottomNavVisible
@@ -198,10 +225,14 @@ class _WorkoutMiniBarHostOverlayState extends State<WorkoutMiniBarHostOverlay> {
                       child: ConstrainedBox(
                         constraints: const BoxConstraints(maxWidth: 560),
                         child: AnimatedSlide(
-                          duration: _animationDuration,
+                          duration: MediaQuery.disableAnimationsOf(context)
+                              ? Duration.zero
+                              : _animationDuration,
                           offset: hidden ? const Offset(0, 1) : Offset.zero,
                           child: AnimatedOpacity(
-                            duration: _animationDuration,
+                            duration: MediaQuery.disableAnimationsOf(context)
+                                ? Duration.zero
+                                : _animationDuration,
                             opacity: hidden ? 0 : 1,
                             child: IgnorePointer(
                               ignoring: hidden,

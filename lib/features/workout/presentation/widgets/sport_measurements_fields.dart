@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../../domain/sport_activity.dart';
+import '../../domain/training_units.dart';
+import 'workout_units_host.dart';
 
 class SportMeasurementsDraft {
   Map<SportMetric, String>? raw;
   String? position, notes;
+  DistanceUnit? distanceUnit;
 }
 
 class SportMeasurementsFields extends StatefulWidget {
@@ -14,8 +17,10 @@ class SportMeasurementsFields extends StatefulWidget {
     required this.initial,
     required this.onChanged,
     this.draft,
+    this.enabled = true,
   });
   final SportMeasurementsDraft? draft;
+  final bool enabled;
   final FootballActivity activity;
   final SportMeasurements initial;
   final ValueChanged<SportMeasurements?> onChanged;
@@ -25,9 +30,33 @@ class SportMeasurementsFields extends StatefulWidget {
 }
 
 class _SportMeasurementsFieldsState extends State<SportMeasurementsFields> {
-  late final Map<SportMetric, String> _raw =
-      widget.draft?.raw ??
-      {for (final e in widget.initial.values.entries) e.key: '${e.value}'};
+  late Map<SportMetric, String> _raw;
+  DistanceUnit? _unit;
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final next = WorkoutUnits.of(context).distance;
+    final previous = _unit ?? widget.draft?.distanceUnit ?? DistanceUnit.meters;
+    if (_unit == null) {
+      _raw = {
+        ...?widget.draft?.raw,
+        if (widget.draft?.raw == null)
+          for (final e in widget.initial.values.entries) e.key: '${e.value}',
+      };
+    }
+    if (next != previous) {
+      final value = double.tryParse(
+        (_raw[SportMetric.distanceMeters] ?? '').replaceAll(',', '.'),
+      );
+      if (value != null) {
+        _raw[SportMetric.distanceMeters] =
+            '${next.fromMeters(previous.toMeters(value))}';
+      }
+    }
+    _unit = next;
+    widget.draft?.distanceUnit = next;
+  }
+
   late String _position = widget.draft?.position ?? widget.initial.position,
       _notes = widget.draft?.notes ?? widget.initial.notes;
   void _emit() {
@@ -42,7 +71,9 @@ class _SportMeasurementsFieldsState extends State<SportMeasurementsFields> {
         widget.onChanged(null);
         return;
       }
-      values[e.key] = parsed;
+      values[e.key] = e.key == SportMetric.distanceMeters
+          ? _unit!.toMeters(parsed)
+          : parsed;
     }
     widget.onChanged(
       SportMeasurements(values: values, position: _position, notes: _notes),
@@ -56,12 +87,19 @@ class _SportMeasurementsFieldsState extends State<SportMeasurementsFields> {
         Padding(
           padding: const EdgeInsets.only(bottom: 12),
           child: TextFormField(
-            key: ValueKey(metric),
+            enabled: widget.enabled,
+            key: ValueKey(
+              '${metric.name}|${metric == SportMetric.distanceMeters ? _unit : ''}',
+            ),
             initialValue: _raw[metric] ?? '',
             keyboardType: TextInputType.numberWithOptions(
               decimal: !metric.integer,
             ),
-            decoration: InputDecoration(labelText: metric.label),
+            decoration: InputDecoration(
+              labelText: metric == SportMetric.distanceMeters
+                  ? 'Distancia (${_unit!.label})'
+                  : metric.label,
+            ),
             autovalidateMode: AutovalidateMode.onUserInteraction,
             validator: (raw) {
               if (raw?.trim().isEmpty != false) return null;
@@ -80,6 +118,7 @@ class _SportMeasurementsFieldsState extends State<SportMeasurementsFields> {
         Padding(
           padding: const EdgeInsets.only(bottom: 12),
           child: TextFormField(
+            enabled: widget.enabled,
             initialValue: _position,
             decoration: const InputDecoration(labelText: 'Posición'),
             onChanged: (v) {
@@ -89,6 +128,7 @@ class _SportMeasurementsFieldsState extends State<SportMeasurementsFields> {
           ),
         ),
       TextFormField(
+        enabled: widget.enabled,
         initialValue: _notes,
         maxLines: 2,
         decoration: const InputDecoration(

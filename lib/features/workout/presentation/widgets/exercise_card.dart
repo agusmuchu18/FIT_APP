@@ -4,6 +4,9 @@ import '../../domain/session_models.dart';
 import '../../../common/widgets/fit_glyph.dart';
 import 'set_row.dart';
 import 'workout_rest_selector.dart';
+import '../../pro/models/workout_models.dart';
+import '../../domain/workout_analytics.dart';
+import 'exercise_thumbnail.dart';
 
 class ExerciseCard extends StatelessWidget {
   const ExerciseCard({
@@ -21,6 +24,14 @@ class ExerciseCard extends StatelessWidget {
     required this.onMoveDown,
     this.onDurationChanged,
     this.onDeleteSet,
+    this.expandedSetId,
+    this.onSetExpansion,
+    this.onSetDetailsChanged,
+    this.onDistanceChanged,
+    this.onDuplicate,
+    this.onReplace,
+    this.onDetails,
+    this.onLoadTypeChanged,
   });
 
   final ExerciseInSession exercise;
@@ -44,6 +55,12 @@ class ExerciseCard extends StatelessWidget {
   final VoidCallback onMoveDown;
   final void Function(String, int?)? onDurationChanged;
   final ValueChanged<String>? onDeleteSet;
+  final String? expandedSetId;
+  final ValueChanged<String>? onSetExpansion;
+  final ValueChanged<SetInSession>? onSetDetailsChanged;
+  final void Function(String, double?)? onDistanceChanged;
+  final VoidCallback? onDuplicate, onReplace, onDetails;
+  final ValueChanged<RoutineExerciseLoadType>? onLoadTypeChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -59,6 +76,14 @@ class ExerciseCard extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               child: Row(
                 children: [
+                  ExerciseThumbnail(
+                    exercise: WorkoutExercise(
+                      id: exercise.exerciseId,
+                      name: exercise.name,
+                    ),
+                    size: 48,
+                  ),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -80,11 +105,35 @@ class ExerciseCard extends StatelessWidget {
                       if (value == 'delete') onDelete();
                       if (value == 'up') onMoveUp();
                       if (value == 'down') onMoveDown();
+                      if (value == 'duplicate') onDuplicate?.call();
+                      if (value == 'replace') onReplace?.call();
+                      if (value == 'details') onDetails?.call();
                     },
-                    itemBuilder: (context) => const [
-                      PopupMenuItem(value: 'up', child: Text('Mover arriba')),
-                      PopupMenuItem(value: 'down', child: Text('Mover abajo')),
-                      PopupMenuItem(
+                    itemBuilder: (context) => [
+                      if (onDetails != null)
+                        const PopupMenuItem(
+                          value: 'details',
+                          child: Text('Ficha, historial y notas permanentes'),
+                        ),
+                      if (onDuplicate != null)
+                        const PopupMenuItem(
+                          value: 'duplicate',
+                          child: Text('Duplicar ejercicio'),
+                        ),
+                      if (onReplace != null)
+                        const PopupMenuItem(
+                          value: 'replace',
+                          child: Text('Reemplazar ejercicio'),
+                        ),
+                      const PopupMenuItem(
+                        value: 'up',
+                        child: Text('Mover arriba'),
+                      ),
+                      const PopupMenuItem(
+                        value: 'down',
+                        child: Text('Mover abajo'),
+                      ),
+                      const PopupMenuItem(
                         value: 'delete',
                         child: Text('Eliminar ejercicio'),
                       ),
@@ -100,6 +149,48 @@ class ExerciseCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  if (onLoadTypeChanged != null &&
+                      !exercise.isTimed &&
+                      !exercise.isDistance) ...[
+                    DropdownButtonFormField<RoutineExerciseLoadType>(
+                      initialValue: WorkoutAnalytics.fromLive([exercise])
+                          .single
+                          .targetLoadType,
+                      isExpanded: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Tipo de carga',
+                        helperText: 'Cambiarlo borra las cargas de las series sin completar.',
+                      ),
+                      items: const [
+                        DropdownMenuItem(
+                          value: RoutineExerciseLoadType.bodyweight,
+                          child: Text('Peso corporal'),
+                        ),
+                        DropdownMenuItem(
+                          value: RoutineExerciseLoadType.weightedKg,
+                          child: Text('Carga externa'),
+                        ),
+                        DropdownMenuItem(
+                          value: RoutineExerciseLoadType.addedWeightKg,
+                          child: Text('Lastre añadido'),
+                        ),
+                        DropdownMenuItem(
+                          value: RoutineExerciseLoadType.assistedKg,
+                          child: Text('Asistencia'),
+                        ),
+                        DropdownMenuItem(
+                          value: RoutineExerciseLoadType.machineKg,
+                          child: Text('Máquina'),
+                        ),
+                      ],
+                      onChanged: exercise.doneSets > 0
+                          ? null
+                          : (v) {
+                              if (v != null) onLoadTypeChanged!(v);
+                            },
+                    ),
+                    const SizedBox(height: 12),
+                  ],
                   TextFormField(
                     initialValue: exercise.notes ?? '',
                     onChanged: onNotesChanged,
@@ -124,6 +215,14 @@ class ExerciseCard extends StatelessWidget {
                       set: set,
                       isTimed: exercise.isTimed,
                       isAssisted: exercise.isAssisted,
+                      isDistance: exercise.isDistance,
+                      isExpanded: expandedSetId == set.id,
+                      onToggleExpanded: onSetExpansion == null
+                          ? null
+                          : () => onSetExpansion!(set.id),
+                      onDetailsChanged: onSetDetailsChanged,
+                      onDistanceChanged: (distance) =>
+                          onDistanceChanged?.call(set.id, distance),
                       onDurationChanged: (seconds) =>
                           onDurationChanged?.call(set.id, seconds),
                       onDelete: onDeleteSet == null

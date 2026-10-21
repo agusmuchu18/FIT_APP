@@ -317,7 +317,7 @@ class _TemplateExercisePickerScreenState
     final hasInProgressBar =
         WorkoutInProgressController.instance.currentDraft != null;
     return Theme(
-      data: AppTheme.workout,
+      data: AppTheme.workoutFor(Theme.of(context)),
       child: ListenableBuilder(
         listenable: Listenable.merge([_controller, _draftController]),
         builder: (context, _) {
@@ -959,7 +959,7 @@ class _TemplateExercisePickerScreenState
       isScrollControlled: true,
       useSafeArea: true,
       builder: (_) => Theme(
-        data: AppTheme.workout,
+        data: AppTheme.workoutFor(Theme.of(context)),
         child: RoutineFilterSheet(
           title: title,
           options: options,

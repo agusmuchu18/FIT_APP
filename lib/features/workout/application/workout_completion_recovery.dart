@@ -1,12 +1,14 @@
 import '../../../core/data/repositories.dart';
 import '../../../core/domain/entities.dart';
 import '../data/workout_repository.dart';
+import 'workout_history_mutation_service.dart';
 
 /// The rich session is authoritative. Repair its Home projection idempotently.
 Future<void> recoverCompletedWorkouts(
   WorkoutRepository sessions,
   FitnessRepository fitness,
 ) async {
+  await WorkoutHistoryMutationService(sessions, fitness).recover();
   final completed = await sessions.listAllSessions();
   final projectedIds = (await fitness.getWorkouts())
       .map((entry) => entry.id)

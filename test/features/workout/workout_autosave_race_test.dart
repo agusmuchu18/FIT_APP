@@ -1,3 +1,5 @@
+import 'package:fit_app/features/workout/domain/training_program.dart';
+
 import 'dart:async';
 
 import 'package:fit_app/features/workout/application/workout_session_controller.dart';
@@ -20,6 +22,7 @@ class DelayedDraftRepository extends WorkoutRepository {
     String? routineId,
     String? routineName,
     String? sourceSessionId,
+    ProgramExecutionRef? programExecution,
     WorkoutType workoutType = WorkoutType.strength,
     int? restStartedAtElapsedSeconds,
     int? restDurationSeconds,
@@ -43,6 +46,7 @@ class DelayedDraftRepository extends WorkoutRepository {
       routineId: routineId,
       routineName: routineName,
       sourceSessionId: sourceSessionId,
+      programExecution: programExecution,
       workoutType: workoutType,
       restStartedAtElapsedSeconds: restStartedAtElapsedSeconds,
       restDurationSeconds: restDurationSeconds,

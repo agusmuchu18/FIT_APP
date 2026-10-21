@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../common/theme/app_layout.dart';
 
-class WorkoutRestSelector extends StatelessWidget {
+class WorkoutRestSelector extends StatefulWidget {
   const WorkoutRestSelector({
     super.key,
     required this.enabled,
@@ -14,74 +14,21 @@ class WorkoutRestSelector extends StatelessWidget {
   final int seconds;
   final ValueChanged<bool> onToggle;
   final ValueChanged<int> onChanged;
-
   @override
-  Widget build(BuildContext context) => Wrap(
-    spacing: AppSpacing.sm,
-    crossAxisAlignment: WrapCrossAlignment.center,
-    children: [
-      const Text('Descanso automático'),
-      Semantics(
-        label: 'Descanso automático',
-        child: Switch(value: enabled, onChanged: onToggle),
-      ),
-      IconButton(
-        tooltip: 'Reducir descanso 15 segundos',
-        onPressed: enabled && seconds > 1
-            ? () => onChanged((seconds - 15).clamp(1, 3600))
-            : null,
-        icon: const Icon(Icons.remove),
-      ),
-      TextButton(
-        onPressed: enabled
-            ? () async {
-                final duration = await showModalBottomSheet<int>(
-                  context: context,
-                  isScrollControlled: true,
-                  showDragHandle: true,
-                  useSafeArea: true,
-                  builder: (_) => _RestDurationSheet(seconds: seconds),
-                );
-                if (duration != null) onChanged(duration);
-              }
-            : null,
-        child: Semantics(
-          label: 'Configurar duración de descanso, $seconds segundos',
-          child: Text(
-            '${seconds ~/ 60}:${(seconds % 60).toString().padLeft(2, '0')}',
-          ),
-        ),
-      ),
-      IconButton(
-        tooltip: 'Aumentar descanso 15 segundos',
-        onPressed: enabled && seconds < 3600
-            ? () => onChanged((seconds + 15).clamp(1, 3600))
-            : null,
-        icon: const Icon(Icons.add),
-      ),
-    ],
-  );
+  State<WorkoutRestSelector> createState() => _WorkoutRestSelectorState();
 }
 
-class _RestDurationSheet extends StatefulWidget {
-  const _RestDurationSheet({required this.seconds});
-  final int seconds;
+class _WorkoutRestSelectorState extends State<WorkoutRestSelector> {
+  final _value = TextEditingController();
+  var _editing = false;
+  String? _error;
   @override
-  State<_RestDurationSheet> createState() => _RestDurationSheetState();
-}
-
-class _RestDurationSheetState extends State<_RestDurationSheet> {
-  static const presets = [30, 45, 60, 90, 120];
-  final _form = GlobalKey<FormState>();
-  late int _selected;
-  late bool _custom;
-  late final TextEditingController _value;
-  @override
-  void initState() {
-    super.initState();
-    _selected = widget.seconds;
-    _custom = !presets.contains(_selected);
-    _value = TextEditingController(text: '$_selected');
+  void didUpdateWidget(covariant WorkoutRestSelector oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!widget.enabled && _editing) {
+      _editing = false;
+      _error = null;
+    }
   }
 
   @override
@@ -90,76 +37,125 @@ class _RestDurationSheetState extends State<_RestDurationSheet> {
     super.dispose();
   }
 
+  void _submit() {
+    final input = _value.text.trim();
+    final parts = input.split(':');
+    int? parsed;
+    if (parts.length == 1) {
+      parsed = int.tryParse(input);
+    } else if (parts.length == 2) {
+      final minutes = int.tryParse(parts[0]), seconds = int.tryParse(parts[1]);
+      if (minutes != null &&
+          minutes >= 0 &&
+          seconds != null &&
+          seconds >= 0 &&
+          seconds < 60) {
+        parsed = minutes * 60 + seconds;
+      }
+    }
+    if (parsed == null || parsed < 1 || parsed > 3600) {
+      setState(
+        () => _error = 'Ingresá de 1 a 3600 segundos, o minutos:segundos.',
+      );
+      return;
+    }
+    widget.onChanged(parsed);
+    setState(() {
+      _editing = false;
+      _error = null;
+    });
+    FocusScope.of(context).unfocus();
+  }
+
   @override
-  Widget build(BuildContext context) => SingleChildScrollView(
-    padding: EdgeInsets.fromLTRB(
-      AppSpacing.xl,
-      AppSpacing.md,
-      AppSpacing.xl,
-      AppSpacing.xl + MediaQuery.viewInsetsOf(context).bottom,
-    ),
-    child: Form(
-      key: _form,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Wrap(
+        spacing: AppSpacing.sm,
+        crossAxisAlignment: WrapCrossAlignment.center,
         children: [
-          Text(
-            'Duración del descanso',
-            style: Theme.of(context).textTheme.titleLarge,
+          const Text('Descanso automático'),
+          Semantics(
+            label: 'Descanso automático',
+            child: Switch(value: widget.enabled, onChanged: widget.onToggle),
           ),
-          const SizedBox(height: AppSpacing.lg),
-          Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.sm,
-            children: [
-              for (final preset in presets)
-                ChoiceChip(
-                  label: Text('$preset segundos'),
-                  selected: !_custom && _selected == preset,
-                  onSelected: (_) => setState(() {
-                    _selected = preset;
-                    _custom = false;
-                  }),
+          IconButton(
+            tooltip: 'Reducir descanso 15 segundos',
+            onPressed: widget.enabled && widget.seconds > 1
+                ? () => widget.onChanged((widget.seconds - 15).clamp(1, 3600))
+                : null,
+            icon: const Icon(Icons.remove),
+          ),
+          if (_editing)
+            SizedBox(
+              width: 110,
+              child: TextField(
+                key: const ValueKey('inline-rest-duration'),
+                controller: _value,
+                autofocus: true,
+                keyboardType: TextInputType.datetime,
+                textInputAction: TextInputAction.done,
+                decoration: const InputDecoration(
+                  labelText: 'Segundos o m:ss',
+                  isDense: true,
                 ),
-              ChoiceChip(
-                label: const Text('Personalizado'),
-                selected: _custom,
-                onSelected: (_) => setState(() => _custom = true),
+                onTap: () => _value.selection = TextSelection(
+                  baseOffset: 0,
+                  extentOffset: _value.text.length,
+                ),
+                onSubmitted: (_) => _submit(),
               ),
-            ],
-          ),
-          if (_custom) ...[
-            const SizedBox(height: AppSpacing.lg),
-            TextFormField(
-              controller: _value,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Segundos',
-                helperText: 'Entre 1 y 3600 segundos',
+            )
+          else
+            TextButton(
+              onPressed: widget.enabled
+                  ? () => setState(() {
+                      _value.text = '${widget.seconds}';
+                      _value.selection = TextSelection(
+                        baseOffset: 0,
+                        extentOffset: _value.text.length,
+                      );
+                      _editing = true;
+                    })
+                  : null,
+              child: Semantics(
+                label:
+                    'Configurar duración de descanso, ${widget.seconds} segundos',
+                child: Text(
+                  '${widget.seconds ~/ 60}:${(widget.seconds % 60).toString().padLeft(2, '0')}',
+                ),
               ),
-              validator: (text) {
-                final value = int.tryParse(text ?? '');
-                return value == null || value < 1 || value > 3600
-                    ? 'Ingresá un número entre 1 y 3600.'
-                    : null;
-              },
             ),
-          ],
-          const SizedBox(height: AppSpacing.xl),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              onPressed: () {
-                if (!_form.currentState!.validate()) return;
-                Navigator.of(context)
-                    .pop(_custom ? int.parse(_value.text) : _selected);
-              },
-              child: const Text('Guardar duración'),
+          if (_editing) ...[
+            IconButton(
+              tooltip: 'Guardar duración',
+              onPressed: _submit,
+              icon: const Icon(Icons.check),
             ),
-          ),
+            IconButton(
+              tooltip: 'Cancelar edición',
+              onPressed: () => setState(() {
+                _editing = false;
+                _error = null;
+              }),
+              icon: const Icon(Icons.close),
+            ),
+          ] else
+            IconButton(
+              tooltip: 'Aumentar descanso 15 segundos',
+              onPressed: widget.enabled && widget.seconds < 3600
+                  ? () => widget.onChanged((widget.seconds + 15).clamp(1, 3600))
+                  : null,
+              icon: const Icon(Icons.add),
+            ),
         ],
       ),
-    ),
+      if (_error != null)
+        Text(
+          _error!,
+          style: TextStyle(color: Theme.of(context).colorScheme.error),
+        ),
+    ],
   );
 }

@@ -23,7 +23,11 @@ class FitnessRepository {
     if (sync) await _remote.syncWorkout(entry);
   }
 
-  Future<List<WorkoutEntry>> getWorkouts() => _local.fetchWorkouts();
+  Future<List<WorkoutEntry>> getWorkouts() async =>
+      (await _local.fetchWorkouts()).where((e) => !e.deleted).toList();
+
+  /// Includes tombstones solely for idempotent local projection reconciliation.
+  Future<List<WorkoutEntry>> getWorkoutProjections() => _local.fetchWorkouts();
 
   Future<void> saveMeal(MealEntry entry, {bool sync = false}) async {
     await _local.saveMeal(entry);

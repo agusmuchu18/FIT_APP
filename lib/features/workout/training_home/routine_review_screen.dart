@@ -1,3 +1,5 @@
+import '../presentation/widgets/workout_units_host.dart';
+
 import 'package:flutter/material.dart';
 
 import '../../../app/theme/app_theme.dart';
@@ -47,7 +49,7 @@ class _RoutineReviewScreenState extends State<RoutineReviewScreen> {
 
   @override
   Widget build(BuildContext context) => Theme(
-    data: AppTheme.workout,
+    data: AppTheme.workoutFor(Theme.of(context)),
     child: AnimatedBuilder(
       animation: draft,
       builder: (context, _) => Scaffold(
@@ -337,7 +339,7 @@ class _RoutineReviewScreenState extends State<RoutineReviewScreen> {
           style: Theme.of(context).textTheme.titleMedium,
         ),
         const SizedBox(height: 8),
-        Text(RoutineLabels.summary(e)),
+        Text(RoutineLabels.summary(e, units: WorkoutUnits.of(context))),
       ],
     ),
   );

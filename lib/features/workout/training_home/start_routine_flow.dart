@@ -1,3 +1,5 @@
+import '../domain/training_program.dart';
+
 import 'package:flutter/material.dart';
 
 import '../data/workout_repository.dart';
@@ -12,12 +14,18 @@ final _openingSessions = Expando<bool>();
 Future<void> startRoutineFlow(
   BuildContext context,
   TrainingHomeController controller,
-  WorkoutTemplate routine,
-) async {
+  WorkoutTemplate routine, {
+  ProgramExecutionRef? programExecution,
+}) async {
   if (_openingSessions[controller] == true) return;
   _openingSessions[controller] = true;
   try {
-    await _startRoutineFlow(context, controller, routine);
+    await _startRoutineFlow(
+      context,
+      controller,
+      routine,
+      programExecution: programExecution,
+    );
   } catch (_) {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -36,8 +44,9 @@ Future<void> startRoutineFlow(
 Future<void> _startRoutineFlow(
   BuildContext context,
   TrainingHomeController controller,
-  WorkoutTemplate routine,
-) async {
+  WorkoutTemplate routine, {
+  ProgramExecutionRef? programExecution,
+}) async {
   final repository = WorkoutRepository();
   final draft = await repository.loadDraftExercises();
   final inProgress = WorkoutInProgressController.instance;
@@ -49,7 +58,10 @@ Future<void> _startRoutineFlow(
         ? null
         : await repository.loadDraftIdentity();
     if (!context.mounted) return;
-    if (legacyDraft || identity?.routineId != routine.id) {
+    if (legacyDraft ||
+        identity?.routineId != routine.id ||
+        identity?.programExecution?.occurrenceKey !=
+            programExecution?.occurrenceKey) {
       final choice = await showDialog<_ActiveSessionChoice>(
         context: context,
         builder: (dialogContext) => AlertDialog(
@@ -105,8 +117,13 @@ Future<void> _startRoutineFlow(
   }
   await controller.markRoutineStarted(routine);
   if (!context.mounted) return;
-  await Navigator.of(context)
-      .pushNamed('/workout/session', arguments: {'templateId': routine.id});
+  await Navigator.of(context).pushNamed(
+    '/workout/session',
+    arguments: {
+      'templateId': routine.id,
+      'programExecution': ?programExecution,
+    },
+  );
   await inProgress.refresh();
   await controller.refresh();
 }

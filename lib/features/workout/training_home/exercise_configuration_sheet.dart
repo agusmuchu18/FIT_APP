@@ -11,6 +11,8 @@ import '../pro/models/workout_models.dart';
 import '../presentation/widgets/exercise_thumbnail.dart';
 import '../presentation/widgets/sport_measurements_fields.dart';
 import '../presentation/widgets/workout_rest_selector.dart';
+import '../presentation/widgets/workout_units_host.dart';
+import '../domain/training_units.dart';
 
 Future<WorkoutExercise?> showExerciseConfiguration(
   BuildContext context,
@@ -28,7 +30,7 @@ Future<WorkoutExercise?> showExerciseConfiguration(
       bottom: MediaQuery.viewInsetsOf(sheetContext).bottom,
     ),
     child: Theme(
-      data: AppTheme.workout,
+      data: AppTheme.workoutFor(Theme.of(context)),
       child: ExerciseConfigurationSheet(
         exercise: exercise,
         definition: definition,
@@ -47,6 +49,7 @@ class ExerciseConfigurationMemory {
   List<RoutineSetTarget>? targets;
   final raw = <String, String>{};
   final sport = SportMeasurementsDraft();
+  WeightUnit? weightUnit;
   bool valid = true;
   bool? advanced;
 }
@@ -104,6 +107,47 @@ class _ExerciseConfigurationSheetState
   ];
   SportMeasurements? _sportTargets;
   late bool _invalidSport = _value.sportPlan != null && !_memory.valid;
+  WeightUnit get _weightUnit => WorkoutUnits.of(context).weight;
+  double? _canonicalWeight(String raw) {
+    if (raw == _displayWeight(_value.targetWeightKg)) {
+      return _value.targetWeightKg;
+    }
+    final value = double.tryParse(raw.replaceAll(',', '.'));
+    return value == null ? null : _weightUnit.toKg(value);
+  }
+
+  String _displayWeight(double? value) => value == null
+      ? ''
+      : _weightUnit
+            .fromKg(value)
+            .toStringAsFixed(4)
+            .replaceFirst(RegExp(r'\.?0+$'), '');
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final next = _weightUnit;
+    final previous = _memory.weightUnit ?? WeightUnit.kg;
+    if (next != previous) {
+      String convert(String raw) {
+        final value = double.tryParse(raw.replaceAll(',', '.'));
+        return value == null
+            ? raw
+            : next
+                  .fromKg(previous.toKg(value))
+                  .toStringAsFixed(4)
+                  .replaceFirst(RegExp(r'\.?0+$'), '');
+      }
+
+      _weight.text = convert(_weight.text);
+      for (final key in _memory.raw.keys.toList()) {
+        if (key == 'weight' || key.endsWith(':weight')) {
+          _memory.raw[key] = convert(_memory.raw[key]!);
+        }
+      }
+    }
+    _memory.weightUnit = next;
+  }
+
   @override
   void dispose() {
     for (final c in [_sets, _reps, _min, _max, _seconds, _weight]) {
@@ -194,7 +238,7 @@ class _ExerciseConfigurationSheetState
     targetRepsMax: int.tryParse(_max.text),
     targetDurationSeconds: _value.isTimed ? int.tryParse(_seconds.text) : null,
     clearTargetDuration: !_value.isTimed,
-    targetWeightKg: double.tryParse(_weight.text.replaceAll(',', '.')),
+    targetWeightKg: _canonicalWeight(_weight.text),
     clearTargetWeightKg: _weight.text.isEmpty,
     setTargets: _targets,
   );
@@ -433,7 +477,7 @@ class _ExerciseConfigurationSheetState
                   RoutineExerciseLoadType.bodyweight) ...[
                 const SizedBox(height: 12),
                 _labeled(
-                  '${RoutineLabels.load(_value.targetLoadType)} objetivo (kg)',
+                  '${RoutineLabels.load(_value.targetLoadType)} objetivo (${_weightUnit.label})',
                   (decoration) => TextFormField(
                     controller: _weight,
                     onChanged: (_) => _change(() {}),
@@ -494,7 +538,9 @@ class _ExerciseConfigurationSheetState
                     _change(() => _value = _value.copyWith(restSeconds: v)),
               ),
             const SizedBox(height: 16),
-            Text(RoutineLabels.summary(_preview)),
+            Text(
+              RoutineLabels.summary(_preview, units: WorkoutUnits.of(context)),
+            ),
             if (widget.inline && !_memory.valid)
               const Padding(
                 padding: EdgeInsets.only(top: 8),
@@ -566,7 +612,7 @@ class _ExerciseConfigurationSheetState
                   repsMax: _range && !_value.isTimed
                       ? int.tryParse(_max.text)
                       : null,
-                  weightKg: double.tryParse(_weight.text.replaceAll(',', '.')),
+                  weightKg: _canonicalWeight(_weight.text),
                   durationSeconds: _value.isTimed
                       ? int.tryParse(_seconds.text)
                       : null,
@@ -639,11 +685,10 @@ class _ExerciseConfigurationSheetState
             TextFormField(
               initialValue:
                   _memory.raw['series:$index:weight'] ??
-                  target.weightKg?.toString() ??
-                  '',
+                  _displayWeight(target.weightKg),
               decoration: InputDecoration(
                 labelText:
-                    '${RoutineLabels.load(_value.targetLoadType)} (kg) · serie ${index + 1}',
+                    '${RoutineLabels.load(_value.targetLoadType)} (${_weightUnit.label}) · serie ${index + 1}',
               ),
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
@@ -662,7 +707,7 @@ class _ExerciseConfigurationSheetState
                   repsMin: target.repsMin,
                   repsMax: target.repsMax,
                   durationSeconds: target.durationSeconds,
-                  weightKg: double.tryParse(v.replaceAll(',', '.')),
+                  weightKg: _canonicalWeight(v),
                 );
               }),
             ),

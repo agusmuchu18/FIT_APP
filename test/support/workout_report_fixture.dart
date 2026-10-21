@@ -1,4 +1,5 @@
 import 'package:fit_app/features/workout/data/workout_repository.dart';
+import 'package:fit_app/features/workout/domain/workout_analytics.dart';
 import 'package:fit_app/features/workout/pro/models/workout_models.dart';
 
 WorkoutSession workoutReportFixture({
@@ -39,6 +40,11 @@ class WorkoutReportsRepository extends WorkoutRepository {
   final List<WorkoutSession> sessions;
   bool fail;
   int reads = 0;
+  // This fixture owns an independent source, rather than the shared owner store.
+  @override
+  Future<TrainingPerformanceIndex> performanceIndex({
+    bool refresh = false,
+  }) async => TrainingPerformanceIndex(await listAllSessions());
   @override
   Future<List<WorkoutSession>> listAllSessions() async {
     reads++;

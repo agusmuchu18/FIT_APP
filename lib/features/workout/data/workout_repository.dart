@@ -1,12 +1,17 @@
+import '../domain/training_program.dart';
+
 import 'dart:convert';
+import 'dart:async';
 
 import 'package:hive/hive.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../../core/data/account_storage_scope.dart';
 
 import '../domain/session_models.dart';
 import '../domain/workout_analytics.dart';
 import '../pro/models/workout_models.dart';
+part 'workout_history_changes.dart';
 
 class WorkoutDraftIdentity {
   const WorkoutDraftIdentity({
@@ -14,6 +19,7 @@ class WorkoutDraftIdentity {
     this.routineId,
     this.routineName,
     this.sourceSessionId,
+    this.programExecution,
     this.workoutType = WorkoutType.strength,
     this.isPaused = false,
     this.pausedAt,
@@ -27,6 +33,7 @@ class WorkoutDraftIdentity {
   final String? routineId;
   final String? routineName;
   final String? sourceSessionId;
+  final ProgramExecutionRef? programExecution;
   final WorkoutType workoutType;
   final bool isPaused;
   final DateTime? pausedAt;
@@ -39,6 +46,56 @@ class WorkoutDraftIdentity {
 class WorkoutRepository {
   WorkoutRepository() : _scope = AccountStorageScope.current;
   final String _scope;
+  static final _historyRevisions = <String, ValueNotifier<int>>{};
+  static final _performanceCaches =
+      <
+        String,
+        ({int revision, DateTime day, Future<TrainingPerformanceIndex> value})
+      >{};
+  ValueListenable<int> get historyRevision =>
+      _historyRevisions.putIfAbsent(_scope, () => ValueNotifier(0));
+
+  void invalidateHistory() {
+    _performanceCaches.remove(_scope);
+    final revision = _historyRevisions.putIfAbsent(
+      _scope,
+      () => ValueNotifier(0),
+    );
+    revision.value++;
+  }
+
+  Future<TrainingPerformanceIndex> performanceIndex({bool refresh = false}) {
+    final now = DateTime.now();
+    final day = DateTime(now.year, now.month, now.day);
+    final cached = _performanceCaches[_scope];
+    if (!refresh &&
+        cached != null &&
+        cached.revision == historyRevision.value &&
+        cached.day == day) {
+      return cached.value;
+    }
+    late final Future<TrainingPerformanceIndex> future;
+    future = listAllSessions().then(TrainingPerformanceIndex.new).catchError((
+      Object error,
+      StackTrace trace,
+    ) {
+      if (identical(_performanceCaches[_scope]?.value, future)) {
+        _performanceCaches.remove(_scope);
+      }
+      Error.throwWithStackTrace(error, trace);
+    });
+    if (_performanceCaches.length >= 4 &&
+        !_performanceCaches.containsKey(_scope)) {
+      _performanceCaches.remove(_performanceCaches.keys.first);
+    }
+    _performanceCaches[_scope] = (
+      revision: historyRevision.value,
+      day: day,
+      value: future,
+    );
+    return future;
+  }
+
   String get storageScope => _scope;
   int _invalidRichRows = 0, _invalidLegacyRows = 0, _invalidMigrationRows = 0;
   int get unreadableHistoryRows =>
@@ -78,7 +135,13 @@ class WorkoutRepository {
         await box.put(id, raw);
       }
     }
-    return _sortedRows(box.values);
+    return _sortedRows(
+      box
+          .toMap()
+          .entries
+          .where((e) => e.key != WorkoutHistoryChanges.storageKey)
+          .map((e) => e.value),
+    );
   }
 
   List<String> _sortedRows(Iterable<String> values) {
@@ -143,6 +206,11 @@ class WorkoutRepository {
         routineId: json['routineId'] as String?,
         routineName: json['routineName'] as String?,
         sourceSessionId: json['sourceSessionId'] as String?,
+        programExecution: json['programExecution'] is Map
+            ? ProgramExecutionRef.fromJson(
+                Map<String, dynamic>.from(json['programExecution'] as Map),
+              )
+            : null,
         workoutType: WorkoutType.values.firstWhere(
           (type) => type.name == json['workoutType'],
           orElse: () => WorkoutType.strength,
@@ -174,6 +242,7 @@ class WorkoutRepository {
     String? routineId,
     String? routineName,
     String? sourceSessionId,
+    ProgramExecutionRef? programExecution,
     WorkoutType workoutType = WorkoutType.strength,
     int? restStartedAtElapsedSeconds,
     int? restDurationSeconds,
@@ -202,6 +271,8 @@ class WorkoutRepository {
         'routineId': routineId,
         'routineName': routineName,
         'sourceSessionId': sourceSessionId ?? previous?['sourceSessionId'],
+        'programExecution':
+            programExecution?.toJson() ?? previous?['programExecution'],
         'workoutType': workoutType.name,
         'isPaused': previous?['isPaused'] ?? false,
         'pausedAt': previous?['pausedAt'],
@@ -265,6 +336,7 @@ class WorkoutRepository {
     DateTime? startedAt,
     Duration? totalDuration,
     String? sourceSessionId,
+    ProgramExecutionRef? programExecution,
     bool clearDraftAfterSave = true,
   }) async {
     final prefs = await ScopedPreferences.getInstance(scope: _scope);
@@ -286,6 +358,7 @@ class WorkoutRepository {
       'date': now.toUtc().toIso8601String(),
       'startedAt': startedAt?.toUtc().toIso8601String(),
       'sourceSessionId': sourceSessionId,
+      'programExecution': programExecution?.toJson(),
       'totalDurationSeconds': totalDuration?.inSeconds,
       'routineId': routineId,
       'routineName': routineName,
@@ -312,30 +385,42 @@ class WorkoutRepository {
       stored.insert(0, encoded);
       await prefs.setStringList(sessionsKey, stored);
     }
+    invalidateHistory();
     if (clearDraftAfterSave) await clearDraft();
   }
 
   Future<List<ExerciseInSession>?> loadLatestCompletedSessionExercises() async {
-    final values = await _readSessionRows();
-    if (values.isEmpty) return null;
-
-    for (final raw in values) {
-      try {
-        final json = jsonDecode(raw) as Map<String, dynamic>;
-        final serialized = json['exercises'] as List<dynamic>? ?? [];
-        return serialized
-            .map(
-              (item) => ExerciseInSession.fromJson(
-                Map<String, dynamic>.from(item as Map),
+    final sessions = await listAllSessions();
+    final latest = sessions.lastOrNull;
+    if (latest == null) return null;
+    return [
+      for (final e in latest.exercises)
+        ExerciseInSession(
+          id: e.instanceId ?? e.id,
+          exerciseId: e.id,
+          name: e.name,
+          plan: e,
+          notes: e.notes,
+          isTimed: WorkoutAnalytics.isTimed(e),
+          isDistance: e.measurement == 'distance',
+          isAssisted: e.targetLoadType == RoutineExerciseLoadType.assistedKg,
+          sets: [
+            for (var i = 0; i < e.sets.length; i++)
+              SetInSession(
+                id: e.sets[i].id,
+                index: i + 1,
+                kg: e.sets[i].externalLoadKg,
+                assistanceKg: e.sets[i].assistanceKg,
+                reps: e.sets[i].reps,
+                durationSeconds: e.sets[i].durationSeconds,
+                distanceMeters: e.sets[i].distanceMeters,
+                done: e.sets[i].done == true,
+                loadConvention: e.sets[i].loadConvention,
+                implementCount: e.sets[i].implementCount,
               ),
-            )
-            .toList();
-      } catch (_) {
-        continue;
-      }
-    }
-
-    return null;
+          ],
+        ),
+    ];
   }
 
   Future<List<WorkoutSession>> listSessions() async {
@@ -371,6 +456,11 @@ class WorkoutRepository {
             totalDurationSeconds: json['totalDurationSeconds'] as int?,
             startedAt: DateTime.tryParse(json['startedAt'] as String? ?? ''),
             sourceSessionId: json['sourceSessionId'] as String?,
+            programExecution: json['programExecution'] is Map
+                ? ProgramExecutionRef.fromJson(
+                    Map<String, dynamic>.from(json['programExecution'] as Map),
+                  )
+                : null,
             exercises: exercises,
             notes: json['notes'] as String?,
           ),
@@ -381,7 +471,7 @@ class WorkoutRepository {
       }
     }
     parsed.sort((a, b) => a.date.compareTo(b.date));
-    return parsed;
+    return applyHistoryChanges(parsed);
   }
 
   Future<List<WorkoutSession>> listAllSessions() async {
@@ -410,7 +500,7 @@ class WorkoutRepository {
     for (final session in await listSessions()) {
       byId[session.id] = session;
     }
-    return byId.values.toList()..sort((a, b) => a.date.compareTo(b.date));
+    return applyHistoryChanges(byId.values.toList());
   }
 
   Future<WorkoutSession?> findSession(String id) async {
@@ -418,6 +508,28 @@ class WorkoutRepository {
       if (session.id == id) return session;
     }
     return null;
+  }
+
+  /// Only confirmed, compatible results may suggest values for a new draft.
+  /// Historical references remain a separate legacy-friendly presentation API.
+  Future<List<SetEntry>> getCompatibleSuggestions(
+    ExerciseInSession exercise,
+  ) async {
+    final mapped = WorkoutAnalytics.fromLive([exercise]).single;
+    final seed =
+        exercise.sets.firstOrNull ?? const SetInSession(id: '', index: 1);
+    final key = exerciseLoadKey(
+      mapped,
+      SetEntry(
+        id: seed.id,
+        loadConvention: seed.loadConvention,
+        implementCount: seed.implementCount,
+      ),
+    );
+    final index = await performanceIndex();
+    final id = WorkoutAnalytics.definition(mapped)?.id ?? mapped.id;
+    final history = index.exerciseHistory(id, loadKey: key);
+    return history.firstOrNull?.sets ?? const [];
   }
 
   /// Append/upsert one new legacy session, preserving every other raw row.
@@ -439,6 +551,7 @@ class WorkoutRepository {
     });
     rows.add(session.toJson());
     await prefs.setString(legacySessionsKey, jsonEncode(rows));
+    invalidateHistory();
   }
 
   Future<String?> pendingLegacyCompletionId() async {
@@ -461,57 +574,81 @@ class WorkoutRepository {
   Future<List<PreviousSet>> getPreviousSetsForExercise(
     String exerciseId,
   ) async {
-    final prefs = await ScopedPreferences.getInstance(scope: _scope);
-    final legacyValue = prefs.get(legacySessionsKey);
-    List<dynamic> legacySessions = [];
-    if (legacyValue is String) {
-      try {
-        final decoded = jsonDecode(legacyValue);
-        if (decoded is List) legacySessions = decoded.reversed.toList();
-      } catch (_) {
-        // A damaged legacy entry must not hide valid current sessions.
+    for (final session in (await listAllSessions()).reversed) {
+      final matching = session.exercises.where(
+        (e) => (WorkoutAnalytics.definition(e)?.id ?? e.id) == exerciseId,
+      );
+      final sets = [
+        for (final e in matching)
+          ...e.sets.where(
+            (s) => s.done != false && WorkoutAnalytics.isRecordedSet(e, s),
+          ),
+      ];
+      if (sets.isNotEmpty) {
+        return [
+          for (final s in sets)
+            PreviousSet(
+              kg: s.externalLoadKg,
+              reps: s.reps,
+              durationSeconds: s.durationSeconds,
+              assistanceKg: s.assistanceKg,
+            ),
+        ];
       }
-    } else if (legacyValue is List) {
-      legacySessions = legacyValue.reversed.toList();
     }
+    return _partialLegacyPrevious(exerciseId);
+  }
 
-    final sessions = <dynamic>[...await _readSessionRows(), ...legacySessions];
-
-    for (final raw in sessions) {
+  /// Earliest versions saved reference-only rows without session identity/date.
+  /// Preserve that display contract, but never promote these rows into records,
+  /// suggestions or analytics, and never reread an identified/tombstoned session.
+  Future<List<PreviousSet>> _partialLegacyPrevious(String exerciseId) async {
+    final prefs = await ScopedPreferences.getInstance(scope: _scope);
+    final raw = prefs.get(legacySessionsKey);
+    List<dynamic> legacy = [];
+    try {
+      final decoded = raw is String ? jsonDecode(raw) : raw;
+      if (decoded is List) legacy = decoded.reversed.toList();
+    } catch (_) {
+      /* Unreadable originals remain in storage. */
+    }
+    for (final row in [...await _readSessionRows(), ...legacy]) {
       try {
-        final decoded = raw is String ? jsonDecode(raw) : raw;
-        final json = Map<String, dynamic>.from(decoded as Map);
-        final exercises = (json['exercises'] as List<dynamic>? ?? []);
-        for (final exerciseRaw in exercises) {
-          final exercise = Map<String, dynamic>.from(exerciseRaw as Map);
-          final currentExerciseId =
-              exercise['exerciseId'] as String? ?? exercise['id'] as String?;
-          if (currentExerciseId != exerciseId) continue;
-
-          final sets = (exercise['sets'] as List<dynamic>? ?? []);
-          final previous = sets
-              .where((setRaw) => (setRaw as Map)['done'] != false)
-              .map((setRaw) {
-                final set = Map<String, dynamic>.from(setRaw as Map);
-                final kg =
-                    (set['kg'] as num?)?.toDouble() ??
-                    (set['externalLoadKg'] as num?)?.toDouble();
-                final reps = set['reps'] as int?;
-                return PreviousSet(
-                  kg: kg,
-                  reps: reps,
-                  durationSeconds: set['durationSeconds'] as int?,
-                  assistanceKg: (set['assistanceKg'] as num?)?.toDouble(),
-                );
-              })
-              .toList();
+        final json = Map<String, dynamic>.from(
+          (row is String ? jsonDecode(row) : row) as Map,
+        );
+        if (json['id'] != null || json['date'] != null) continue;
+        for (final e in (json['exercises'] as List? ?? [])) {
+          if ((e['exerciseId'] ?? e['id']) != exerciseId) continue;
+          final previous = <PreviousSet>[];
+          for (final set in (e['sets'] as List? ?? [])) {
+            if (set is! Map || set['done'] == false) continue;
+            double? positive(Object? n, {bool zero = false}) =>
+                n is num && n.isFinite && (zero ? n >= 0 : n > 0)
+                ? n.toDouble()
+                : null;
+            final reps = positive(set['reps']),
+                seconds = positive(set['durationSeconds']);
+            if (reps == null && seconds == null) continue;
+            if (reps != null && reps != reps.roundToDouble() ||
+                seconds != null && seconds != seconds.roundToDouble()) {
+              continue;
+            }
+            previous.add(
+              PreviousSet(
+                kg: positive(set['kg'] ?? set['externalLoadKg'], zero: true),
+                reps: reps?.toInt(),
+                durationSeconds: seconds?.toInt(),
+                assistanceKg: positive(set['assistanceKg'], zero: true),
+              ),
+            );
+          }
           if (previous.isNotEmpty) return previous;
         }
       } catch (_) {
-        continue;
+        /* Skip one malformed reference, preserving subsequent rows. */
       }
     }
-
     return [];
   }
 }

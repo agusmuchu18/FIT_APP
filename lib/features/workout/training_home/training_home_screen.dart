@@ -13,6 +13,9 @@ import 'routine_preview_screen.dart';
 import 'start_routine_flow.dart';
 import 'training_home_controller.dart';
 import 'training_home_widgets.dart';
+import 'training_programs_screen.dart';
+import '../presentation/workout_insights_screen.dart';
+import '../workout_in_progress_controller.dart';
 
 class TrainingHomeScreen extends StatelessWidget {
   const TrainingHomeScreen({super.key});
@@ -20,7 +23,7 @@ class TrainingHomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Theme(
-      data: AppTheme.workout,
+      data: AppTheme.workoutFor(Theme.of(context)),
       child: ChangeNotifierProvider(
         create: (_) => TrainingHomeController()..initialize(),
         child: const _TrainingHomeView(),
@@ -175,6 +178,36 @@ class _TrainingHomeViewState extends State<_TrainingHomeView> {
                       ),
                     ),
                     const SizedBox(height: 16),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 8,
+                      children: [
+                        TextButton.icon(
+                          onPressed: () async {
+                            await Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) => const TrainingProgramsScreen(),
+                              ),
+                            );
+                            if (context.mounted) await controller.refresh();
+                          },
+                          icon: const Icon(Icons.calendar_view_week_outlined),
+                          label: const Text('Programas'),
+                        ),
+                        TextButton.icon(
+                          onPressed: () async {
+                            await Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) => const WorkoutInsightsScreen(),
+                              ),
+                            );
+                            if (context.mounted) await controller.refresh();
+                          },
+                          icon: const Icon(Icons.insights_outlined),
+                          label: const Text('Mi progreso'),
+                        ),
+                      ],
+                    ),
                     if (!controller.hasRoutines)
                       const EmptyRoutinesInfoCard()
                     else ...[
@@ -244,6 +277,18 @@ class _TrainingHomeViewState extends State<_TrainingHomeView> {
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                 sliver: _routinesList(controller),
               ),
+            SliverToBoxAdapter(
+              child: ValueListenableBuilder(
+                valueListenable: WorkoutInProgressController.instance
+                    .watchDraft(),
+                builder: (context, draft, _) => SizedBox(
+                  height: draft == null
+                      ? MediaQuery.paddingOf(context).bottom
+                      : MediaQuery.textScalerOf(context).scale(96) +
+                            MediaQuery.paddingOf(context).bottom,
+                ),
+              ),
+            ),
           ],
         ),
       ),

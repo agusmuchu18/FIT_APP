@@ -5,10 +5,9 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   testWidgets(
-    'one duration, presets, custom validation and disabled preservation',
+    'rest duration edits inline, validates, normalizes and preserves disabled duration',
     (tester) async {
-      var seconds = 90;
-      var enabled = true;
+      var seconds = 90, enabled = true;
       await tester.pumpWidget(
         MaterialApp(
           theme: AppTheme.workout,
@@ -17,43 +16,51 @@ void main() {
               builder: (context, update) => WorkoutRestSelector(
                 enabled: enabled,
                 seconds: seconds,
-                onToggle: (value) => update(() => enabled = value),
-                onChanged: (value) => update(() => seconds = value),
+                onToggle: (v) => update(() => enabled = v),
+                onChanged: (v) => update(() => seconds = v),
               ),
             ),
           ),
         ),
       );
       expect(find.text('1:30'), findsOneWidget);
-      expect(find.text('90s'), findsNothing);
-      expect(find.byType(TextFormField), findsNothing);
       await tester.tap(find.text('1:30'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('120 segundos'));
-      await tester.tap(find.text('Guardar duración'));
+      expect(find.byType(BottomSheet), findsNothing);
+      await tester.enterText(find.byType(TextField), '0');
+      await tester.tap(find.byTooltip('Guardar duración'));
       await tester.pumpAndSettle();
-      expect(find.text('2:00'), findsOneWidget);
-      await tester.tap(find.text('2:00'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Personalizado'));
-      await tester.pumpAndSettle();
-      await tester.enterText(find.byType(TextFormField), '0');
-      await tester.tap(find.text('Guardar duración'));
-      await tester.pumpAndSettle();
-      expect(find.text('Ingresá un número entre 1 y 3600.'), findsOneWidget);
-      await tester.enterText(find.byType(TextFormField), '75');
-      await tester.tap(find.text('Guardar duración'));
+      expect(seconds, 90);
+      expect(find.textContaining('Ingresá de 1'), findsOneWidget);
+      await tester.enterText(find.byType(TextField), '75');
+      await tester.tap(find.byTooltip('Guardar duración'));
       await tester.pumpAndSettle();
       expect(find.text('1:15'), findsOneWidget);
       await tester.tap(find.byType(Switch));
       await tester.pumpAndSettle();
-      expect(seconds, 75);
       expect(enabled, isFalse);
+      expect(seconds, 75);
       await tester.tap(find.byType(Switch));
       await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('Aumentar descanso 15 segundos'));
       await tester.pumpAndSettle();
       expect(find.text('1:30'), findsOneWidget);
+      await tester.tap(find.text('1:30'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), '2:05');
+      await tester.tap(find.byTooltip('Guardar duración'));
+      await tester.pumpAndSettle();
+      expect(seconds, 125);
+      expect(find.text('2:05'), findsOneWidget);
+      await tester.tap(find.text('2:05'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), '1:90');
+      await tester.tap(find.byTooltip('Guardar duración'));
+      await tester.pumpAndSettle();
+      expect(seconds, 125);
+      await tester.tap(find.byTooltip('Cancelar edición'));
+      await tester.pumpAndSettle();
+      expect(find.text('2:05'), findsOneWidget);
     },
   );
 }

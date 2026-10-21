@@ -4,6 +4,7 @@ import '../pro/models/workout_models.dart';
 import 'routine_preview_screen.dart';
 import 'routines_repository.dart';
 import 'training_home_controller.dart';
+import 'routine_examples_screen.dart';
 
 String _foldSearch(String value) => value
     .toLowerCase()
@@ -96,7 +97,26 @@ class _WorkoutRoutineSearchScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Buscar rutinas')),
+      appBar: AppBar(
+        title: const Text('Buscar rutinas'),
+        actions: [
+          IconButton(
+            tooltip: 'Explorar ejemplos editables',
+            icon: const Icon(Icons.auto_awesome_mosaic_outlined),
+            onPressed: () async {
+              await Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) =>
+                      RoutineExamplesScreen(repository: _repository),
+                ),
+              );
+              if (mounted) {
+                setState(() => _routinesFuture = _repository.getAllRoutines());
+              }
+            },
+          ),
+        ],
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(

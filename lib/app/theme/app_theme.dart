@@ -15,6 +15,17 @@ class AppTheme {
 
   static ThemeData get light => _buildTheme(_lightColorScheme);
   static ThemeData get dark => _buildTheme(_darkColorScheme);
+
+  /// Preserve the training identity in the default dark theme while allowing
+  /// light or user-selected palettes to retain their surface/contrast rules.
+  static ThemeData workoutFor(ThemeData inherited) {
+    if (inherited.brightness == Brightness.dark &&
+        inherited.colorScheme.primary == _primaryBlue) {
+      return workout;
+    }
+    return inherited;
+  }
+
   static ThemeData get workout {
     final theme = _buildTheme(
       _darkColorScheme.copyWith(

@@ -64,7 +64,7 @@ Future<void> runWorkoutDeviceJourney(
     () => RoutinesRepository().getAllRoutines(),
   );
   expect(routines!.single.name, 'Rutina de verificación');
-  await tester.ensureVisible(find.text('Rutina de verificación'));
+  await tester.scrollUntilVisible(find.text('Rutina de verificación'),200,scrollable:find.descendant(of:find.byType(CustomScrollView).hitTestable().first,matching:find.byType(Scrollable)).first);
   await tester.pumpAndSettle();
   await tester.tap(find.text('Rutina de verificación'));
   await _ready(tester, find.text('Iniciar entrenamiento'));

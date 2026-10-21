@@ -44,7 +44,7 @@ class RoutineLibraryCard extends StatelessWidget {
             .join(' · ');
   @override
   Widget build(BuildContext context) => Theme(
-    data: AppTheme.workout,
+    data: AppTheme.workoutFor(Theme.of(context)),
     child: Card(
       child: Padding(
         padding: const EdgeInsets.all(16),

@@ -1,12 +1,18 @@
+import 'widgets/workout_units_host.dart';
+
 import 'package:flutter/material.dart';
 
 import '../../../app/theme/app_theme.dart';
+import '../../../main.dart' show RepositoryScope;
+import '../../../core/data/repositories.dart';
 import '../../common/theme/app_layout.dart';
 import '../application/workout_repeat_service.dart';
 import '../data/workout_repository.dart';
 import '../domain/workout_analytics.dart';
 import '../pro/models/workout_models.dart';
 import 'widgets/workout_report_widgets.dart';
+import 'workout_history_editor_screen.dart';
+import '../application/workout_history_mutation_service.dart';
 
 class WorkoutHistoryDetailScreen extends StatefulWidget {
   const WorkoutHistoryDetailScreen({
@@ -14,10 +20,12 @@ class WorkoutHistoryDetailScreen extends StatefulWidget {
     this.session,
     this.sessionId,
     this.repository,
+    this.fitnessRepository,
   }) : assert(session != null || sessionId != null);
   final WorkoutSession? session;
   final String? sessionId;
   final WorkoutRepository? repository;
+  final FitnessRepository? fitnessRepository;
   @override
   State<WorkoutHistoryDetailScreen> createState() =>
       _WorkoutHistoryDetailScreenState();
@@ -29,6 +37,80 @@ class _WorkoutHistoryDetailScreenState
       widget.repository ?? WorkoutRepository();
   late Future<(WorkoutReport?, WorkoutComparison?)> _data;
   bool _repeating = false;
+  bool _changing = false, _deletionPending = false;
+  FitnessRepository? get _fitness =>
+      widget.fitnessRepository ??
+      context.getInheritedWidgetOfExactType<RepositoryScope>()?.repository;
+
+  Future<void> _change(String action) async {
+    final fitness = _fitness;
+    if (_changing || fitness == null || !_repository.isCurrentScope) return;
+    setState(() => _changing = true);
+    try {
+      final service = WorkoutHistoryMutationService(_repository, fitness);
+      if (_deletionPending) {
+        await service.recover();
+        if (mounted) Navigator.pop(context, true);
+        return;
+      }
+      final snapshot = await _repository.editableSessionSnapshot(
+            widget.sessionId ?? widget.session!.id,
+          ),
+          session = snapshot.$1;
+      if (!mounted || session == null) return;
+      if (action == 'edit') {
+        await Navigator.of(context).push<bool>(
+          MaterialPageRoute(
+            builder: (_) => WorkoutHistoryEditorScreen(
+              session: session,
+              repository: _repository,
+              fitness: fitness,
+              initialRevision: snapshot.$2,
+            ),
+          ),
+        );
+        if (mounted) setState(_load);
+      } else {
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (dialog) => AlertDialog(
+            title: const Text('Eliminar sesión'),
+            content: const Text(
+              'Se quitará del historial, calendario, informes y récords. Las rutinas y los programas se conservan.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialog, false),
+                child: const Text('Cancelar'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(dialog, true),
+                child: const Text('Eliminar sesión'),
+              ),
+            ],
+          ),
+        );
+        if (confirmed != true || !mounted) return;
+        await service.delete(session.id, expectedRevision: snapshot.$2);
+        if (mounted) Navigator.pop(context, true);
+      }
+    } on HistoryProjectionPending {
+      if (mounted) setState(() => _deletionPending = true);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'No se pudo completar el cambio. Volvé a abrir la sesión y reintentá.',
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _changing = false);
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -36,11 +118,19 @@ class _WorkoutHistoryDetailScreenState
   }
 
   void _load() {
-    _data = _repository.listAllSessions().then((history) {
+    _data = _repository.listAllSessions().then((history) async {
       final found = history.where(
         (s) => s.id == (widget.sessionId ?? widget.session?.id),
       );
-      final session = found.isEmpty ? widget.session : found.first;
+      final deleted =
+          found.isEmpty &&
+          (await _repository.historyChanges())[widget.sessionId ??
+                      widget.session?.id]
+                  ?.deleted ==
+              true;
+      final session = found.isEmpty
+          ? (deleted ? null : widget.session)
+          : found.first;
       if (session == null) return (null, null);
       final report = WorkoutReport(session);
       return (
@@ -107,12 +197,45 @@ class _WorkoutHistoryDetailScreenState
 
   @override
   Widget build(BuildContext context) => Theme(
-    data: AppTheme.workout,
+    data: AppTheme.workoutFor(Theme.of(context)),
     child: Scaffold(
-      appBar: AppBar(title: const Text('Detalle')),
+      appBar: AppBar(
+        title: const Text('Detalle'),
+        actions: [
+          if (_fitness != null)
+            PopupMenuButton<String>(
+              tooltip: 'Opciones del historial',
+              enabled: !_changing,
+              onSelected: _change,
+              itemBuilder: (_) => const [
+                PopupMenuItem(value: 'edit', child: Text('Corregir sesión')),
+                PopupMenuItem(value: 'delete', child: Text('Eliminar sesión')),
+              ],
+            ),
+        ],
+      ),
       body: FutureBuilder<(WorkoutReport?, WorkoutComparison?)>(
         future: _data,
         builder: (context, snapshot) {
+          if (_deletionPending) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'La sesión quedó eliminada del historial. Falta actualizar el resumen general.',
+                    ),
+                    FilledButton(
+                      onPressed: _changing ? null : () => _change('delete'),
+                      child: const Text('Reintentar cierre'),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
           if (snapshot.connectionState != ConnectionState.done) {
             return const Center(child: CircularProgressIndicator());
           }
@@ -155,7 +278,7 @@ class _WorkoutHistoryDetailScreenState
                 ),
               if (report.session.distanceKm != null)
                 Text(
-                  'Distancia: ${workoutNumber(report.session.distanceKm!)} km',
+                  'Distancia: ${WorkoutUnits.of(context).valueWithUnit('km', report.session.distanceKm!)}',
                 ),
               if (report.session.pace?.trim().isNotEmpty == true)
                 Text('Ritmo registrado: ${report.session.pace}'),

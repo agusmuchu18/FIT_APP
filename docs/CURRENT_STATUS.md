@@ -1,6 +1,6 @@
 # Current status
 
-**Actualizado:** 2026-10-14
+**Actualizado:** 2026-10-21
 **Base auditada:** `9f61c68ff4a362d48f97265d300f7ae54de64edc`
 **Carpeta local:** `D:\Datos User\Escritorio\fitness\fit_app`
 
@@ -11,10 +11,10 @@
 | SDK | Flutter 3.47.3 / Dart 3.13.3; actualización estable aplicada |
 | `dart format` | Base de 158 archivos; cambios posteriores formateados por archivo |
 | `flutter analyze --fatal-infos` | 0 problemas |
-| `flutter test --no-pub` | 195/195 aprobadas, incluido el ensayo host con Hive, rutinas/fútbol y el ajuste UX inline |
+| `flutter test --no-pub` | 247/247 aprobadas; expansión de entrenamiento, historial editable, unidades y regresiones del resto de la carpeta |
 | Web release `/FIT_APP/` | Compila con fuente e imágenes locales; dry run Wasm aprobado |
 | YAML de GitHub | Sintaxis válida |
-| APK Android | Debug compilado el 13/10, anterior al ajuste inline del 14/10. Este último corte no se recompiló ni ejecutó en Android |
+| APK Android | Debug recompilado el 21/10; no ejecutado en Android ni validado para tienda |
 | Integración móvil local | APK de prueba compilado; recorrido compartido ensayado en host. No ejecutado en Android/iPhone |
 
 La ampliación previa de alimentación/USDA está en la carpeta original y sigue
@@ -24,7 +24,24 @@ pendiente de commit. Entrenamiento tiene commits locales en
 corresponden a la carpeta de trabajo actual, que conserva cambios previos de otros
 módulos; no equivalen a validar un checkout limpio de esos commits.
 
-## Entrenamiento · corte actual
+## Entrenamiento · corte 21/10
+
+Expansión local en `codex/training-expansion-20261017`; fuente y aceptación en
+`docs/plans/TRAINING_EXPANSION_2026_10_17.md` y auditoría inicial en
+`docs/auditorias/ENTRENAMIENTO_AUDITORIA_FUNCIONAL.md`. Un único motor de métricas,
+ficha/PRs reales, estadísticas/mapa/calendario/informes, programas y ejemplos,
+historial editable recuperable, exportación PNG optativa y unidades por cuenta.
+Invitado separado; sin cambios de navegación global ni sincronización nueva.
+APK debug y web release compilados; recorrido de lectura ejecutado en navegador
+con Hive local real. Capturas y widget tests cubren 320 px/200%, claro/oscuro.
+
+Pendientes: Android/iPhone y compartir nativo, lectores de pantalla y perfilado
+en hardware; conexión global de los modos Clásico/Pink (main fija tema oscuro),
+cobertura de ilustraciones/técnica y preparación real de firma/identidad de tienda.
+La pestaña PRs de Perfil es real; otros indicadores previos de demostración de
+Perfil no se convierten en métricas verificadas. No se declara 100% de tienda.
+
+## Entrenamiento · cortes anteriores
 
 El ajuste del 14/10 está en `docs/plans/ROUTINE_INLINE_UX_2026_10_14.md`: configuración
 inline reutilizada, ficha técnica sólo desde el nombre y + independiente. Conserva
@@ -33,8 +50,8 @@ actualizan el borrador por cuenta. Filtros vectoriales de 40 dp con selección
 múltiple, traducciones y taxonomía separada sin alterar IDs. Corregida la comparación
 UTC/local de «sesión hoy». Verificados 195 tests, análisis estricto sin problemas,
 web release compilada y nueve capturas nuevas revisadas; incluye 320 px/200%,
-teclado, anclaje con movimiento y fallback. El tema de Entrenamiento sigue siendo
-oscuro también cuando el contenedor usa un tema claro. Android/iPhone, lectores
+teclado, anclaje con movimiento y fallback. En aquel corte, Entrenamiento imponía tema oscuro; la expansión del 21/10
+respeta el tema heredado, con el límite global descrito arriba. Android/iPhone, lectores
 nativos y perfilado siguen pendientes; el APK anterior no verifica este cambio.
 
 El corte anterior de rutinas está en `docs/plans/ROUTINE_SYSTEM_2026_10_12.md`: borrador único

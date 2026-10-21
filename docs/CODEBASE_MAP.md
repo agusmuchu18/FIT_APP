@@ -98,6 +98,25 @@ Ejecutar primero el archivo de prueba asociado al feature.
 
 ### Continuidad de Entrenamiento
 
+- Expansión 17–21/10: auditoría `docs/auditorias/ENTRENAMIENTO_AUDITORIA_FUNCIONAL.md`
+  y aceptación/evidencia `docs/plans/TRAINING_EXPANSION_2026_10_17.md`.
+- `workout_analytics.dart` conserva el motor único; sus partes
+  `exercise_performance.dart` y `training_statistics.dart` derivan PRs, series
+  comparables, períodos, rankings, calendario y grupos musculares.
+- `WorkoutRepository.performanceIndex`: caché por cuenta/día/revisión.
+  `workout_history_changes.dart` + `WorkoutHistoryMutationService`: correcciones,
+  tombstones y recuperación de la proyección Home. No leer filas crudas para UI.
+- `TrainingLibraryRepository`: notas permanentes/programas versionados en Hive
+  por cuenta. `training_program.dart` conserva ocurrencias históricas; los programas
+  referencian rutinas existentes. `training_examples.dart` usa IDs reales.
+- `exercise_progress_panel.dart`, `workout_insights_screen.dart`,
+  `training_programs_screen.dart`, `workout_history_editor_screen.dart` y
+  `training_export_screen.dart`: entradas de la ampliación. Perfil reutiliza
+  `WorkoutRecordsPanel` en su pestaña PRs existente.
+- Unidades: `WorkoutPreferences` + `WorkoutUnitsHost` + `training_units.dart`.
+  Guardar kg/metros; convertir sólo presentación y entrada. Compartir: snapshot
+  `TrainingExportData` → PNG/preview → share_plus, sin envío automático.
+
 - Rediseño 12/10: `docs/plans/WORKOUT_REDESIGN_2026_10_12.md` contiene aceptación,
   evidencia y límites. Leer antes de ampliar el módulo.
 - Cálculos únicos: `features/workout/domain/workout_analytics.dart`; período,

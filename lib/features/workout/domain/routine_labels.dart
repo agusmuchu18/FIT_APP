@@ -2,6 +2,7 @@ import '../pro/data/exercise_definition.dart';
 import '../pro/models/workout_models.dart';
 import 'sport_activity.dart';
 import 'routine_display_names.dart';
+import 'training_units.dart';
 
 class RoutineLabels {
   static const equipment = {
@@ -68,7 +69,10 @@ class RoutineLabels {
   };
   static String exerciseName(String name) => routineDisplayNames[name] ?? name;
 
-  static String summary(WorkoutExercise e) {
+  static String summary(
+    WorkoutExercise e, {
+    TrainingUnits units = const TrainingUnits(),
+  }) {
     if (e.sportPlan != null) {
       return 'Fútbol · ${e.sportPlan!.mode.label} · ${e.restEnabled == false
           ? 'Sin descanso'
@@ -81,7 +85,7 @@ class RoutineLabels {
         : e.targetReps != null
         ? '${e.targetReps} repeticiones'
         : '${e.targetRepsMin}–${e.targetRepsMax} repeticiones';
-    return '${e.targetSets} series · $measure${e.sportPurpose == null ? '' : ' · ${e.sportPurpose!.label}'} · ${load(e.targetLoadType)}${e.targetWeightKg == null ? '' : ' ${e.targetWeightKg} kg'} · ${e.restEnabled == false
+    return '${e.targetSets} series · $measure${e.sportPurpose == null ? '' : ' · ${e.sportPurpose!.label}'} · ${load(e.targetLoadType)}${e.targetWeightKg == null ? '' : ' ${units.valueWithUnit('kg', e.targetWeightKg!)}'} · ${e.restEnabled == false
         ? 'Sin descanso'
         : e.restSeconds == null
         ? 'Descanso heredado'

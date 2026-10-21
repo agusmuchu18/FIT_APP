@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:hive/hive.dart';
 import 'package:fit_app/app/theme/app_theme.dart';
 import 'package:fit_app/features/workout/domain/routine_labels.dart';
 import 'package:fit_app/features/workout/domain/sport_activity.dart';
@@ -15,6 +18,24 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  late Directory trainingTemporary;
+  setUpAll(() async {
+    trainingTemporary = await Directory.systemTemp.createTemp(
+      'fit-training-ui-',
+    );
+    Hive.init(trainingTemporary.path);
+    await Hive.openBox<String>('fit_training_library_v1');
+  });
+  tearDownAll(() async {
+    await Hive.close();
+    if (!trainingTemporary.absolute.path.startsWith(
+          Directory.systemTemp.absolute.path,
+        ) ||
+        !trainingTemporary.path.contains('fit-training-ui-')) {
+      throw StateError('Ruta temporal inesperada');
+    }
+    await trainingTemporary.delete(recursive: true);
+  });
   setUp(() => SharedPreferences.setMockInitialValues({}));
   Finder expand(String id) => find.byKey(ValueKey('expand:$id'));
   Finder detail(String id) => find.byKey(ValueKey('details:$id'));
