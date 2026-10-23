@@ -195,14 +195,7 @@ class _ProfileSocialScreenState extends State<ProfileSocialScreen> {
     ),
   );
 
-  static final List<ProfileProgressPhoto> _photos = [
-    const ProfileProgressPhoto(id: 'p1', url: 'https://picsum.photos/300/420?1', dateLabel: '10 Mar 2026'),
-    const ProfileProgressPhoto(id: 'p2', url: 'https://picsum.photos/300/420?2', dateLabel: '18 Mar 2026'),
-    const ProfileProgressPhoto(id: 'p3', url: 'https://picsum.photos/300/420?3', dateLabel: '27 Mar 2026'),
-    const ProfileProgressPhoto(id: 'p4', url: 'https://picsum.photos/300/420?4', dateLabel: '03 Abr 2026'),
-    const ProfileProgressPhoto(id: 'p5', url: 'https://picsum.photos/300/420?5', dateLabel: '11 Abr 2026'),
-    const ProfileProgressPhoto(id: 'p6', url: 'https://picsum.photos/300/420?6', dateLabel: '19 Abr 2026'),
-  ];
+  static const List<ProfileProgressPhoto> _photos = [];
 
   @override
   Widget build(BuildContext context) {
@@ -306,8 +299,8 @@ class _ProfileSocialScreenState extends State<ProfileSocialScreen> {
                       builder: (context, avatar, __) {
                         return ProfileHero(
                           displayName: name,
-                          username: '@fit_user',
-                          subtitle: 'En definición',
+                          username: 'Perfil privado',
+                          subtitle: 'Solo vos',
                           avatarProvider: avatar == null
                               ? null
                               : MemoryImage(avatar),
