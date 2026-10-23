@@ -1,6 +1,6 @@
 # Current status
 
-**Actualizado:** 2026-10-21
+**Actualizado:** 2026-10-23
 **Base auditada:** `9f61c68ff4a362d48f97265d300f7ae54de64edc`
 **Carpeta local:** `D:\Datos User\Escritorio\fitness\fit_app`
 
@@ -11,10 +11,10 @@
 | SDK | Flutter 3.47.3 / Dart 3.13.3; actualización estable aplicada |
 | `dart format` | Base de 158 archivos; cambios posteriores formateados por archivo |
 | `flutter analyze --fatal-infos` | 0 problemas |
-| `flutter test --no-pub` | 247/247 aprobadas; expansión de entrenamiento, historial editable, unidades y regresiones del resto de la carpeta |
-| Web release `/FIT_APP/` | Compila con fuente e imágenes locales; dry run Wasm aprobado |
+| `flutter test --no-pub` | 260/260 aprobadas; incluye métricas reales de Perfil, carga diferida y regresiones del resto de la carpeta |
+| Web release | Compila; dry run Wasm aprobado. Último recorrido local en `/`; el build anterior también comprobó `/FIT_APP/` |
 | YAML de GitHub | Sintaxis válida |
-| APK Android | Debug recompilado el 21/10; no ejecutado en Android ni validado para tienda |
+| APK Android | Debug recompilado para este corte; no ejecutado en Android ni validado para tienda |
 | Integración móvil local | APK de prueba compilado; recorrido compartido ensayado en host. No ejecutado en Android/iPhone |
 
 La ampliación previa de alimentación/USDA está en la carpeta original y sigue
@@ -23,6 +23,22 @@ pendiente de commit. Entrenamiento tiene commits locales en
 `codex/routine-inline-ux-20261014`; no se hizo push ni despliegue. Las comprobaciones
 corresponden a la carpeta de trabajo actual, que conserva cambios previos de otros
 módulos; no equivalen a validar un checkout limpio de esos commits.
+
+## Entrenamiento · continuidad 22–23/10
+
+Perfil usa el historial real por cuenta para entrenamientos guardados, series y
+días de los últimos 30 días, última marca verificada, frecuencia, volumen y
+duraciones comparables. Reutiliza el motor de entrenamiento; no añade otra base
+de datos ni fórmulas. Carga, vacío y error se distinguen; las respuestas de otra
+cuenta se descartan. Perfil y PRs difieren sus lecturas mientras están ocultos,
+conservan filtros y convierten unidades sin releer ni reescribir sesiones.
+
+Plan y aceptación: `docs/plans/TRAINING_PROFILE_REAL_DATA_2026_10_22.md`.
+Verificados 260 tests, análisis estricto sin incidencias, APK debug y web release;
+tres goldens revisados, incluidos 320 px/200% y movimiento reducido. El 23/10 se
+comprobó en navegador el historial local vacío, estadísticas, PRs, desplazamiento,
+acceso al análisis y regreso conservando la pestaña. Las fotos e identidad de
+demostración previas siguen separadas de estas métricas. No se declara 100% de tienda.
 
 ## Entrenamiento · corte 21/10
 
@@ -38,8 +54,8 @@ con Hive local real. Capturas y widget tests cubren 320 px/200%, claro/oscuro.
 Pendientes: Android/iPhone y compartir nativo, lectores de pantalla y perfilado
 en hardware; conexión global de los modos Clásico/Pink (main fija tema oscuro),
 cobertura de ilustraciones/técnica y preparación real de firma/identidad de tienda.
-La pestaña PRs de Perfil es real; otros indicadores previos de demostración de
-Perfil no se convierten en métricas verificadas. No se declara 100% de tienda.
+La conexión de los demás indicadores de entrenamiento de Perfil se completó en
+la continuidad del 22–23/10 descrita arriba. No se declara 100% de tienda.
 
 ## Entrenamiento · cortes anteriores
 

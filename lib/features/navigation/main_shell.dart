@@ -94,7 +94,12 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
           ),
           IndexedStack(
             index: _currentIndex,
-            children: _pages,
+            children: [
+              for (var i = 0; i < _pages.length; i++)
+                i == 3
+                    ? ProfileSocialScreen(active: _currentIndex == 3)
+                    : _pages[i],
+            ],
           ),
           SpeedDialMenu(
             isOpen: _menuOpen,

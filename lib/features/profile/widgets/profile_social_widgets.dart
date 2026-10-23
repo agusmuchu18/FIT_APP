@@ -76,29 +76,37 @@ class ProfileHero extends StatelessWidget {
 
 class ProfileStatsRow extends StatelessWidget {
   const ProfileStatsRow({super.key, required this.items});
-
   final List<ProfileStatItem> items;
-
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-      decoration: BoxDecoration(
-        color: AppColors.card.withOpacity(0.72),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
-      ),
-      child: Row(
-        children: items
-            .map(
-              (item) => Expanded(
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+    decoration: BoxDecoration(
+      color: AppColors.card.withValues(alpha: .72),
+      borderRadius: BorderRadius.circular(24),
+      border: Border.all(color: Colors.white.withValues(alpha: .08)),
+    ),
+    child: LayoutBuilder(
+      builder: (context, constraints) {
+        final columns =
+            constraints.maxWidth < 300 ||
+                MediaQuery.textScalerOf(context).scale(1) > 1.3
+            ? 2
+            : 4;
+        final width = (constraints.maxWidth - 8 * (columns - 1)) / columns;
+        return Wrap(
+          spacing: 8,
+          runSpacing: 12,
+          children: [
+            for (final item in items)
+              SizedBox(
+                width: width,
                 child: _AnimatedStatValue(item: item),
               ),
-            )
-            .toList(),
-      ),
-    );
-  }
+          ],
+        );
+      },
+    ),
+  );
 }
 
 class _AnimatedStatValue extends StatelessWidget {
@@ -111,7 +119,7 @@ class _AnimatedStatValue extends StatelessWidget {
     return Column(
       children: [
         AnimatedSwitcher(
-          duration: const Duration(milliseconds: 280),
+          duration: MediaQuery.disableAnimationsOf(context) ? Duration.zero : const Duration(milliseconds:280),
           transitionBuilder: (child, animation) => FadeTransition(opacity: animation, child: child),
           child: Text(
             key: ValueKey(item.value),
@@ -197,17 +205,45 @@ class MinimalMetricCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.card,
         borderRadius: BorderRadius.circular(24),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.22), blurRadius: 20, offset: const Offset(0, 8))],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.22),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
         border: Border.all(color: Colors.white.withOpacity(0.06)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(item.label, style: const TextStyle(color: AppColors.textMuted, fontSize: 12)),
           Text(
-            item.unit == null ? item.value : '${item.value} ${item.unit}',
-            style: const TextStyle(color: AppColors.textPrimary, fontSize: 20, fontWeight: FontWeight.w700),
+            item.label,
+            style: const TextStyle(color: AppColors.textMuted, fontSize: 12),
+          ),
+          const SizedBox(height: 12),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                item.value,
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              if (item.unit != null)
+                Text(
+                  item.unit!,
+                  style: const TextStyle(
+                    color: AppColors.textMuted,
+                    fontSize: 12,
+                  ),
+                ),
+            ],
           ),
         ],
       ),

@@ -135,6 +135,10 @@ Ejecutar primero el archivo de prueba asociado al feature.
   tiempo, asistencia, borrado, corrupción, configuración y texto ampliado.
 - Perfil visible: `lib/features/profile/profile_social_screen.dart`; el golden
   previo de otra pantalla de perfil no valida esta vista.
+- Entrenamiento en Perfil: `presentation/workout_profile_summary.dart` consume el
+  índice único. `MainShell` comunica la activación de Perfil; lecturas diferidas y
+  PRs con filtros conservados. Evidencia: `TRAINING_PROFILE_REAL_DATA_2026_10_22.md`
+  en `docs/plans/`, prueba `workout_profile_summary_test.dart` y goldens propios.
 - Barra global/rutas: `features/workout/widgets/workout_mini_bar_host_overlay.dart`.
 - Diseño: `docs/design/DESIGN_SYSTEM.md`; evidencia y defectos visuales: `docs/UX_AUDIT.md`.
 

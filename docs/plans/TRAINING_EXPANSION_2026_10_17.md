@@ -117,8 +117,10 @@ comprobaciones nativas indicadas debajo.
 4. Contenido: 6 ilustraciones específicas y 291 fallbacks de categoría para los
    297 ejercicios; revisión profesional de técnica ampliada pendiente. No se
    inventan imágenes, animaciones biomecánicas ni datos fisiológicos faltantes.
-5. Perfil conserva otros indicadores de demostración previos ajenos a la pestaña
-   PRs; no usar esos indicadores como evidencia de estadísticas reales del módulo.
+5. Resuelto el 22/10: las cifras de Entrenamiento de la cabecera y Estadísticas
+   de Perfil usan el índice real y carga diferida. Ver
+   `TRAINING_PROFILE_REAL_DATA_2026_10_22.md`. Fotos e identidad de demostración
+   previas tienen otro alcance; no se presentan como datos reales del módulo.
 6. Preparación de tienda: Android conserva applicationId `com.example.fit_app`
    y release con firma de debug; hay que definir identidad/firma reales antes
    de distribuir. iOS y publicación no realizados. El build actual advierte una
