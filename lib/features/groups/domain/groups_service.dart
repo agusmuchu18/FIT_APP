@@ -1,35 +1,167 @@
-import 'dart:math';
+import 'dart:async';
+import 'dart:convert';
 
-import '../../../core/data/statistics_service.dart';
-import '../../../core/domain/entities.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uuid/uuid.dart';
+
+import '../../../core/data/account_storage_scope.dart';
 import 'entities/group.dart';
 
+/// Owner-private local groups. Contacts are not remote authenticated members.
+/// Following or adding a contact never grants access to their health data.
 class GroupsService {
-  GroupsService({StatisticsService? statistics})
-      : _statisticsFactory = (() => statistics ?? StatisticsService()) {
-    _seed();
+  GroupsService({this.preferences, List<Group> legacyGroups = const []}) {
+    for (final group in legacyGroups) {
+      _groups[group.id] = group;
+    }
+  }
+  static const storageKey = 'groups.private.v1';
+  static const legacyConflictsKey = 'groups.private.legacy_conflicts.v1';
+  final SharedPreferences? preferences;
+  // Keep this field for importing old in-process groups; old versions had no disk store.
+  final Map<String, Group> _groups = {};
+  static final Map<String, Future<void>> _writes = {};
+
+  void _check(String owner) {
+    if (owner != AccountStorageScope.current) {
+      throw StateError('La cuenta cambió. Volvé a abrir Grupos.');
+    }
   }
 
-  final StatisticsService Function() _statisticsFactory;
-  final Map<String, Group> _groups = {};
-  final Map<String, _MemberActivityData> _memberData = {};
+  Future<ScopedPreferences> _prefs(String owner) async => preferences == null
+      ? ScopedPreferences.getInstance(scope: owner)
+      : ScopedPreferences(preferences!, scope: owner);
+  Future<T> _serial<T>(String owner, Future<T> Function() action) async {
+    final previous = _writes[owner], gate = Completer<void>();
+    _writes[owner] = gate.future;
+    try {
+      if (previous != null) await previous;
+      return await action();
+    } finally {
+      if (identical(_writes[owner], gate.future)) _writes.remove(owner);
+      gate.complete();
+    }
+  }
+
+  List<Group> _read(
+    ScopedPreferences prefs, {
+    String key = storageKey,
+    bool uniqueIds = true,
+  }) {
+    final raw = prefs.getString(key);
+    if (raw == null) return [];
+    final data = jsonDecode(raw) as Map<String, dynamic>;
+    if (data['schemaVersion'] != 1) {
+      throw const FormatException('Versión de grupos no compatible');
+    }
+    final groups = (data['groups'] as List)
+        .map((g) => Group.fromJson(Map<String, dynamic>.from(g as Map)))
+        .toList();
+    if (uniqueIds && groups.map((g) => g.id).toSet().length != groups.length) {
+      throw const FormatException('Grupos duplicados');
+    }
+    return groups;
+  }
+
+  Future<void> _save(
+    ScopedPreferences prefs,
+    List<Group> groups, {
+    String key = storageKey,
+  }) => prefs.setString(
+    key,
+    jsonEncode({
+      'schemaVersion': 1,
+      'groups': groups.map((g) => g.toJson()).toList(),
+    }),
+  );
+
+  Future<void> _preserveLegacy() async {
+    if (_groups.isEmpty) return;
+    // Previously unowned entries belong to guest, never to the first account to log in.
+    await _serial('', () async {
+      if (_groups.isEmpty) return;
+      final prefs = await _prefs('');
+      final saved = _read(prefs);
+      List<Group>? conflicts;
+      const demoMembers = {
+        'member-andrea': 'Andrea Gómez',
+        'member-julián': 'Julián Rivas',
+        'member-marcela': 'Marcela Ríos',
+      };
+      for (final group in _groups.values) {
+        final members = group.members
+            .where(
+              (m) =>
+                  group.id != 'group-elite' ||
+                  group.name != 'Equipo élite' ||
+                  demoMembers[m.id] != m.name,
+            )
+            .toList();
+        if (group.id == 'group-elite' &&
+            group.name == 'Equipo élite' &&
+            members.isEmpty) {
+          continue;
+        }
+        final incoming = group.copyWith(members: members);
+        final index = saved.indexWhere((g) => g.id == group.id);
+        if (index < 0) {
+          saved.add(incoming);
+        } else if (jsonEncode(saved[index].toJson()) !=
+            jsonEncode(incoming.toJson())) {
+          // Keep both versions recoverable without replacing saved identities.
+          conflicts ??= _read(prefs, key: legacyConflictsKey, uniqueIds: false);
+          final snapshot = jsonEncode(incoming.toJson());
+          if (!conflicts.any((g) => jsonEncode(g.toJson()) == snapshot)) {
+            conflicts.add(incoming);
+          }
+          final current = saved[index];
+          final memberIds = current.members.map((m) => m.id).toSet();
+          saved[index] = current.copyWith(
+            members: [
+              ...current.members,
+              ...members.where((m) => memberIds.add(m.id)),
+            ],
+          );
+        }
+      }
+      if (conflicts != null) {
+        await _save(prefs, conflicts, key: legacyConflictsKey);
+      }
+      await _save(prefs, saved);
+      _groups.clear();
+    });
+  }
 
   Future<List<Group>> fetchGroups() async {
-    final groups = _groups.values.toList();
-    return Future.wait(groups.map(_attachMetrics));
+    final owner = AccountStorageScope.current;
+    await _preserveLegacy();
+    final prefs = await _prefs(owner);
+    _check(owner);
+    return _read(prefs);
   }
 
-  Future<Group?> getGroup(String id) async {
-    final group = _groups[id];
-    if (group == null) return null;
-    return _attachMetrics(group);
-  }
-
+  Future<Group?> getGroup(String id) async =>
+      (await fetchGroups()).where((g) => g.id == id).firstOrNull;
   Future<Group> createGroup(String name) async {
-    final id = 'group-${DateTime.now().millisecondsSinceEpoch}';
-    final group = Group(id: id, name: name, members: []);
-    _groups[id] = group;
-    return group;
+    final owner = AccountStorageScope.current, trimmed = name.trim();
+    if (trimmed.isEmpty || trimmed.length > 120) {
+      throw ArgumentError('Usá un nombre de 1 a 120 caracteres.');
+    }
+    await _preserveLegacy();
+    return _serial(owner, () async {
+      final prefs = await _prefs(owner);
+      _check(owner);
+      final groups = _read(prefs);
+      final group = Group(
+        id: 'group-${const Uuid().v4()}',
+        name: trimmed,
+        members: [],
+      );
+      groups.add(group);
+      await _save(prefs, groups);
+      _check(owner);
+      return group;
+    });
   }
 
   Future<Group?> addMemberToGroup({
@@ -37,193 +169,29 @@ class GroupsService {
     required String name,
     required String role,
   }) async {
-    final group = _groups[groupId];
-    if (group == null) return null;
-
-    final member = GroupMember(
-      id: 'member-${DateTime.now().millisecondsSinceEpoch}',
-      name: name,
-      role: role,
-    );
-
-    final updatedMembers = [...group.members, member];
-    _groups[groupId] = group.copyWith(members: updatedMembers);
-    _memberData[member.id] = _generateSampleActivity();
-    return _attachMetrics(_groups[groupId]!);
-  }
-
-  Future<Group> _attachMetrics(Group group) async {
-    final members = await Future.wait(group.members.map(_memberWithMetrics));
-    return group.copyWith(members: members);
-  }
-
-  Future<GroupMember> _memberWithMetrics(GroupMember member) async {
-    final data = _memberData[member.id];
-    if (data == null) return member;
-    final metrics = await _calculateMetrics(data);
-    return member.copyWith(metrics: metrics);
-  }
-
-  Future<GroupMemberMetrics> _calculateMetrics(_MemberActivityData data) async {
-    final stats = _statisticsFactory();
-    final now = DateTime.now();
-    final start = DateTime(now.year, now.month, now.day).subtract(
-      const Duration(days: 6),
-    );
-
-    final weeklyMinutes = _sumWorkoutMinutes(data.workouts, start, now);
-    final averageDailyCalories = await _averageCaloriesPerDay(
-      stats,
-      data.meals,
-      start,
-      now,
-    );
-    final averageSleepHours = await _averageSleepHours(stats, data.sleep, start, now);
-
-    return GroupMemberMetrics(
-      weeklyWorkoutMinutes: weeklyMinutes,
-      averageDailyCalories: averageDailyCalories,
-      averageSleepHours: averageSleepHours,
-    );
-  }
-
-  int _sumWorkoutMinutes(List<WorkoutEntry> workouts, DateTime start, DateTime end) {
-    return workouts.where((entry) {
-      final date = DateTime.tryParse(entry.id);
-      if (date == null) return false;
-      return !date.isBefore(start) && !date.isAfter(end);
-    }).fold(0, (sum, entry) => sum + entry.durationMinutes);
-  }
-
-  Future<double> _averageCaloriesPerDay(
-    StatisticsService stats,
-    List<MealEntry> meals,
-    DateTime start,
-    DateTime end,
-  ) async {
-    final Map<DateTime, List<MealEntry>> mealsByDay = {};
-    for (final meal in meals) {
-      final date = DateTime.tryParse(meal.id);
-      if (date == null) continue;
-      if (date.isBefore(start) || date.isAfter(end)) continue;
-      final day = DateTime(date.year, date.month, date.day);
-      mealsByDay.putIfAbsent(day, () => []).add(meal);
+    final owner = AccountStorageScope.current, trimmed = name.trim();
+    if (trimmed.isEmpty || trimmed.length > 120 || role.trim().length > 80) {
+      throw ArgumentError('Revisá el nombre y la descripción del atleta.');
     }
-
-    for (var i = 0; i < 7; i++) {
-      final day = DateTime(start.year, start.month, start.day).add(Duration(days: i));
-      final dailyMeals = mealsByDay[day] ?? [];
-      final totalCalories = dailyMeals.fold<int>(0, (sum, meal) => sum + meal.calories);
-      final macros = dailyMeals.fold<Macros>(
-        Macros(carbs: 0, protein: 0, fat: 0),
-        (acc, meal) => Macros(
-          carbs: acc.carbs + meal.macros.carbs,
-          protein: acc.protein + meal.macros.protein,
-          fat: acc.fat + meal.macros.fat,
-        ),
+    await _preserveLegacy();
+    return _serial(owner, () async {
+      final prefs = await _prefs(owner);
+      _check(owner);
+      final groups = _read(prefs);
+      final index = groups.indexWhere((g) => g.id == groupId);
+      if (index < 0) return null;
+      final group = groups[index];
+      final member = GroupMember(
+        id: 'member-${const Uuid().v4()}',
+        name: trimmed,
+        role: role.trim(),
       );
-
-      await stats.recordNutritionMetrics(
-        NutritionMetrics(date: day, totalCalories: totalCalories, macros: macros),
-      );
-    }
-
-    final history = await stats.getNutritionHistory(days: 7);
-    final totalCaloriesWeek = history.fold<int>(0, (sum, item) => sum + item.totalCalories);
-    return totalCaloriesWeek / 7;
-  }
-
-  Future<double> _averageSleepHours(
-    StatisticsService stats,
-    List<SleepEntry> sleepEntries,
-    DateTime start,
-    DateTime end,
-  ) async {
-    for (final entry in sleepEntries) {
-      final date = DateTime.tryParse(entry.id);
-      if (date == null) continue;
-      if (date.isBefore(start) || date.isAfter(end)) continue;
-      await stats.recordSleepInsights(entry);
-    }
-
-    final entries = await stats.getSleepEntries(days: 7);
-    if (entries.isEmpty) return 0;
-    final totalHours = entries.fold<double>(0, (sum, entry) => sum + entry.hours);
-    return totalHours / entries.length;
-  }
-
-  void _seed() {
-    final team = Group(
-      id: 'group-elite',
-      name: 'Equipo élite',
-      members: [
-        GroupMember(id: 'member-andrea', name: 'Andrea Gómez', role: 'Velocista'),
-        GroupMember(id: 'member-julián', name: 'Julián Rivas', role: 'Fuerza'),
-        GroupMember(id: 'member-marcela', name: 'Marcela Ríos', role: 'Resistencia'),
-      ],
-    );
-
-    _groups[team.id] = team;
-
-    _memberData['member-andrea'] = _generateSampleActivity(intensityFactor: 1.2);
-    _memberData['member-julián'] = _generateSampleActivity(intensityFactor: 1.6);
-    _memberData['member-marcela'] = _generateSampleActivity(intensityFactor: 1.1);
-  }
-
-  _MemberActivityData _generateSampleActivity({double intensityFactor = 1.0}) {
-    final now = DateTime.now();
-    final random = Random(intensityFactor.hashCode);
-
-    final workouts = List<WorkoutEntry>.generate(7, (index) {
-      final date = now.subtract(Duration(days: index));
-      final duration = (30 + random.nextInt(25)) * intensityFactor;
-      return WorkoutEntry(
-        id: date.toIso8601String(),
-        name: 'Sesión ${index + 1}',
-        durationMinutes: duration.round(),
-        intensity: ['Baja', 'Moderado', 'Alta'][random.nextInt(3)],
-      );
+      groups[index] = group.copyWith(members: [...group.members, member]);
+      await _save(prefs, groups);
+      _check(owner);
+      return groups[index];
     });
-
-    final meals = List<MealEntry>.generate(14, (index) {
-      final date = now.subtract(Duration(hours: index * 10));
-      final calories = 450 + random.nextInt(350);
-      return MealEntry(
-        id: date.toIso8601String(),
-        title: 'Plan ${index + 1}',
-        calories: (calories * intensityFactor).round(),
-        macros: Macros(
-          carbs: 50 + random.nextInt(40),
-          protein: 25 + random.nextInt(30),
-          fat: 15 + random.nextInt(20),
-        ),
-      );
-    });
-
-    final sleep = List<SleepEntry>.generate(7, (index) {
-      final date = now.subtract(Duration(days: index));
-      final hours = 6 + random.nextDouble() * 3;
-      return SleepEntry(
-        id: date.toIso8601String(),
-        hours: double.parse(hours.toStringAsFixed(1)),
-        quality: ['Excelente', 'Buena', 'Irregular'][random.nextInt(3)],
-      );
-    });
-
-    return _MemberActivityData(workouts: workouts, meals: meals, sleep: sleep);
   }
-}
-
-class _MemberActivityData {
-  _MemberActivityData({
-    required this.workouts,
-    required this.meals,
-    required this.sleep,
-  });
-
-  final List<WorkoutEntry> workouts;
-  final List<MealEntry> meals;
-  final List<SleepEntry> sleep;
 }
 
 final groupsService = GroupsService();

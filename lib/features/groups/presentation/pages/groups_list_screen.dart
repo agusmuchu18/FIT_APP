@@ -1,3 +1,5 @@
+import 'group_entry_form.dart';
+
 import 'package:flutter/material.dart';
 
 import '../../../common/theme/app_colors.dart';
@@ -23,73 +25,20 @@ class _GroupsListScreenState extends State<GroupsListScreen> {
   }
 
   Future<void> _createGroup(BuildContext context) async {
-    final controller = TextEditingController();
-    final colorScheme = Theme.of(context).colorScheme;
-
-    await showModalBottomSheet<void>(
+    final saved = await showDialog<bool>(
       context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      backgroundColor: AppColors.card,
-      builder: (context) => Padding(
-        padding: EdgeInsets.only(
-          left: 20,
-          right: 20,
-          bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-          top: 20,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.group_add_rounded, color: AppColors.accentSecondary),
-                const SizedBox(width: 8),
-                const Text(
-                  'Nuevo grupo',
-                  style: TextStyle(
-                    color: AppColors.textSecondary,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 16,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: controller,
-              decoration: InputDecoration(
-                labelText: 'Nombre del grupo',
-                labelStyle: const TextStyle(color: AppColors.textMuted),
-                filled: true,
-                fillColor: AppColors.surface,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: () async {
-                  if (controller.text.trim().isEmpty) return;
-                  await groupsService.createGroup(controller.text.trim());
-                  if (!mounted) return;
-                  Navigator.of(context).pop();
-                  setState(() => _groupsFuture = groupsService.fetchGroups());
-                },
-                child: const Text('Crear'),
-              ),
-            ),
-          ],
-        ),
+      builder: (_) => GroupEntryForm(
+        member: false,
+        onSave: (name, _) async {
+          await groupsService.createGroup(name);
+        },
       ),
     );
+    if (saved == true && mounted) {
+      setState(() {
+        _groupsFuture = groupsService.fetchGroups();
+      });
+    }
   }
 
   @override
@@ -112,7 +61,7 @@ class _GroupsListScreenState extends State<GroupsListScreen> {
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
             color: AppColors.textPrimary,
-            onPressed: () => setState(() => _groupsFuture = groupsService.fetchGroups()),
+            onPressed: () => setState(() { _groupsFuture = groupsService.fetchGroups(); }),
             tooltip: 'Actualizar',
           ),
         ],

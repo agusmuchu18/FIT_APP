@@ -1,3 +1,5 @@
+import 'group_entry_form.dart';
+
 import 'package:characters/characters.dart';
 import 'package:flutter/material.dart';
 
@@ -24,50 +26,25 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
   }
 
   Future<void> _addMember() async {
-    final nameController = TextEditingController();
-    final roleController = TextEditingController(text: 'Atleta');
-
-    await showDialog<void>(
+    final saved = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Agregar miembro'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameController,
-              decoration: const InputDecoration(labelText: 'Nombre completo'),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: roleController,
-              decoration: const InputDecoration(labelText: 'Rol'),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton.icon(
-            onPressed: () async {
-              if (nameController.text.trim().isEmpty) return;
-              await groupsService.addMemberToGroup(
-                groupId: widget.groupId,
-                name: nameController.text.trim(),
-                role: roleController.text.trim(),
-              );
-              if (!mounted) return;
-              Navigator.of(context).pop();
-              setState(() => _groupFuture = groupsService.getGroup(widget.groupId));
-            },
-            icon: const Icon(Icons.person_add_alt_1_rounded),
-            label: const Text('Agregar'),
-          ),
-        ],
+      builder: (_) => GroupEntryForm(
+        member: true,
+        onSave: (name, role) async {
+          final group = await groupsService.addMemberToGroup(
+            groupId: widget.groupId,
+            name: name,
+            role: role,
+          );
+          if (group == null) throw StateError('Grupo no disponible');
+        },
       ),
     );
+    if (saved == true && mounted) {
+      setState(() {
+        _groupFuture = groupsService.getGroup(widget.groupId);
+      });
+    }
   }
 
   @override
@@ -80,7 +57,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
         title: Text(widget.groupName),
         actions: [
           IconButton(
-            onPressed: () => setState(() => _groupFuture = groupsService.getGroup(widget.groupId)),
+            onPressed: () => setState(() { _groupFuture = groupsService.getGroup(widget.groupId); }),
             icon: const Icon(Icons.refresh_rounded),
             tooltip: 'Recargar',
           )
@@ -100,6 +77,27 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
               return const Center(child: CircularProgressIndicator());
             }
 
+            if (snapshot.hasError) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'No se pudo leer el grupo. Tus datos se conservan.',
+                      ),
+                      TextButton(
+                        onPressed: () => setState(() {
+                          _groupFuture = groupsService.getGroup(widget.groupId);
+                        }),
+                        child: const Text('Reintentar'),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
             if (!snapshot.hasData || snapshot.data == null) {
               return Center(
                 child: Column(
@@ -127,7 +125,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
                         Text('Resumen de miembros', style: textTheme.titleLarge),
                         const SizedBox(height: 8),
                         Text(
-                          'Visualiza de un vistazo los minutos entrenados, calorías ingeridas y horas de sueño promedio de cada atleta.',
+                          'Los atletas agregados son contactos de este grupo local. Sus entrenamientos, alimentación y sueño permanecen privados hasta que compartan datos expresamente.',
                           style: textTheme.bodyMedium,
                         ),
                         const SizedBox(height: 12),
@@ -197,7 +195,7 @@ class _MemberCard extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             if (metrics == null)
-              const Text('Sin datos disponibles')
+              const Text('Sin métricas compartidas. Agregar un contacto no concede acceso a sus datos.')
             else
               Row(
                 children: [
