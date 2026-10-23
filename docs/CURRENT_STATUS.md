@@ -11,7 +11,7 @@
 | SDK | Flutter 3.47.3 / Dart 3.13.3; actualización estable aplicada |
 | `dart format` | Base de 158 archivos; cambios posteriores formateados por archivo |
 | `flutter analyze --fatal-infos` | 0 problemas |
-| `flutter test --no-pub` | 260/260 aprobadas; incluye métricas reales de Perfil, carga diferida y regresiones del resto de la carpeta |
+| `flutter test --no-pub` | 270/270 aprobadas; incluye catálogo de rutinas, métricas reales de Perfil y regresiones del resto de la carpeta |
 | Web release | Compila; dry run Wasm aprobado. Último recorrido local en `/`; el build anterior también comprobó `/FIT_APP/` |
 | YAML de GitHub | Sintaxis válida |
 | APK Android | Debug recompilado para este corte; no ejecutado en Android ni validado para tienda |
@@ -23,6 +23,23 @@ pendiente de commit. Entrenamiento tiene commits locales en
 `codex/routine-inline-ux-20261014`; no se hizo push ni despliegue. Las comprobaciones
 corresponden a la carpeta de trabajo actual, que conserva cambios previos de otros
 módulos; no equivalen a validar un checkout limpio de esos commits.
+
+## Buscar rutinas · 23/10
+
+La entrada muestra 12 propuestas offline con fotografías distintas, cuatro por
+nivel (básico/intermedio/avanzado), búsqueda y filtros. Cada detalle permite
+consultar objetivos y fichas, abrir el editor existente y guardar una copia por
+cuenta sin sobrescribir el borrador normal ni insertar sesiones/resultados.
+Mis rutinas conserva el acceso a las guardadas. Corregido su reintento de lectura.
+Nueve WebP nuevos suman 906.064 bytes; se reutilizan tres fotografías existentes.
+Sin dependencias ni permisos nuevos. Plan: `docs/plans/ROUTINE_CATALOG_2026_10_23.md`.
+Verificados 270 tests y análisis estricto sin incidencias; cuatro goldens revisados
+(390 px oscuro/detalle, 900 px claro y 320 px/200% con movimiento reducido).
+APK debug y web release recompilados. Recorrido web a 390×844 desde Home:
+Entrenamiento → Buscar → detalle → ficha → personalizar → guardar → Mis rutinas
+→ Home de Entrenamiento con la copia disponible y sin sesión registrada. Prueba
+en un origen localhost separado, con copia identificada como «Prueba local»;
+no se usó una cuenta del usuario. No equivale a ejecución Android/iPhone.
 
 ## Entrenamiento · continuidad 22–23/10
 

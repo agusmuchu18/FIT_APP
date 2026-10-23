@@ -135,6 +135,10 @@ Ejecutar primero el archivo de prueba asociado al feature.
   tiempo, asistencia, borrado, corrupción, configuración y texto ampliado.
 - Perfil visible: `lib/features/profile/profile_social_screen.dart`; el golden
   previo de otra pantalla de perfil no valida esta vista.
+- Buscar rutinas: `domain/routine_catalog.dart` define 12 propuestas offline por
+  nivel; `training_home/routine_search_screen.dart` explora o busca las guardadas.
+  `catalog_routine_detail_screen.dart` reutiliza el editor con borrador separado.
+  Aceptación: `docs/plans/ROUTINE_CATALOG_2026_10_23.md`.
 - Entrenamiento en Perfil: `presentation/workout_profile_summary.dart` consume el
   índice único. `MainShell` comunica la activación de Perfil; lecturas diferidas y
   PRs con filtros conservados. Evidencia: `TRAINING_PROFILE_REAL_DATA_2026_10_22.md`

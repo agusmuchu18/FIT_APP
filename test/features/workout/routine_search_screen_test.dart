@@ -44,6 +44,8 @@ void main() {
       const MaterialApp(home: WorkoutRoutineSearchScreen()),
     );
     await tester.pumpAndSettle();
+    await tester.tap(find.text('Mis rutinas'));
+    await tester.pumpAndSettle();
     expect(find.text('Fuerza superior'), findsOneWidget);
     expect(find.text('Piernas'), findsOneWidget);
 

@@ -1,0 +1,75 @@
+{
+  "date": "2026-10-23",
+  "tool": "Built-in image_gen; no CLI/API key",
+  "usage": "Decorative routine library covers. Not proof of reviewed exercise technique. Existing originals preserved. WebP encoding only; pixels not retouched.",
+  "generated": [
+    {
+      "name": "dumbbells",
+      "prompt": "Generate ONE realistic premium editorial sports photograph in landscape 3:2 for a FIT App routine library cover. Modern spacious gym, deep navy charcoal, subtle teal daylight, natural skin, realistic anatomy, modest dark athletic clothes, believable equipment. Subject on right two thirds, left third dark clean negative space. High-end fitness campaign photograph, not illustration. No text, logos, collage, borders. Decorative cover, not instructional. Scene: Adult woman sitting on a flat gym bench with a pair of light dumbbells resting beside her thighs between controlled sets, full bench and dumbbells visible.",
+      "source": "C:\\Users\\User\\.codex\\generated_images\\01a09f32-ad8f-7362-8c5f-3b4431258acf\\exec-910ba9fe-037b-4c3e-92b7-ed13819bb41e.png",
+      "target": "assets/images/workout/catalog_dumbbells.webp",
+      "bytes": 120544
+    },
+    {
+      "name": "home",
+      "prompt": "Generate ONE realistic premium editorial sports photograph in landscape 3:2 for a FIT App routine library cover. Modern spacious gym, deep navy charcoal, subtle teal daylight, natural skin, realistic anatomy, modest dark athletic clothes, believable equipment. Subject on right two thirds, left third dark clean negative space. High-end fitness campaign photograph, not illustration. No text, logos, collage, borders. Decorative cover, not instructional. Scene: Adult man practicing a controlled incline push-up with hands on a sturdy exercise bench in a tidy home training area, warm window side-light, no clutter.",
+      "source": "C:\\Users\\User\\.codex\\generated_images\\01a09f32-ad8f-7362-8c5f-3b4431258acf\\exec-d11fbcff-ad0b-49ee-a440-53ac53bf4201.png",
+      "target": "assets/images/workout/catalog_home.webp",
+      "bytes": 119446
+    },
+    {
+      "name": "core",
+      "prompt": "Generate ONE realistic premium editorial sports photograph in landscape 3:2 for a FIT App routine library cover. Modern spacious gym, deep navy charcoal, subtle teal daylight, natural skin, realistic anatomy, modest dark athletic clothes, believable equipment. Subject on right two thirds, left third dark clean negative space. High-end fitness campaign photograph, not illustration. No text, logos, collage, borders. Decorative cover, not instructional. Scene: Adult woman holding a relaxed bird-dog position on an exercise mat, opposite arm and leg extended, visible whole body, quiet training studio.",
+      "source": "C:\\Users\\User\\.codex\\generated_images\\01a09f32-ad8f-7362-8c5f-3b4431258acf\\exec-d60eb85b-013b-4a16-a496-a70972d4d440.png",
+      "target": "assets/images/workout/catalog_core.webp",
+      "bytes": 68338
+    },
+    {
+      "name": "legs",
+      "prompt": "Generate ONE realistic premium editorial sports photograph in landscape 3:2 for a FIT App routine library cover. Modern spacious gym, deep navy charcoal, subtle teal daylight, natural skin, realistic anatomy, modest dark athletic clothes, believable equipment. Subject on right two thirds, left third dark clean negative space. High-end fitness campaign photograph, not illustration. No text, logos, collage, borders. Decorative cover, not instructional. Scene: Adult man at a squat rack between sets, barbell safely racked behind him, hands at hips, legs and weight plates in frame, calm focused expression.",
+      "source": "C:\\Users\\User\\.codex\\generated_images\\01a09f32-ad8f-7362-8c5f-3b4431258acf\\exec-70c9360e-86f8-4f79-b3b1-ab26577e8aa3.png",
+      "target": "assets/images/workout/catalog_legs.webp",
+      "bytes": 119226
+    },
+    {
+      "name": "push",
+      "prompt": "Generate ONE realistic premium editorial sports photograph in landscape 3:2 for a FIT App routine library cover. Modern spacious gym, deep navy charcoal, subtle teal daylight, natural skin, realistic anatomy, modest dark athletic clothes, believable equipment. Subject on right two thirds, left third dark clean negative space. High-end fitness campaign photograph, not illustration. No text, logos, collage, borders. Decorative cover, not instructional. Scene: Adult woman sitting upright on an incline bench holding two dumbbells near her shoulders in a stable position before a press, plausible form, entire upper body and bench visible.",
+      "source": "C:\\Users\\User\\.codex\\generated_images\\01a09f32-ad8f-7362-8c5f-3b4431258acf\\exec-36256968-71d5-41a4-aadd-f813438dd637.png",
+      "target": "assets/images/workout/catalog_push.webp",
+      "bytes": 78590
+    },
+    {
+      "name": "pull",
+      "prompt": "Generate ONE realistic premium editorial sports photograph in landscape 3:2 for a FIT App routine library cover. Modern spacious gym, deep navy charcoal, subtle teal daylight, natural skin, realistic anatomy, modest dark athletic clothes, believable equipment. Subject on right two thirds, left third dark clean negative space. High-end fitness campaign photograph, not illustration. No text, logos, collage, borders. Decorative cover, not instructional. Scene: Adult man performing a controlled seated cable row, chest tall, feet braced, both hands holding one cable handle, realistic pulleys and weight stack visible.",
+      "source": "C:\\Users\\User\\.codex\\generated_images\\01a09f32-ad8f-7362-8c5f-3b4431258acf\\exec-0cd2198b-d8a9-45dd-8d6b-32925c22fe26.png",
+      "target": "assets/images/workout/catalog_pull.webp",
+      "bytes": 108166
+    },
+    {
+      "name": "basic",
+      "target": "assets/images/workout/catalog_basic.webp",
+      "prompt": "Premium editorial 3:2 photograph: adult woman performing a controlled seated cable row in a modern gym; charcoal workout clothes, subject on right, dark negative space on left, navy and teal daylight, realistic anatomy/equipment, no text/logos; decorative cover, not technique instruction.",
+      "source": "built-in image_gen / exec-3c959334-c856-4c86-b78a-1490cc2d80c8.png",
+      "bytes": 105284
+    },
+    {
+      "name": "intermediate",
+      "target": "assets/images/workout/catalog_intermediate.webp",
+      "prompt": "Premium editorial 3:2 photograph: adult man holding cable handles between controlled repetitions at a dual cable machine; slate clothes, subject on right, dark negative space on left, navy/charcoal/teal rim light, believable anatomy/equipment, no text/logos; decorative cover.",
+      "source": "built-in image_gen / exec-213bda50-ed8a-4f96-a629-7a9358d7c46d.png",
+      "bytes": 89262
+    },
+    {
+      "name": "advanced",
+      "target": "assets/images/workout/catalog_advanced.webp",
+      "prompt": "Premium editorial 3:2 photograph: adult woman setting up a realistically loaded barbell deadlift on a gym platform; modest dark athletic clothes, subject mainly on right, dark negative space left, navy/charcoal/teal, realistic equipment/anatomy, no text/logos; decorative, not instructional.",
+      "source": "built-in image_gen / exec-57075696-2cc6-4e02-b4d3-853642415bc7.png",
+      "bytes": 97208
+    }
+  ],
+  "reused": [
+    "assets/images/workout/routine_builder.webp",
+    "assets/images/workout/session_strength.webp",
+    "assets/images/workout/equipment_detail.webp"
+  ]
+}
