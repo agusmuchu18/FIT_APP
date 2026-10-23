@@ -35,20 +35,23 @@ la implementación relevante con una búsqueda puntual antes de editar.
 |---|---|
 | `analytics` | `analytics_overview_screen.dart`; consume métricas agregadas. |
 | `auth` | `data/auth_service.dart`, `presentation/login_screen.dart`, `signup_screen.dart`; Firebase Auth. |
-| `groups` | `domain/entities/group.dart`, `groups_service.dart`, páginas de lista/detalle. |
+| `groups` | `domain/entities/group.dart`, `groups_service.dart`: contactos locales durables por dueño, sin métricas implícitas; lista/detalle y `group_entry_form.dart`. No son membresías remotas. |
 | `habits` | `domain/habit_models.dart`, `habit_progress_models.dart`, `habit_gallery_engine.dart`; creación, galería y tracker en `presentation/`. |
 | `home` | `home_screen.dart`, `presentation/home_summary_screen.dart`, utilidades y detalles de actividad. |
 | `modules` | Pantallas placeholder de psicología, laboratorio y ciclo menstrual. |
 | `nutrition` | `domain/models.dart`; `data/offline_food_catalog.dart` carga el catálogo USDA empaquetado; `fdc_client.dart` usa proxy web o clave nativa; `food_repository.dart` combina catálogo, aprendidos, personalizados y caché; controladores/UI en `application/` y `presentation/`. |
 | `onboarding` | Flujo inicial y páginas de onboarding. |
-| `profile` | `profile_controller.dart`, perfil social, ajustes, avatar y fotos. |
-| `settings` | Pantalla raíz, subpantallas, módulos e interfaz de integraciones; preferencias reales viven en `core/data/app_preferences.dart`. |
+| `profile` | `profile_controller.dart`: identidad privada durable por cuenta; Perfil conserva Fotos/Estadísticas/PRs. Galería propia e identidad pública pendientes. |
+| `settings` | Pantalla raíz, subpantallas, módulos e integraciones; `integration_readiness.dart` evita conexiones ficticias. Preferencias en `core/data/app_preferences.dart`. |
 | `sleep` | Servicios de insights/horarios y pantallas de resumen, historial y regularidad. |
 | `streak` | Pantalla de racha. |
 | `workout` | Sesión y descanso en `application/` y `presentation/`; sesiones ricas y preferencias en `data/`; rutinas, búsqueda, historial y ajustes en `training_home/`; modelos, biblioteca y UI previa en `pro/`. |
 | `common` | Colores y widgets reutilizables entre features. |
 
 ## Relaciones importantes
+
+Expansión complementaria: `docs/expansion/MASTER_PLAN.md`, `FEATURE_AUDIT.md`,
+`IMPLEMENTATION_STATUS.md`, `PRIVACY_MODEL.md` y `TEST_REPORT.md`.
 
 ```text
 main.dart -> RepositoryScope(FitnessRepository)

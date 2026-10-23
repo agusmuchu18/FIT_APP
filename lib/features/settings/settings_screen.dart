@@ -53,7 +53,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           SettingsCardGroup(children: [
             SettingsTile(icon: Icons.person_rounded, title: 'Editar perfil', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ProfileSettingsScreen()))),
             const Divider(height: 1),
-            const SettingsTile(icon: Icons.workspace_premium_rounded, title: 'Suscripción / Plan', subtitle: 'Premium activo'),
+            const SettingsTile(icon: Icons.workspace_premium_rounded, title: 'Suscripción / Plan', subtitle: 'Sin suscripción configurada'),
             const Divider(height: 1),
             const SettingsTile(icon: Icons.flag_rounded, title: 'Objetivos', subtitle: 'Mantener constancia y mejorar composición'),
           ]),

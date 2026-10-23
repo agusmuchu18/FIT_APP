@@ -1,13 +1,10 @@
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 
 import '../../../../core/data/app_preferences.dart';
-import '../../../../core/integrations/fitbit_service.dart';
-import '../../../../core/integrations/google_fit_service.dart';
-import '../../../../core/integrations/healthkit_service.dart';
 import 'integration_detail_screen.dart';
 import 'integration_models.dart';
+import 'integration_readiness.dart';
 import 'widgets/integration_section_card.dart';
 import 'widgets/integration_tile.dart';
 import 'widgets/integrations_filter_chips.dart';
@@ -21,6 +18,7 @@ class IntegrationsSettingsScreen extends StatefulWidget {
 
 class _IntegrationsSettingsScreenState extends State<IntegrationsSettingsScreen> {
   AppPreferences? _prefs;
+  bool _failed = false;
   final TextEditingController _searchController = TextEditingController();
   IntegrationsFilter _selectedFilter = IntegrationsFilter.all;
   Map<IntegrationId, IntegrationStatus> _statuses = {};
@@ -33,12 +31,18 @@ class _IntegrationsSettingsScreenState extends State<IntegrationsSettingsScreen>
   }
 
   Future<void> _load() async {
-    final prefs = await AppPreferences.load();
-    if (!mounted) return;
-    setState(() {
-      _prefs = prefs;
-      _statuses = prefs.integrationStatuses;
-    });
+    try {
+      final prefs = await AppPreferences.load();
+      final statuses = prefs.integrationStatuses;
+      if (!mounted) return;
+      setState(() {
+        _prefs = prefs;
+        _statuses = statuses;
+        _failed = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _failed = true);
+    }
   }
 
   Future<void> _persist(IntegrationId id, IntegrationStatus status) async {
@@ -50,7 +54,11 @@ class _IntegrationsSettingsScreenState extends State<IntegrationsSettingsScreen>
     setState(() => _statuses = updated);
   }
 
-  IntegrationStatus _statusFor(IntegrationId id) => _statuses[id] ?? const IntegrationStatus();
+  IntegrationStatus _statusFor(IntegrationId id) =>
+      IntegrationReadiness.verifiedStatus(
+        id,
+        _statuses[id] ?? const IntegrationStatus(),
+      );
 
   @override
   void dispose() {
@@ -74,7 +82,25 @@ class _IntegrationsSettingsScreenState extends State<IntegrationsSettingsScreen>
           ),
         ],
       ),
-      body: _prefs == null
+      body: _failed
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'No se pudieron leer los estados guardados. Se conservan para reintentar.',
+                    ),
+                    TextButton(
+                      onPressed: _load,
+                      child: const Text('Reintentar'),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          : _prefs == null
           ? const Center(child: CircularProgressIndicator())
           : ListView(
               padding: const EdgeInsets.all(16),
@@ -168,46 +194,7 @@ class _IntegrationsSettingsScreenState extends State<IntegrationsSettingsScreen>
   }
 
   Future<void> _handleConnect(IntegrationItem item) async {
-    if (!item.isAvailable) {
-      _showSoonDialog(item);
-      return;
-    }
-
-    bool success = false;
-    switch (item.id) {
-      case IntegrationId.appleHealth:
-        if (!Platform.isIOS) {
-          _showSoonDialog(item, message: 'Apple Health requiere iOS para conectarse.');
-          return;
-        }
-        final service = HealthKitService();
-        success = await service.hasPermissions() || await service.requestPermissions();
-        break;
-      case IntegrationId.googleFit:
-        if (!Platform.isAndroid) {
-          _showSoonDialog(item, message: 'Google Fit requiere Android para conectarse.');
-          return;
-        }
-        final service = GoogleFitService();
-        success = await service.hasPermissions() || await service.requestPermissions();
-        break;
-      case IntegrationId.fitbit:
-        final service = FitbitService();
-        success = await service.hasPermissions() || await service.requestPermissions();
-        break;
-      default:
-        success = true;
-    }
-
-    if (!success) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No se pudo completar la conexión.')));
-      return;
-    }
-
-    await _persist(item.id, IntegrationStatus(enabled: true, connected: true, lastSync: DateTime.now()));
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${item.title} conectado.')));
+    _showSoonDialog(item, message: IntegrationReadiness.reason(item.id));
   }
 
   Future<void> _disconnect(IntegrationItem item) async {
@@ -351,7 +338,7 @@ const List<IntegrationItem> _allItems = [
     title: 'Fitbit (reloj)',
     subtitle: 'Pasos, calorías y actividad.',
     category: IntegrationCategory.activityTraining,
-    isAvailable: true,
+    isAvailable: false,
     iconData: Icons.fitness_center_rounded,
     description: 'Importa actividad, sueño y señales de salud desde Fitbit.',
     importableData: ['Pasos', 'Entrenamientos', 'Sueño básico'],
@@ -381,7 +368,7 @@ const List<IntegrationItem> _allItems = [
     title: 'Apple Health',
     subtitle: 'Hub de salud en iPhone.',
     category: IntegrationCategory.healthSensors,
-    isAvailable: true,
+    isAvailable: false,
     iconData: Icons.health_and_safety_rounded,
     description: 'Permite leer entrenamientos, sueño, pasos y nutrición desde HealthKit.',
     importableData: ['Pasos', 'Sueño', 'Entrenamientos', 'Nutrición'],
@@ -391,7 +378,7 @@ const List<IntegrationItem> _allItems = [
     title: 'Google Fit',
     subtitle: 'Actividad y métricas en Android.',
     category: IntegrationCategory.healthSensors,
-    isAvailable: true,
+    isAvailable: false,
     iconData: Icons.favorite_rounded,
     description: 'Conecta Google Fit para sincronizar actividad y métricas de bienestar.',
     importableData: ['Pasos', 'Puntos cardio', 'Entrenamientos', 'Sueño'],

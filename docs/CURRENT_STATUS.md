@@ -11,10 +11,10 @@
 | SDK | Flutter 3.47.3 / Dart 3.13.3; actualización estable aplicada |
 | `dart format` | Base de 158 archivos; cambios posteriores formateados por archivo |
 | `flutter analyze --fatal-infos` | 0 problemas |
-| `flutter test --no-pub` | 270/270 aprobadas; incluye catálogo de rutinas, métricas reales de Perfil y regresiones del resto de la carpeta |
+| `flutter test --no-pub` | 319/319 aprobadas (23/10, goldens regenerados y revisados); incluye sesión en vivo, tipos de serie, superseries, aviso de descanso y migración de borradores |
 | Web release | Compila; dry run Wasm aprobado. Último recorrido local en `/`; el build anterior también comprobó `/FIT_APP/` |
 | YAML de GitHub | Sintaxis válida |
-| APK Android | Debug recompilado para este corte; no ejecutado en Android ni validado para tienda |
+| APK Android | Debug compilado el 23/10 con notificaciones locales (desugaring activado); no ejecutado en Android ni validado para tienda |
 | Integración móvil local | APK de prueba compilado; recorrido compartido ensayado en host. No ejecutado en Android/iPhone |
 
 La ampliación previa de alimentación/USDA está en la carpeta original y sigue
@@ -23,6 +23,67 @@ pendiente de commit. Entrenamiento tiene commits locales en
 `codex/routine-inline-ux-20261014`; no se hizo push ni despliegue. Las comprobaciones
 corresponden a la carpeta de trabajo actual, que conserva cambios previos de otros
 módulos; no equivalen a validar un checkout limpio de esos commits.
+
+## Entrenamiento · sesión sin fricción 23/10
+
+Corte de UX y errores de la sesión en vivo. Verificado en la PC local con
+`tools\claude_verify.bat` (analyze 0 problemas, 319 pruebas) y
+`tools\claude_build.bat` (APK debug y web release compilan).
+
+- Errores: ejercicio con series hechas pide confirmación y todo borrado se puede
+  deshacer; la rutina abre su primer ejercicio y carga «Anterior»; kg sin «.0»;
+  encabezado fijo en teléfonos (radar en hoja); «Reintentar» conserva el
+  programa; conteo de distancia al finalizar; días por calendario; etiquetas.
+- Registro: tabla SERIE/ANTERIOR/KG/REPS/✓, «Anterior» tocable y como sugerencia,
+  ✓ completa con el valor anterior/objetivo, auto-avance al siguiente ejercicio,
+  deslizar para borrar serie, duración en m:ss, barra de teclado ‹ › Listo.
+- Descanso: vibración y sonido al terminar (también desde la mini-barra), cierre
+  automático a los 3 s, −15/+15 s, cuenta regresiva en la mini-barra.
+- Sesión: «Finalizar» fijo en la barra superior, barra inferior compacta, hoja de
+  agregar con recientes, filtro por músculo, imágenes y selección múltiple;
+  al finalizar se elige qué hacer con series sin marcar.
+- Progreso: récord de peso en vivo (🏆), récords destacados en el resumen y
+  propuesta de actualizar la rutina con lo hecho (no borra ejercicios no hechos).
+- Inicio: tarjeta «Continuar entrenamiento» si hay sesión, bloques más compactos;
+  mini-barra visible en Historial, Mi progreso y Programas con espacio reservado.
+
+- Tipos de serie: normal, calentamiento (C), drop (D) y al fallo (F). El
+  calentamiento se guarda pero no cuenta para volumen, récords ni músculos.
+- Superseries: vincular con el siguiente desde el menú del ejercicio; el descanso
+  arranca recién tras el último ejercicio del bloque. Se guardan en la rutina.
+- Aviso de descanso en segundo plano: `flutter_local_notifications` + `timezone`;
+  se programa al salir de la app con un descanso corriendo y se cancela al volver.
+  Permiso pedido una sola vez, en el primer descanso. Android: desugaring y
+  `SCHEDULE_EXACT_ALARM` (si no está concedido usa alarma inexacta).
+- Flujo legado `pro/`: al iniciar sesión, los borradores viejos con ejercicios
+  pasan al formato actual y abren en la sesión en vivo
+  (`legacy_draft_migration.dart`). Se conserva la pantalla vieja solo para
+  registros de actividad sin ejercicios (cardio por duración/distancia) y para
+  terminar un guardado viejo a medias, porque la sesión en vivo aún no registra
+  distancia/ritmo/RPE por sesión.
+
+Pendiente: registro de actividad sin ejercicios en la sesión en vivo (para borrar
+`pro/workout_pro_screen.dart` y su provider); probar notificaciones en un
+teléfono real; actualizar Gradle/AGP/Kotlin antes de que Flutter deje de
+soportar las versiones actuales (aviso del build).
+
+## Expansión complementaria · 23/10
+
+Auditoría/plan en `docs/expansion/`; estado granular en IMPLEMENTATION_STATUS.md.
+Grupos guarda contactos privados por cuenta/invitado, conserva IDs y variantes
+legadas en conflicto, sin semillas ni métricas aleatorias ni escrituras indirectas
+a StatisticsService. Crear/agregar espera guardado y conserva entradas si falla.
+El mismo ProfileController persiste nombre/avatar privados por cuenta y rechaza
+controladores anteriores. Se retiraron picsum/@fit_user/objetivo fijo, conservando
+Fotos/Estadísticas/PRs y sus cálculos. Los 18 conectores indican capacidad pendiente,
+sin flags antiguos como prueba de conexión ni Premium activo sin sistema comercial.
+
+293 pruebas, análisis estricto sin incidencias, web release y APK debug aprobados.
+Capturas: Grupos, formulario claro 320 px/200%, integración oscura 320 px/200%.
+Entrenamiento y navegación principal sin nuevas modificaciones. Perfil público,
+búsqueda/follow/feed/grupos remotos/notificaciones/medidas/importación pendientes;
+no se afirma etapa social completa ni autorización multiusuario verificada.
+Sin push ni despliegue. Validación de la carpeta local con WIP previo conservado.
 
 ## Buscar rutinas · 23/10
 
