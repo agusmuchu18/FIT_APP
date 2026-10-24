@@ -12,7 +12,18 @@ No cambia la estructura principal descrita en docs/ARCHITECTURE.md.
   autenticación verificada, transacciones, límites e índices paginados. Las reglas
   vigentes permanecen cerradas; no permitir reads globales de users/*.
 
-## Contratos remotos previstos
+## Identidad social implementada localmente
+`backend/social/src/index.js` expone callable, verifica Auth y App Check. Servicio
+`social_identity.js` aplica autorización, rate limits y transacciones; colecciones
+sociales denegadas para lectura/escritura Firestore directa. El SDK Admin exige
+estos controles explícitos. Registros se crean solo al guardar voluntariamente.
+`SocialIdentityClient` usa el protocolo callable con token, atestación oficial,
+captura de scope/UID y cancelación. `ProfileDiscoveryController` es dueño de cada
+consulta y cursor; descarta resultados obsoletos. No hay caché pública persistente.
+Descubrir se integra en Grupos; formularios reutilizan identidad y persistencia del
+Perfil. Ninguna vista ajena usa el controlador de estadísticas privadas del dueño.
+
+## Identidad y contratos restantes
 Proyección PublicProfile mínima (uid, handle normalizado, nombre/biografía públicos,
 disciplina, avatar público saneado). Nada de email, medidas, sueño, nutrición o notas.
 Handle único reservado en transacción, aliases históricos → UID; no reasignar enlaces
@@ -27,5 +38,6 @@ prefijo/normalización con filtrado autorizado en servidor. Reglas no son filtro
 Storage privado; thumbnails públicos solo tras consentimiento/saneado EXIF y política
 de retirada. Backend verifica UID, bloqueos, contexto y consentimientos antes de leer.
 
-Los nuevos contratos no habilitan endpoints ni significan backend desplegado. No
-inventar transporte que devuelva datos falsos cuando falta infraestructura.
+La API de identidad funciona en emulador; no está desplegada ni habilitada en la
+app por defecto. Los contratos de publicaciones/media/grupos remotos anteriores
+siguen pendientes. No devolver datos ficticios si falta infraestructura.

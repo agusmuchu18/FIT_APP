@@ -22,3 +22,11 @@ Fotos públicas deben perder EXIF de ubicación y referencias privadas. Exportac
 privadas requieren advertencia/selección, sin contraseñas, tokens ni secretos. Política
 de eliminación/retención y revisión operativa de reportes requieren implementación
 antes de habilitar UGC. No se cambia política de producción en este corte.
+
+Identidad/relaciones: el callable verifica actor real, cuenta disponible, UID y
+atestación. Sus proyecciones incluyen solo campos explícitos de identidad; todas
+las colecciones sociales siguen denegadas al cliente directo. Get/search/listas
+comprueban bloqueos y disponibilidad del destinatario. Seguimiento pendiente no
+autoriza biografía/enlace/contadores privados. Sugerencias solo de perfiles públicos
+descubribles, sin fotos privadas ni estadísticas. Revisión de emulador no equivale
+a App Check verificado en dispositivo ni a reglas desplegadas.
