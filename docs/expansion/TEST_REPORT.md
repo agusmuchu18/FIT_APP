@@ -67,3 +67,48 @@ registrado/verificado, push, Storage o prueba Android/iPhone. Limpieza social al
 eliminar cuenta y administración de bloqueados siguen pendientes. Pasar estos
 tests no certifica todos los criterios de la expansión ni un checkout limpio:
 se verificó la carpeta local con avances previos conservados.
+
+## Medidas corporales locales · 24/10/2026
+12 pruebas nuevas con Hive temporal real: reapertura, IDs/unidades originales,
+registro parcial sin inferencias, aislamiento invitado/A/B, repositorio obsoleto,
+12 escrituras concurrentes, revisiones de edición/borrado, fallo/reintento,
+corrupción/versiones futuras, fechas/valores inválidos, formularios e historial.
+Tres capturas revisadas: formulario claro normal, formulario claro 320 px/200%
+con error completo y tendencia oscura 320 px/200%/movimiento reducido.
+Se corrigió truncamiento en etiquetas largas y errores; acciones nuevas usan el
+turquesa existente y altura mínima de 48. Estadísticas del Perfil conserva sus
+cálculos y suma un acceso: se actualizaron solo dos goldens de esa pestaña.
+El test de guardado del editor ahora espera el frame de desplazamiento antes
+de pulsar Guardar (antes tocaba fuera del viewport tras añadir el nuevo acceso).
+
+Suite final: **345 aprobadas + 1 omitida**, después de las correcciones visuales
+y de semántica. Análisis estricto: 0 incidencias. La omitida requiere emuladores
+y ya pasó separadamente en el corte social.
+Logs `build/body_measurements_{tests,full_tests,analyze,web,apk}.log`.
+El contrato omitido y las 13 pruebas backend conservan la evidencia del corte
+social anterior: este bloque no cambia servidor, Rules ni App Check.
+
+Límites específicos: manual/local; no importación ni sincronización de medidas,
+sin nueva publicación/compartición, fuentes de dispositivos pendientes. La
+galería no tiene todavía CRUD/comparación durable. No hubo benchmark móvil ni
+pruebas de miles de mediciones: el historial renderiza bloques de 30, mientras
+la consulta local de tendencia lee los registros de esta caja. No afirmar
+rendimiento certificado para tienda ni validación Android/iPhone.
+
+Builds finales aprobados: web release (45,4 s) y APK debug (14,0 s).
+Recorrido real en navegador local a 390×844: Perfil → Estadísticas → Medidas →
+guardar solo peso con nota de prueba → recarga completa → volver al historial.
+El registro sintético se restauró; no se utilizaron datos personales. Se comprobó
+también Grupos → Descubrir con servicio deshabilitado, sin resultados ficticios.
+Evidencia: [historial restaurado](evidence/body-measurements-persisted.png),
+[estado real de Descubrir](evidence/discovery-service-disabled.png).
+El recorrido detectó y permitió corregir etiqueta duplicada para lector de
+pantalla, contraste del tooltip y rango degenerado con un único punto.
+
+Validación manual: desde Estadísticas o edición del Perfil abrir Medidas;
+guardar una o varias métricas, cambiar período/medida, comparar dos registros,
+editar notas y revisar unidades originales. Eliminar exige confirmación.
+Para repetir la prueba automatizada local: `flutter test --no-pub
+test/features/profile/body_measurements_test.dart`; los registros sintéticos
+de ese test viven en una caja Hive temporal, nunca en datos de producción.
+No se alteraron motores de entrenamiento, reglas desplegadas ni navegación.

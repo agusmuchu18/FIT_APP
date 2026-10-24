@@ -10,7 +10,8 @@ Fecha: 24/10/2026. Estados: Pendiente / En desarrollo / Implementada / Probada /
 | 3 Posts/feeds/media/likes/comentarios/menciones | Pendiente | depende identidad, consentimiento, Storage y moderación reales |
 | 4 Grupos remotos/roles/invitaciones/entrenador | Pendiente | contactos locales no son miembros autenticados |
 | 5 Notificaciones internas/moderación | Pendiente | no hay infraestructura push ni cola de moderación |
-| 6 Fotos propias/comparación/medidas | Pendiente | se retiraron solo las URLs picsum; galería conservada, no hay todavía CRUD de fotos ni medidas |
+| 6 Medidas corporales locales privadas | Probada | 17 métricas opcionales, historial, fechas, notas, unidades originales, edición/borrado con revisión, gráfico y comparación; 12 pruebas host, 3 capturas, suite completa aprobada; no certifica móviles |
+| 6 Fotos propias/comparación | Pendiente | galería conservada; faltan CRUD durable y comparación de fotografías |
 | 7 Estados reales de integraciones | Probada | 18 accesos sin conexión verificada; preferencias antiguas no muestran conectado ni última sync ficticia |
 | 7 Conexiones reales Apple/Android/terceros | Bloqueada | faltan implementación nativa, hardware y credenciales/aprobaciones; sin inventar conexión |
 | 8 Datos JSON/CSV/importación/QA | Pendiente | backup versionado/preview/no sobrescritura; no cambiar entrenamiento |
@@ -62,4 +63,15 @@ normal, aprobado separadamente con emuladores; 13 casos backend, análisis
 estricto limpio y builds web/APK debug aprobados. Tres capturas de identidad
 revisadas, incluyendo 320 px/200%. El servicio permanece deshabilitado por
 defecto hasta resolver los gates externos y de ciclo de cuenta. Backend:
-`89c33dd`; commits de fundamentos `133997d`, `0f08d7a`, `4e79df6`.
+`89c33dd`; interfaz `7a96376`; fundamentos `133997d`, `0f08d7a`, `4e79df6`.
+
+## Corte independiente: medidas privadas
+Se avanza la parte local de etapa 6 mientras la habilitación social depende de
+infraestructura. Accesos desde Estadísticas del Perfil y edición del Perfil;
+Fotos/Estadísticas/PRs conservadas. No toca sesiones ni cargas históricas.
+Hive existente, caja nueva por dueño, sin reasignar invitado ni migrar otras
+bases. Fuente manual explícita; fuentes importadas/dispositivos y uso contextual
+del peso en Entrenamiento pendientes. No se infiere composición corporal.
+Gráficos por fechas reales, períodos, consulta exacta y comparación de registros;
+historial visible por bloques de 30. Conserva valores/unidades originales al
+editar o cambiar presentación. El siguiente corte de fotos aún no está hecho.

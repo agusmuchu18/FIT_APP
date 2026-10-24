@@ -11,10 +11,10 @@
 | SDK | Flutter 3.47.3 / Dart 3.13.3; actualización estable aplicada |
 | `dart format` | Base de 158 archivos; cambios posteriores formateados por archivo |
 | `flutter analyze --fatal-infos` | 0 problemas |
-| `flutter test --no-pub` | 333 aprobadas + 1 omitida (24/10); contrato omitido ejecutado aparte con emuladores: 1 aprobado; backend social: 13 aprobadas |
+| `flutter test --no-pub` | 345 aprobadas + 1 omitida (24/10); contrato omitido ejecutado aparte con emuladores: 1 aprobado; backend social: 13 aprobadas |
 | Web release | Compila; dry run Wasm aprobado. Último recorrido local en `/`; el build anterior también comprobó `/FIT_APP/` |
 | YAML de GitHub | Sintaxis válida |
-| APK Android | Debug compilado el 23/10 con notificaciones locales (desugaring activado); no ejecutado en Android ni validado para tienda |
+| APK Android | Debug compilado el 24/10, incluyendo expansión social y medidas locales; conserva desugaring/notificaciones previos; no ejecutado en Android ni validado para tienda |
 | Integración móvil local | APK de prueba compilado; recorrido compartido ensayado en host. No ejecutado en Android/iPhone |
 
 La ampliación previa de alimentación/USDA está en la carpeta original y sigue
@@ -86,10 +86,17 @@ Firebase reales en el cliente; `FIT_SOCIAL_ENABLED=false` hasta configurar y
 validar producción. Pendientes: Node 22, App Check registrado, ciclo de borrado
 de cuenta, lista de bloqueados y dispositivos. Feed/grupos remotos/medidas y
 otras etapas no se declaran completas. Ver TEST_REPORT para límites y evidencia.
-333 pruebas Flutter + 13 backend + 1 contrato real; análisis estricto limpio,
+345 pruebas Flutter + 13 backend + 1 contrato real; análisis estricto limpio,
 web release y APK debug aprobados. Tres capturas sociales revisadas con texto
 ampliado/temas. Sin cambios propios a Entrenamiento ni navegación principal,
 push o despliegue. Se conserva WIP previo; no certifica checkout limpio.
+
+Medidas privadas en Perfil: 17 métricas opcionales, fuente manual, valores/unidades
+originales, historial, edición/borrado con revisión, gráfico por fechas y comparación.
+Caja Hive nueva por dueño; invitado no migra a cuentas. No se sincroniza/publica
+salud ni se infiere composición. Tres capturas nuevas revisadas, dos accesos en
+Perfil sin eliminar pestañas. Fuentes de dispositivos, fotos durables y grandes
+volúmenes en móvil pendientes. Estado completo en `docs/expansion/`.
 
 ## Buscar rutinas · 23/10
 

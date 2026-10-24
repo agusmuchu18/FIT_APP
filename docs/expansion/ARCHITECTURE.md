@@ -41,3 +41,17 @@ de retirada. Backend verifica UID, bloqueos, contexto y consentimientos antes de
 La API de identidad funciona en emulador; no está desplegada ni habilitada en la
 app por defecto. Los contratos de publicaciones/media/grupos remotos anteriores
 siguen pendientes. No devolver datos ficticios si falta infraestructura.
+
+## Medidas corporales privadas
+`BodyMeasurementRepository` reutiliza Hive: caja `fit_body_measurements_v1` con
+el namespace existente por cuenta/invitado, metadato `schema=1` y una fila JSON
+versionada por UUID. No usa preferencias para los registros ni modifica cajas
+históricas. Solo la preferencia pequeña de perímetros cm/in va en ScopedPreferences.
+Cada observación incluye fecha de calendario, creación, fuente manual, notas y
+mapa de medidas con valor/unidad originales. Reutiliza WeightUnit para kg/lb;
+cm/in se convierten solo al presentar. No calcula grasa ni masa magra.
+Cola por dueño entre instancias; lectura estricta de formato y revisión optimista
+para edición/borrado. Corrupción o versión futura impiden escritura sin borrar
+datos. No hay migración destructiva, sincronización ni endpoint público de medidas.
+Pantalla/formulario en Perfil; gráfico usa días reales, no intervalos uniformes
+entre muestras; historial por bloques y comparación explícita de dos registros.

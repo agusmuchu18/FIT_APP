@@ -114,6 +114,7 @@ void main() {
       await t.pumpAndSettle();
       await t.enterText(find.byType(TextField), 'Mi nombre persistente');
       await t.ensureVisible(find.byType(ElevatedButton));
+      await t.pumpAndSettle();
       await t.tap(find.byType(ElevatedButton));
       await t.pumpAndSettle();
       final restored = ProfileController();

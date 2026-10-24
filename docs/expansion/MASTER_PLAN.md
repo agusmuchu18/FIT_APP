@@ -52,5 +52,7 @@ globales de users/* para habilitar búsqueda: Rules no filtra consultas y el SDK
 Admin exige verificar explícitamente UID, bloqueos y consentimientos.
 Fotos/medidas y exportación local pueden progresar sin credenciales de terceros;
 esto no autoriza su publicación. Cada etapa mantiene evidencia y estado propios.
-El próximo corte extiende la identidad existente y el backend de búsqueda antes
-de añadir resultados a Descubrir. No usar perfiles de ejemplo en producción.
+Identidad/búsqueda/follow ya tienen backend y UI probados localmente; aún falta
+habilitación externa y cerrar ciclo de cuenta/administración de bloqueados.
+Medidas privadas avanzan de forma independiente; continuar con fotos durables,
+comparación y posteriores etapas sin usar perfiles de ejemplo en producción.

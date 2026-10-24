@@ -1,4 +1,5 @@
 import 'social_profile_editor.dart';
+import 'body_measurements_screen.dart';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -271,6 +272,19 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                       _nameController.text = _profile.displayName.value;
                     }
                   },
+          ),
+          const SizedBox(height: 16),
+          OutlinedButton.icon(
+            icon: const Icon(Icons.straighten_outlined),
+            label: const Text('Medidas corporales privadas'),
+            onPressed: _saving || !_ready
+                ? null
+                : () => Navigator.push<void>(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const BodyMeasurementsScreen(),
+                    ),
+                  ),
           ),
           const SizedBox(height: 24),
           SizedBox(

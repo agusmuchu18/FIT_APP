@@ -30,3 +30,13 @@ comprueban bloqueos y disponibilidad del destinatario. Seguimiento pendiente no
 autoriza biografía/enlace/contadores privados. Sugerencias solo de perfiles públicos
 descubribles, sin fotos privadas ni estadísticas. Revisión de emulador no equivale
 a App Check verificado en dispositivo ni a reglas desplegadas.
+
+Medidas corporales: exclusivamente locales y privadas en este corte, aisladas por
+namespace de cuenta/invitado y con rechazo de repositorios de otra cuenta. No se
+incluyen en perfil público, feed, Grupos, notificaciones ni sincronización. Son
+registros manuales explícitos; no se incorporan automáticamente valores de
+onboarding de procedencia ambigua ni se modifican cargas históricas.
+Hive usa la protección de almacenamiento del entorno existente; no se afirma
+cifrado adicional ni una bóveda resistente a un dispositivo comprometido. Una
+futura sincronización requiere contrato propietario, consentimiento y pruebas
+remotas de autorización; seguimiento social no concede permiso alguno aquí.

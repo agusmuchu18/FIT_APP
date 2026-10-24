@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 
 import '../common/theme/app_colors.dart';
 import 'profile_controller.dart';
+import 'body_measurements_screen.dart';
 import 'profile_settings_screen.dart';
 import 'profile_social_models.dart';
 import 'widgets/profile_social_widgets.dart';
@@ -462,6 +463,17 @@ class _StatsTabState extends State<_StatsTab>
           primary: true,
           padding: const EdgeInsets.fromLTRB(16, 18, 16, 24),
           children: [
+            OutlinedButton.icon(
+              icon: const Icon(Icons.straighten_outlined),
+              label: const Text('Medidas corporales privadas'),
+              onPressed: () => Navigator.push<void>(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const BodyMeasurementsScreen(),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
             Text(
               'Tu entrenamiento · últimos 30 días',
               style: Theme.of(context).textTheme.titleLarge,
