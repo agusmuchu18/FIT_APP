@@ -1,6 +1,6 @@
 # Current status
 
-**Actualizado:** 2026-10-23
+**Actualizado:** 2026-10-24
 **Base auditada:** `9f61c68ff4a362d48f97265d300f7ae54de64edc`
 **Carpeta local:** `D:\Datos User\Escritorio\fitness\fit_app`
 
@@ -11,7 +11,7 @@
 | SDK | Flutter 3.47.3 / Dart 3.13.3; actualización estable aplicada |
 | `dart format` | Base de 158 archivos; cambios posteriores formateados por archivo |
 | `flutter analyze --fatal-infos` | 0 problemas |
-| `flutter test --no-pub` | 319/319 aprobadas (23/10, goldens regenerados y revisados); incluye sesión en vivo, tipos de serie, superseries, aviso de descanso y migración de borradores |
+| `flutter test --no-pub` | 333 aprobadas + 1 omitida (24/10); contrato omitido ejecutado aparte con emuladores: 1 aprobado; backend social: 13 aprobadas |
 | Web release | Compila; dry run Wasm aprobado. Último recorrido local en `/`; el build anterior también comprobó `/FIT_APP/` |
 | YAML de GitHub | Sintaxis válida |
 | APK Android | Debug compilado el 23/10 con notificaciones locales (desugaring activado); no ejecutado en Android ni validado para tienda |
@@ -67,7 +67,7 @@ Pendiente: registro de actividad sin ejercicios en la sesión en vivo (para borr
 teléfono real; actualizar Gradle/AGP/Kotlin antes de que Flutter deje de
 soportar las versiones actuales (aviso del build).
 
-## Expansión complementaria · 23/10
+## Expansión complementaria · 24/10
 
 Auditoría/plan en `docs/expansion/`; estado granular en IMPLEMENTATION_STATUS.md.
 Grupos guarda contactos privados por cuenta/invitado, conserva IDs y variantes
@@ -78,12 +78,18 @@ controladores anteriores. Se retiraron picsum/@fit_user/objetivo fijo, conservan
 Fotos/Estadísticas/PRs y sus cálculos. Los 18 conectores indican capacidad pendiente,
 sin flags antiguos como prueba de conexión ni Premium activo sin sistema comercial.
 
-293 pruebas, análisis estricto sin incidencias, web release y APK debug aprobados.
-Capturas: Grupos, formulario claro 320 px/200%, integración oscura 320 px/200%.
-Entrenamiento y navegación principal sin nuevas modificaciones. Perfil público,
-búsqueda/follow/feed/grupos remotos/notificaciones/medidas/importación pendientes;
-no se afirma etapa social completa ni autorización multiusuario verificada.
-Sin push ni despliegue. Validación de la carpeta local con WIP previo conservado.
+Identidad social real en `backend/social`: handles únicos, búsqueda paginada,
+follow/solicitudes, contadores, bloqueos y permisos probados con emuladores.
+Grupos conserva Mis grupos y suma Descubrir internamente; Perfil tiene editor
+de identidad/privacidad. No publica salud ni avatar privado. App Check y tokens
+Firebase reales en el cliente; `FIT_SOCIAL_ENABLED=false` hasta configurar y
+validar producción. Pendientes: Node 22, App Check registrado, ciclo de borrado
+de cuenta, lista de bloqueados y dispositivos. Feed/grupos remotos/medidas y
+otras etapas no se declaran completas. Ver TEST_REPORT para límites y evidencia.
+333 pruebas Flutter + 13 backend + 1 contrato real; análisis estricto limpio,
+web release y APK debug aprobados. Tres capturas sociales revisadas con texto
+ampliado/temas. Sin cambios propios a Entrenamiento ni navegación principal,
+push o despliegue. Se conserva WIP previo; no certifica checkout limpio.
 
 ## Buscar rutinas · 23/10
 

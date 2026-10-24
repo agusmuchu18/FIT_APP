@@ -41,7 +41,7 @@ la implementación relevante con una búsqueda puntual antes de editar.
 | `modules` | Pantallas placeholder de psicología, laboratorio y ciclo menstrual. |
 | `nutrition` | `domain/models.dart`; `data/offline_food_catalog.dart` carga el catálogo USDA empaquetado; `fdc_client.dart` usa proxy web o clave nativa; `food_repository.dart` combina catálogo, aprendidos, personalizados y caché; controladores/UI en `application/` y `presentation/`. |
 | `onboarding` | Flujo inicial y páginas de onboarding. |
-| `profile` | `profile_controller.dart`: identidad privada durable por cuenta; Perfil conserva Fotos/Estadísticas/PRs. Galería propia e identidad pública pendientes. |
+| `profile` | `profile_controller.dart`: identidad privada por cuenta; Fotos/Estadísticas/PRs conservadas. `data/social_identity_client.dart`, `social_attestation.dart`, `application/profile_discovery_controller.dart`, `social_profile_editor.dart`, `public_profile_screen.dart`: identidad pública autorizada, sin datos de salud. Galería durable pendiente. |
 | `settings` | Pantalla raíz, subpantallas, módulos e integraciones; `integration_readiness.dart` evita conexiones ficticias. Preferencias en `core/data/app_preferences.dart`. |
 | `sleep` | Servicios de insights/horarios y pantallas de resumen, historial y regularidad. |
 | `streak` | Pantalla de racha. |
@@ -52,6 +52,9 @@ la implementación relevante con una búsqueda puntual antes de editar.
 
 Expansión complementaria: `docs/expansion/MASTER_PLAN.md`, `FEATURE_AUDIT.md`,
 `IMPLEMENTATION_STATUS.md`, `PRIVACY_MODEL.md` y `TEST_REPORT.md`.
+API social: `backend/social/src/social_identity.js`, callable `src/index.js`;
+emuladores `firebase.social.json`, reglas `firestore.rules`. Descubrir vive en
+`groups/presentation/pages/discover_profiles_panel.dart`, sin pestaña principal.
 
 ```text
 main.dart -> RepositoryScope(FitnessRepository)

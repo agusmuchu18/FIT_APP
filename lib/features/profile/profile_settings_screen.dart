@@ -1,3 +1,5 @@
+import 'social_profile_editor.dart';
+
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -161,10 +163,11 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                       builder: (context, bytes, _) {
                         return CircleAvatar(
                           radius: 32,
-                          backgroundColor:
-                              AppColors.accentSecondary.withOpacity(0.2),
-                          backgroundImage:
-                              bytes == null ? null : MemoryImage(bytes),
+                          backgroundColor: AppColors.accentSecondary
+                              .withOpacity(0.2),
+                          backgroundImage: bytes == null
+                              ? null
+                              : MemoryImage(bytes),
                           child: bytes == null
                               ? const Icon(
                                   Icons.person,
@@ -249,6 +252,25 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                 ),
               ],
             ),
+          ),
+          const SizedBox(height: 16),
+          OutlinedButton.icon(
+            icon: const Icon(Icons.manage_accounts_outlined),
+            label: const Text('Identidad y privacidad social'),
+            onPressed: _saving || !_ready
+                ? null
+                : () async {
+                    final updated = await Navigator.push<bool>(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            SocialProfileEditor(profileController: _profile),
+                      ),
+                    );
+                    if (updated == true && mounted) {
+                      _nameController.text = _profile.displayName.value;
+                    }
+                  },
           ),
           const SizedBox(height: 24),
           SizedBox(
