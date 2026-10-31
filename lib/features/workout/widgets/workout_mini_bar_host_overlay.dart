@@ -1,23 +1,88 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../application/rest_notifications.dart';
 import '../workout_in_progress_controller.dart';
 import 'workout_mini_bar.dart';
+import '../presentation/widgets/workout_units_host.dart';
+import '../../../core/data/account_storage_scope.dart';
 
 final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
+
+Widget workoutMiniBarAppBuilder(BuildContext context, Widget? child) {
+  return WorkoutUnitsHost(
+    key: ValueKey(AccountStorageScope.current),
+    child: _WorkoutAppOverlay(child: child),
+  );
+}
+
+class _WorkoutAppOverlay extends StatefulWidget {
+  const _WorkoutAppOverlay({required this.child});
+
+  final Widget? child;
+
+  @override
+  State<_WorkoutAppOverlay> createState() => _WorkoutAppOverlayState();
+}
+
+class _WorkoutAppOverlayState extends State<_WorkoutAppOverlay> {
+  late final OverlayEntry _appEntry = OverlayEntry(
+    builder: (_) => widget.child ?? const SizedBox.shrink(),
+  );
+  late final OverlayEntry _miniBarEntry = OverlayEntry(
+    builder: (_) => const WorkoutMiniBarHostOverlay(),
+  );
+
+  @override
+  void didUpdateWidget(covariant _WorkoutAppOverlay oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.child != widget.child) {
+      _appEntry.markNeedsBuild();
+    }
+  }
+
+  @override
+  void dispose() {
+    _appEntry.remove();
+    _miniBarEntry.remove();
+    _appEntry.dispose();
+    _miniBarEntry.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) =>
+      Overlay(initialEntries: [_appEntry, _miniBarEntry]);
+}
 
 class WorkoutMiniBarOverlayController {
   WorkoutMiniBarOverlayController._();
 
   static const double mainShellBarHeight = 76;
-  static final WorkoutMiniBarOverlayController instance = WorkoutMiniBarOverlayController._();
+  static final WorkoutMiniBarOverlayController instance =
+      WorkoutMiniBarOverlayController._();
 
   final ValueNotifier<bool> bottomNavVisible = ValueNotifier(true);
   final ValueNotifier<String?> currentRouteName = ValueNotifier(null);
+  final ValueNotifier<bool> modalVisible = ValueNotifier(false);
 
   String? _lastOverlayStateLog;
 
-  bool get shouldHideMiniBar => currentRouteName.value == '/workout/session';
+  /// Screens where the floating bar is shown. Those besides Home reserve
+  /// space for it with [WorkoutMiniBarInset].
+  static const visibleRoutes = {
+    '/',
+    '/home',
+    '/workout',
+    '/workout/history',
+    '/workout/insights',
+    '/workout/programs',
+  };
+
+  bool get shouldHideMiniBar =>
+      modalVisible.value || !visibleRoutes.contains(currentRouteName.value);
 
   void updateFromRoute(Route<dynamic>? route) {
     updateFromRouteName(route?.settings.name);
@@ -28,12 +93,7 @@ class WorkoutMiniBarOverlayController {
       currentRouteName.value = routeName;
     }
 
-    // Mantener robustez ante cambios de rutas:
-    // por defecto asumimos que la bottom nav está visible, excepto en rutas full-screen.
-    const fullScreenRoutesWithoutBottomNav = <String>{
-      '/workout/session',
-    };
-    final showBottomNav = routeName == null || !fullScreenRoutesWithoutBottomNav.contains(routeName);
+    final showBottomNav = const {'/', '/home'}.contains(routeName);
     if (bottomNavVisible.value != showBottomNav) {
       bottomNavVisible.value = showBottomNav;
     }
@@ -53,28 +113,45 @@ class WorkoutMiniBarRouteObserver extends NavigatorObserver {
   WorkoutMiniBarRouteObserver();
 
   final controller = WorkoutMiniBarOverlayController.instance;
+  final _routes = <Route<dynamic>>[];
+  void _sync() {
+    controller.modalVisible.value = _routes.any((r) => r is PopupRoute);
+    controller.updateFromRoute(_routes.whereType<PageRoute>().lastOrNull);
+  }
 
   @override
   void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    controller.updateFromRoute(route);
+    if (previousRoute == null) _routes.clear();
+    _routes.add(route);
+    _sync();
     super.didPush(route, previousRoute);
   }
 
   @override
   void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    controller.updateFromRoute(previousRoute);
+    _routes.remove(route);
+    _sync();
     super.didPop(route, previousRoute);
   }
 
   @override
   void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
-    controller.updateFromRoute(newRoute);
+    final index = oldRoute == null ? -1 : _routes.indexOf(oldRoute);
+    if (index >= 0) {
+      if (newRoute == null) {
+        _routes.removeAt(index);
+      } else {
+        _routes[index] = newRoute;
+      }
+    }
+    _sync();
     super.didReplace(newRoute: newRoute, oldRoute: oldRoute);
   }
 
   @override
   void didRemove(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    controller.updateFromRoute(previousRoute);
+    _routes.remove(route);
+    _sync();
     super.didRemove(route, previousRoute);
   }
 }
@@ -83,14 +160,55 @@ class WorkoutMiniBarHostOverlay extends StatefulWidget {
   const WorkoutMiniBarHostOverlay({super.key});
 
   @override
-  State<WorkoutMiniBarHostOverlay> createState() => _WorkoutMiniBarHostOverlayState();
+  State<WorkoutMiniBarHostOverlay> createState() =>
+      _WorkoutMiniBarHostOverlayState();
 }
 
-class _WorkoutMiniBarHostOverlayState extends State<WorkoutMiniBarHostOverlay> {
+class _WorkoutMiniBarHostOverlayState extends State<WorkoutMiniBarHostOverlay>
+    with WidgetsBindingObserver {
   static const _animationDuration = Duration(milliseconds: 180);
 
   bool _didSyncInitialRoute = false;
   String? _lastLayoutLog;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  /// Leaving the app during a rest schedules a system notification for its
+  /// end; coming back cancels it, because the app alerts by itself.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final notifier = RestNotifications.instance;
+    if (state == AppLifecycleState.resumed) {
+      unawaited(notifier.cancelRestEnd());
+      return;
+    }
+    if (state != AppLifecycleState.paused &&
+        state != AppLifecycleState.hidden) {
+      return;
+    }
+    final draft = WorkoutInProgressController.instance.currentDraft;
+    final remaining = draft?.restRemainingAt(DateTime.now());
+    if (draft == null ||
+        draft.isPaused ||
+        remaining == null ||
+        remaining <= Duration.zero) {
+      return;
+    }
+    final name = draft.routineName == 'Entrenamiento activo'
+        ? null
+        : draft.routineName;
+    unawaited(notifier.scheduleRestEnd(remaining, workoutName: name));
+  }
 
   @override
   void didChangeDependencies() {
@@ -104,7 +222,9 @@ class _WorkoutMiniBarHostOverlayState extends State<WorkoutMiniBarHostOverlay> {
         return;
       }
       final routeName = ModalRoute.of(context)?.settings.name;
-      WorkoutMiniBarOverlayController.instance.updateFromRouteName(routeName);
+      if (routeName != null) {
+        WorkoutMiniBarOverlayController.instance.updateFromRouteName(routeName);
+      }
     });
   }
 
@@ -117,13 +237,24 @@ class _WorkoutMiniBarHostOverlayState extends State<WorkoutMiniBarHostOverlay> {
       builder: (context, draft, _) {
         return ValueListenableBuilder<bool>(
           valueListenable: overlayController.bottomNavVisible,
-          builder: (context, bottomNavVisible, __) {
-            return ValueListenableBuilder<String?>(
-              valueListenable: overlayController.currentRouteName,
-              builder: (context, _, ___) {
-                final hidden = draft == null || overlayController.shouldHideMiniBar;
+          builder: (context, bottomNavVisible, _) {
+            return ListenableBuilder(
+              listenable: Listenable.merge([
+                overlayController.currentRouteName,
+                overlayController.modalVisible,
+              ]),
+              builder: (context, _) {
+                final hidden =
+                    draft == null ||
+                    overlayController.shouldHideMiniBar ||
+                    MediaQuery.viewInsetsOf(context).bottom > 0;
                 final bottomInset = MediaQuery.of(context).padding.bottom;
-                final bottomOffset = (bottomNavVisible ? WorkoutMiniBarOverlayController.mainShellBarHeight : 0) + bottomInset + 12;
+                final bottomOffset =
+                    (bottomNavVisible
+                        ? WorkoutMiniBarOverlayController.mainShellBarHeight
+                        : 0) +
+                    bottomInset +
+                    12;
 
                 if (kDebugMode) {
                   final snapshot =
@@ -147,10 +278,14 @@ class _WorkoutMiniBarHostOverlayState extends State<WorkoutMiniBarHostOverlay> {
                       child: ConstrainedBox(
                         constraints: const BoxConstraints(maxWidth: 560),
                         child: AnimatedSlide(
-                          duration: _animationDuration,
+                          duration: MediaQuery.disableAnimationsOf(context)
+                              ? Duration.zero
+                              : _animationDuration,
                           offset: hidden ? const Offset(0, 1) : Offset.zero,
                           child: AnimatedOpacity(
-                            duration: _animationDuration,
+                            duration: MediaQuery.disableAnimationsOf(context)
+                                ? Duration.zero
+                                : _animationDuration,
                             opacity: hidden ? 0 : 1,
                             child: IgnorePointer(
                               ignoring: hidden,
@@ -158,11 +293,16 @@ class _WorkoutMiniBarHostOverlayState extends State<WorkoutMiniBarHostOverlay> {
                                   ? const SizedBox.shrink()
                                   : WorkoutMiniBar(
                                       draft: draft,
-                                      onContinue: () => appNavigatorKey.currentState?.pushNamed('/workout/session'),
+                                      onContinue: () => appNavigatorKey
+                                          .currentState
+                                          ?.pushNamed('/workout/session'),
                                       onPauseResume: () => draft.isPaused
-                                          ? WorkoutInProgressController.instance.resumePausedWorkout()
-                                          : WorkoutInProgressController.instance.pause(),
+                                          ? WorkoutInProgressController.instance
+                                                .resumePausedWorkout()
+                                          : WorkoutInProgressController.instance
+                                                .pause(),
                                       onDiscard: _confirmDiscardDraft,
+                                      alertOnRestEnd: !hidden,
                                     ),
                             ),
                           ),
@@ -191,8 +331,14 @@ class _WorkoutMiniBarHostOverlayState extends State<WorkoutMiniBarHostOverlay> {
         title: const Text('Descartar entrenamiento'),
         content: const Text('¿Querés descartar el entrenamiento en curso?'),
         actions: [
-          TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: const Text('Cancelar')),
-          FilledButton(onPressed: () => Navigator.of(dialogContext).pop(true), child: const Text('Descartar')),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Descartar'),
+          ),
         ],
       ),
     );
@@ -200,4 +346,38 @@ class _WorkoutMiniBarHostOverlayState extends State<WorkoutMiniBarHostOverlay> {
       await WorkoutInProgressController.instance.discard();
     }
   }
+}
+
+/// Keeps a screen's content above the floating workout bar while a session
+/// is running. The tree shape never changes, so screen state is preserved.
+class WorkoutMiniBarInset extends StatelessWidget {
+  const WorkoutMiniBarInset({super.key, required this.child});
+
+  final Widget child;
+
+  /// Bar height plus its margins.
+  static const reservedHeight = 88.0;
+
+  @override
+  Widget build(BuildContext context) =>
+      ValueListenableBuilder<WorkoutInProgressDraft?>(
+        valueListenable: WorkoutInProgressController.instance.watchDraft(),
+        builder: (context, draft, child) {
+          final safeBottom = MediaQuery.paddingOf(context).bottom;
+          return ColoredBox(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            child: Padding(
+              padding: EdgeInsets.only(
+                bottom: safeBottom + (draft == null ? 0 : reservedHeight),
+              ),
+              child: MediaQuery.removePadding(
+                context: context,
+                removeBottom: true,
+                child: child!,
+              ),
+            ),
+          );
+        },
+        child: child,
+      );
 }

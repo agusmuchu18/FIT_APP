@@ -33,19 +33,31 @@ double socialJetLagHours(List<SleepEntry> entries) {
       .where((e) => sleepEntryDate(e).weekday >= DateTime.saturday)
       .toList();
   if (weekday.isEmpty || weekend.isEmpty) return 0;
-  final weekdayMid = circularMeanMinutes(weekday
-          .map((e) => computeMidSleepMinutes(
-              bedMin: parseHHmmToMinutes(e.bedtime),
-              wakeMin: parseHHmmToMinutes(e.wakeTime)))
-          .whereType<int>()
-          .toList()) ??
+  final weekdayMid =
+      circularMeanMinutes(
+        weekday
+            .map(
+              (e) => computeMidSleepMinutes(
+                bedMin: parseHHmmToMinutes(e.bedtime),
+                wakeMin: parseHHmmToMinutes(e.wakeTime),
+              ),
+            )
+            .whereType<int>()
+            .toList(),
+      ) ??
       0;
-  final weekendMid = circularMeanMinutes(weekend
-          .map((e) => computeMidSleepMinutes(
-              bedMin: parseHHmmToMinutes(e.bedtime),
-              wakeMin: parseHHmmToMinutes(e.wakeTime)))
-          .whereType<int>()
-          .toList()) ??
+  final weekendMid =
+      circularMeanMinutes(
+        weekend
+            .map(
+              (e) => computeMidSleepMinutes(
+                bedMin: parseHHmmToMinutes(e.bedtime),
+                wakeMin: parseHHmmToMinutes(e.wakeTime),
+              ),
+            )
+            .whereType<int>()
+            .toList(),
+      ) ??
       0;
   final diff = (weekendMid - weekdayMid).abs();
   return diff / 60;
@@ -110,33 +122,39 @@ List<SleepInsightCard> buildInsightCards(List<SleepEntry> entries) {
     final sorted = correlations.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
     final best = sorted.first;
-    cards.add(SleepInsightCard(
-      title: 'Tag: ${best.key}',
-      description:
-          'Cuando registras "${best.key}" tu duración cambia ${(best.value).toStringAsFixed(1)} h',
-      severity: best.value >= 0 ? 'info' : 'warning',
-      icon: '🏷️',
-    ));
+    cards.add(
+      SleepInsightCard(
+        title: 'Tag: ${best.key}',
+        description:
+            'Cuando registras "${best.key}" tu duración cambia ${(best.value).toStringAsFixed(1)} h',
+        severity: best.value >= 0 ? 'info' : 'warning',
+        icon: '🏷️',
+      ),
+    );
   }
 
   final sjl = socialJetLagHours(entries);
   if (sjl > 0) {
-    cards.add(SleepInsightCard(
-      title: 'Social jet lag',
-      description: 'Diferencia fin de semana ${sjl.toStringAsFixed(1)} h',
-      severity: sjl > 1.5 ? 'alert' : 'info',
-      icon: '⏰',
-    ));
+    cards.add(
+      SleepInsightCard(
+        title: 'Social jet lag',
+        description: 'Diferencia fin de semana ${sjl.toStringAsFixed(1)} h',
+        severity: sjl > 1.5 ? 'alert' : 'info',
+        icon: '⏰',
+      ),
+    );
   }
 
   final bedStd = consistencyBedStd(entries);
   if (bedStd > 0) {
-    cards.add(SleepInsightCard(
-      title: 'Consistencia de acostarse',
-      description: 'Variación ${bedStd.toStringAsFixed(0)} min',
-      severity: bedStd > 60 ? 'alert' : 'info',
-      icon: '🌙',
-    ));
+    cards.add(
+      SleepInsightCard(
+        title: 'Consistencia de acostarse',
+        description: 'Variación ${bedStd.toStringAsFixed(0)} min',
+        severity: bedStd > 60 ? 'alert' : 'info',
+        icon: '🌙',
+      ),
+    );
   }
 
   return cards.take(3).toList();

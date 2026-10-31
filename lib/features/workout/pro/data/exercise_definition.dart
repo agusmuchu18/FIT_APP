@@ -1,9 +1,8 @@
-
 enum LoadType {
   external,
-  bodyweight_effective,
-  bodyweight_plus_external,
-  assisted_bodyweight,
+  bodyweightEffective,
+  bodyweightPlusExternal,
+  assistedBodyweight,
 }
 
 class ExerciseDefinition {
@@ -37,20 +36,20 @@ class ExerciseDefinition {
   final bool isUnilateral;
   final bool isTimed;
 
-  bool get isBodyweightEffective => loadType == LoadType.bodyweight_effective;
+  bool get isBodyweightEffective => loadType == LoadType.bodyweightEffective;
 
   bool get needsUserWeight =>
-      loadType == LoadType.bodyweight_effective ||
-      loadType == LoadType.bodyweight_plus_external ||
-      loadType == LoadType.assisted_bodyweight;
+      loadType == LoadType.bodyweightEffective ||
+      loadType == LoadType.bodyweightPlusExternal ||
+      loadType == LoadType.assistedBodyweight;
 }
 
 class ExerciseLibraryIndex {
   ExerciseLibraryIndex(this.exercises)
-      : _byKey = _buildIndex(exercises),
-        _primaryById = _buildPrimaryIndex(exercises),
-        _normalizedNameById = _buildNameIndex(exercises),
-        _normalizedAliasesById = _buildAliasIndex(exercises);
+    : _byKey = _buildIndex(exercises),
+      _primaryById = _buildPrimaryIndex(exercises),
+      _normalizedNameById = _buildNameIndex(exercises),
+      _normalizedAliasesById = _buildAliasIndex(exercises);
 
   final List<ExerciseDefinition> exercises;
 
@@ -59,8 +58,23 @@ class ExerciseLibraryIndex {
   final Map<String, String> _normalizedNameById;
   final Map<String, List<String>> _normalizedAliasesById;
 
+  static String normalizeQuery(String value) {
+    var normalized = value.trim().toLowerCase();
+    const accents = {
+      'á': 'a',
+      'é': 'e',
+      'í': 'i',
+      'ó': 'o',
+      'ú': 'u',
+      'ü': 'u',
+      'ñ': 'n',
+    };
+    accents.forEach((from, to) => normalized = normalized.replaceAll(from, to));
+    return normalized;
+  }
+
   static String _normalizeNullable(String? value) =>
-      (value ?? '').trim().toLowerCase();
+      normalizeQuery(value ?? '');
 
   static String _normalize(String value) => _normalizeNullable(value);
 
@@ -95,18 +109,17 @@ class ExerciseLibraryIndex {
       map[key] = exercise;
       return;
     }
+    if (existing.id == exercise.id) return;
 
     // Duplicated normalized keys keep the first registered exercise.
-    assert(
-      () {
-        // ignore: avoid_print
-        print(
-          'ExerciseLibraryIndex duplicate key "$key": '
-          '${existing.id} kept, ${exercise.id} ignored',
-        );
-        return true;
-      }(),
-    );
+    assert(() {
+      // ignore: avoid_print
+      print(
+        'ExerciseLibraryIndex duplicate key "$key": '
+        '${existing.id} kept, ${exercise.id} ignored',
+      );
+      return true;
+    }());
   }
 
   static Map<String, Set<String>> _buildPrimaryIndex(
@@ -125,7 +138,9 @@ class ExerciseLibraryIndex {
     return map;
   }
 
-  static Map<String, String> _buildNameIndex(List<ExerciseDefinition> exercises) {
+  static Map<String, String> _buildNameIndex(
+    List<ExerciseDefinition> exercises,
+  ) {
     final map = <String, String>{};
     for (final exercise in exercises) {
       map[exercise.id] = _normalize(exercise.name);
@@ -163,7 +178,11 @@ class ExerciseLibraryIndex {
               (_normalizedAliasesById[e.id]?.any(
                     (alias) => alias.contains(normalized),
                   ) ??
-                  false),
+                  false) ||
+              [
+                ...e.primaryMuscles,
+                ...e.secondaryMuscles,
+              ].any((muscle) => _normalize(muscle).contains(normalized)),
         )
         .toList();
   }
@@ -172,9 +191,7 @@ class ExerciseLibraryIndex {
     final normalizedMuscle = _normalize(muscle);
 
     return exercises
-        .where(
-          (e) => _primaryById[e.id]?.contains(normalizedMuscle) ?? false,
-        )
+        .where((e) => _primaryById[e.id]?.contains(normalizedMuscle) ?? false)
         .toList();
   }
 

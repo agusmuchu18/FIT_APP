@@ -74,8 +74,8 @@ class _ModulePlaceholderShell extends StatelessWidget {
           Text(
             subtitle,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: Colors.white.withOpacity(0.86),
-                ),
+              color: Colors.white.withValues(alpha: 0.86),
+            ),
           ),
           const SizedBox(height: 14),
           for (final action in actions) ...[
@@ -84,7 +84,7 @@ class _ModulePlaceholderShell extends StatelessWidget {
               decoration: BoxDecoration(
                 color: AppColors.card,
                 borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: Colors.white.withOpacity(0.06)),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
               ),
               child: Row(
                 children: [

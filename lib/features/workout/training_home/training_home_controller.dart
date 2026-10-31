@@ -1,7 +1,9 @@
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../../core/data/account_storage_scope.dart';
+
 import 'package:uuid/uuid.dart';
 
 import '../data/workout_repository.dart';
@@ -36,10 +38,10 @@ class RoutineMetadata {
   }
 
   Map<String, dynamic> toJson() => {
-        'pinned': pinned,
-        'usageCount': usageCount,
-        'lastUsedAt': lastUsedAt?.toIso8601String(),
-      };
+    'pinned': pinned,
+    'usageCount': usageCount,
+    'lastUsedAt': lastUsedAt?.toIso8601String(),
+  };
 
   factory RoutineMetadata.fromJson(Map<String, dynamic> json) {
     return RoutineMetadata(
@@ -61,8 +63,19 @@ class TrainingHomeController extends ChangeNotifier {
   final RoutinesRepository _routinesRepository = RoutinesRepository();
   final WorkoutRepository _workoutRepository = WorkoutRepository();
 
-  SharedPreferences? _prefs;
+  ScopedPreferences? _prefs;
   bool _initialized = false;
+  bool _disposed = false;
+  bool _loading = false;
+  bool _watching = false;
+  final String _scope = AccountStorageScope.current;
+  Object? _loadError;
+  Object? get loadError => _loadError;
+  @override
+  void notifyListeners() {
+    if (!_disposed) super.notifyListeners();
+  }
+
   List<WorkoutTemplate> _routines = [];
   List<WorkoutSession> _sessions = [];
   Map<String, RoutineMetadata> _metadata = {};
@@ -81,6 +94,7 @@ class TrainingHomeController extends ChangeNotifier {
     });
     return List.unmodifiable(items);
   }
+
   bool get hasRoutines => _routines.isNotEmpty;
   bool get hasDraft => _draftRaw != null;
   RoutineSortOption get sortOption => _sortOption;
@@ -97,13 +111,17 @@ class TrainingHomeController extends ChangeNotifier {
     }
   }
 
-  WorkoutSession? get latestSession => _sessions.isEmpty ? null : _sessions.last;
+  WorkoutSession? get latestSession =>
+      _sessions.isEmpty ? null : _sessions.last;
 
   bool get hasSessionToday {
     final last = latestSession;
     if (last == null) return false;
     final now = DateTime.now();
-    return now.year == last.date.year && now.month == last.date.month && now.day == last.date.day;
+    final localDate = last.date.toLocal();
+    return now.year == localDate.year &&
+        now.month == localDate.month &&
+        now.day == localDate.day;
   }
 
   RoutineMetadata metadataFor(String routineId) {
@@ -111,28 +129,36 @@ class TrainingHomeController extends ChangeNotifier {
   }
 
   Future<void> initialize() async {
-    _prefs ??= await SharedPreferences.getInstance();
-    _routinesRepository.watchRoutines().addListener(_onRoutinesChanged);
-    await _loadTemplates();
-    await _loadSessions();
-    await _loadMetadata();
-    await _loadDraft();
-    await _loadSortOption();
-    await _loadFolders();
-    WorkoutInProgressController.instance.syncFromRaw(_draftRaw);
-    _initialized = true;
+    if (_loading || _disposed) return;
+    _loading = true;
+    _loadError = null;
     notifyListeners();
+    try {
+      _prefs ??= await ScopedPreferences.getInstance(scope: _scope);
+      if (_disposed) return;
+      if (!_watching) {
+        _routinesRepository.watchRoutines().addListener(_onRoutinesChanged);
+        _watching = true;
+      }
+      await _loadTemplates();
+      await _loadSessions();
+      await _loadMetadata();
+      await _loadDraft();
+      await _loadSortOption();
+      await _loadFolders();
+      if (_disposed || AccountStorageScope.current != _scope) return;
+      WorkoutInProgressController.instance.syncFromRaw(_draftRaw);
+      _initialized = true;
+    } catch (error) {
+      _loadError = error;
+    } finally {
+      _loading = false;
+      notifyListeners();
+    }
   }
 
   Future<void> refresh() async {
-    await _loadTemplates();
-    await _loadSessions();
-    await _loadMetadata();
-    await _loadDraft();
-    await _loadSortOption();
-    await _loadFolders();
-    WorkoutInProgressController.instance.syncFromRaw(_draftRaw);
-    notifyListeners();
+    await initialize();
   }
 
   Future<void> setSortOption(RoutineSortOption option) async {
@@ -166,130 +192,146 @@ class TrainingHomeController extends ChangeNotifier {
   }
 
   Future<void> deleteRoutine(WorkoutTemplate routine) async {
-    _routines = _routines.where((element) => element.id != routine.id).toList();
+    final next = _routines.where((e) => e.id != routine.id).toList();
+    await _routinesRepository.replaceRoutines(next);
+    _routines = next;
     _metadata.remove(routine.id);
-    await _persistTemplates();
     await _persistMetadata();
     notifyListeners();
   }
 
   Future<void> duplicateRoutine(WorkoutTemplate routine) async {
-    final duplicated = WorkoutTemplate(
+    final copy = routine.copyWith(
       id: _uuid.v4(),
       name: '${routine.name} (copia)',
-      type: routine.type,
-      origin: TemplateOrigin.user,
-      activityName: routine.activityName,
-      folderId: routine.folderId,
       exercises: routine.exercises
-          .map((exercise) => exercise.copyWith(
-                id: _uuid.v4(),
-                sets: exercise.sets.map((set) => set.copyWith(id: _uuid.v4())).toList(),
-              ))
+          .map(
+            (e) => e.copyWith(
+              instanceId: _uuid.v4(),
+              sets: e.sets.map((v) => v.copyWith(id: _uuid.v4())).toList(),
+            ),
+          )
           .toList(),
     );
-    _routines = [..._routines, duplicated];
-    await _persistTemplates();
+    final next = [..._routines, copy];
+    await _routinesRepository.replaceRoutines(next);
+    _routines = next;
     notifyListeners();
   }
 
-  Future<void> renameRoutine(WorkoutTemplate routine, String name) async {
-    _routines = _routines
-        .map((element) =>
-            element.id == routine.id
-                ? WorkoutTemplate(
-                    id: element.id,
-                    name: name,
-                    type: element.type,
-                    origin: element.origin,
-                    activityName: element.activityName,
-                    folderId: element.folderId,
-                    exercises: element.exercises,
-                  )
-                : element)
-        .toList();
-    await _persistTemplates();
+  Future<void> renameRoutine(WorkoutTemplate routine, String name) =>
+      updateRoutine(routine.copyWith(name: name.trim()));
+
+  Future<void> updateRoutine(WorkoutTemplate updated) async {
+    final index = _routines.indexWhere((r) => r.id == updated.id);
+    if (index < 0) throw StateError('La rutina ya no existe');
+    final next = [..._routines]..[index] = updated;
+    await _routinesRepository.replaceRoutines(next);
+    _routines = next;
     notifyListeners();
   }
 
+  Object? _foldersReadError;
+  Future<void> _saveFolders(List<RoutineFolder> next) async {
+    if (_foldersReadError != null) {
+      throw StateError(
+        "La lista de carpetas contiene datos ilegibles y se conserva sin sobrescribir",
+      );
+    }
+    if (_prefs == null) throw StateError('Primero cargá tus carpetas');
+    await _prefs!.setString(
+      _foldersKey,
+      jsonEncode(next.map((e) => e.toJson()).toList()),
+    );
+    _folders = next;
+    notifyListeners();
+  }
 
   Future<void> createFolder(String name) async {
-    final nextSortOrder = _folders.isEmpty
+    if (name.trim().isEmpty) throw ArgumentError('Ingresá un nombre');
+    final order = _folders.isEmpty
         ? 0
-        : _folders.map((folder) => folder.sortOrder).reduce((a, b) => a > b ? a : b) + 1;
-    _folders = [..._folders, RoutineFolder(id: _uuid.v4(), name: name, sortOrder: nextSortOrder)];
-    await _persistFolders();
-    notifyListeners();
+        : _folders.map((f) => f.sortOrder).reduce((a, b) => a > b ? a : b) + 1;
+    await _saveFolders([
+      ..._folders,
+      RoutineFolder(id: _uuid.v4(), name: name.trim(), sortOrder: order),
+    ]);
   }
 
-  Future<void> renameFolder(String folderId, String name) async {
-    _folders = _folders
-        .map((f) =>
-            f.id == folderId
+  Future<void> renameFolder(String id, String name) async {
+    if (name.trim().isEmpty) throw ArgumentError('Ingresá un nombre');
+    await _saveFolders(
+      _folders
+          .map(
+            (f) => f.id == id
                 ? RoutineFolder(
                     id: f.id,
-                    name: name,
+                    name: name.trim(),
                     sortOrder: f.sortOrder,
                     color: f.color,
                     icon: f.icon,
                   )
-                : f)
-        .toList();
-    await _persistFolders();
-    notifyListeners();
+                : f,
+          )
+          .toList(),
+    );
   }
 
-  Future<void> deleteFolder(String folderId) async {
-    _folders = _folders.where((f) => f.id != folderId).toList();
-    _routines = _routines
-        .map((r) => r.folderId == folderId
-            ? WorkoutTemplate(
-                id: r.id,
-                name: r.name,
-                type: r.type,
-                origin: r.origin,
-                activityName: r.activityName,
-                folderId: null,
-                exercises: r.exercises,
-              )
-            : r)
+  Future<void> deleteFolder(String id) async {
+    if (_foldersReadError != null) {
+      throw StateError(
+        'La lista de carpetas ilegible se conserva sin sobrescribir',
+      );
+    }
+    // Unlink first: a failed folder write leaves every routine safely visible.
+    final routines = _routines
+        .map((r) => r.folderId == id ? r.copyWith(clearFolder: true) : r)
         .toList();
-    await _persistFolders();
-    await _persistTemplates();
-    notifyListeners();
+    await _routinesRepository.replaceRoutines(routines);
+    _routines = routines;
+    await _saveFolders(_folders.where((f) => f.id != id).toList());
   }
 
-  Future<void> moveRoutineToFolder(WorkoutTemplate routine, String? folderId) async {
-    _routines = _routines
-        .map((r) => r.id == routine.id
-            ? WorkoutTemplate(
-                id: r.id,
-                name: r.name,
-                type: r.type,
-                origin: r.origin,
-                activityName: r.activityName,
-                folderId: folderId,
-                exercises: r.exercises,
-              )
-            : r)
-        .toList();
-    await _persistTemplates();
-    notifyListeners();
+  Future<void> moveRoutineToFolder(
+    WorkoutTemplate routine,
+    String? folderId,
+  ) async {
+    if (folderId != null && !_folders.any((f) => f.id == folderId)) {
+      throw ArgumentError('La carpeta ya no existe');
+    }
+    await updateRoutine(
+      routine.copyWith(folderId: folderId, clearFolder: folderId == null),
+    );
   }
 
   List<WorkoutTemplate> routinesForFolder(String? folderId) {
     return routines.where((r) => r.folderId == folderId).toList();
   }
+
   int estimatedDuration(WorkoutTemplate routine) {
     if (routine.exercises.isEmpty) return 20;
-    final sets = routine.exercises.fold<int>(0, (sum, e) => sum + e.sets.length);
+    final sets = routine.exercises.fold<int>(
+      0,
+      (sum, e) => sum + e.sets.length,
+    );
     final effectiveSets = sets == 0 ? routine.exercises.length * 3 : sets;
     return (effectiveSets * 2.5).round().clamp(15, 120);
   }
 
+  DateTime? lastCompletedFor(String routineId) {
+    final dates =
+        _sessions
+            .where((e) => e.templateId == routineId)
+            .map((e) => e.date)
+            .toList()
+          ..sort();
+    return dates.lastOrNull;
+  }
+
   List<WorkoutTemplate> _sortedRoutines() {
     final items = [..._routines];
-    int alpha(WorkoutTemplate a, WorkoutTemplate b) => a.name.toLowerCase().compareTo(b.name.toLowerCase());
+    int alpha(WorkoutTemplate a, WorkoutTemplate b) =>
+        a.name.toLowerCase().compareTo(b.name.toLowerCase());
 
     switch (_sortOption) {
       case RoutineSortOption.alphabetical:
@@ -308,7 +350,8 @@ class TrainingHomeController extends ChangeNotifier {
         break;
       case RoutineSortOption.mostUsed:
         items.sort((a, b) {
-          final usageComp = metadataFor(b.id).usageCount.compareTo(metadataFor(a.id).usageCount);
+          final usageComp = metadataFor(b.id).usageCount
+              .compareTo(metadataFor(a.id).usageCount);
           if (usageComp != 0) return usageComp;
           final aDate = metadataFor(a.id).lastUsedAt;
           final bDate = metadataFor(b.id).lastUsedAt;
@@ -344,20 +387,31 @@ class TrainingHomeController extends ChangeNotifier {
     _routines = await _routinesRepository.getAllRoutines();
   }
 
-  Future<void> _persistTemplates() async {
-    await _routinesRepository.replaceRoutines(_routines);
-  }
-
   Future<void> _loadSessions() async {
     final fromRepo = await _workoutRepository.listSessions();
     final raw = _prefs?.getString(_sessionsKey);
     final legacy = <WorkoutSession>[];
     if (raw != null) {
-      final decoded = jsonDecode(raw) as List<dynamic>;
-      legacy.addAll(decoded.map((e) => WorkoutSession.fromJson(e as Map<String, dynamic>)));
+      try {
+        final decoded = jsonDecode(raw) as List<dynamic>;
+        for (final item in decoded) {
+          try {
+            legacy.add(
+              WorkoutSession.fromJson(Map<String, dynamic>.from(item as Map)),
+            );
+          } catch (_) {
+            // One damaged legacy session must not hide the rest of the history.
+          }
+        }
+      } catch (_) {
+        // Keep v2 sessions visible even when the old list is malformed.
+      }
     }
-    _sessions = [...legacy, ...fromRepo]
-      ..sort((a, b) => a.date.compareTo(b.date));
+    final byId = <String, WorkoutSession>{
+      for (final session in legacy) session.id: session,
+      for (final session in fromRepo) session.id: session,
+    };
+    _sessions = byId.values.toList()..sort((a, b) => a.date.compareTo(b.date));
   }
 
   Future<void> _loadMetadata() async {
@@ -366,13 +420,22 @@ class TrainingHomeController extends ChangeNotifier {
       _metadata = {};
       return;
     }
-    final decoded = jsonDecode(raw) as Map<String, dynamic>;
-    _metadata = decoded.map(
-      (key, value) => MapEntry(
-        key,
-        RoutineMetadata.fromJson(value as Map<String, dynamic>),
-      ),
-    );
+    final parsed = <String, RoutineMetadata>{};
+    try {
+      final decoded = jsonDecode(raw) as Map<String, dynamic>;
+      for (final entry in decoded.entries) {
+        try {
+          parsed[entry.key] = RoutineMetadata.fromJson(
+            Map<String, dynamic>.from(entry.value as Map),
+          );
+        } catch (_) {
+          // A damaged routine must not hide the remaining metadata.
+        }
+      }
+    } catch (_) {
+      // Keep routines and sessions available if metadata is malformed.
+    }
+    _metadata = parsed;
   }
 
   Future<void> _persistMetadata() async {
@@ -382,25 +445,33 @@ class TrainingHomeController extends ChangeNotifier {
     await _prefs?.setString(_metadataKey, payload);
   }
 
-
   Future<void> _loadFolders() async {
     final raw = _prefs?.getString(_foldersKey);
     if (raw == null) {
       _folders = [];
       return;
     }
-    final decoded = jsonDecode(raw) as List<dynamic>;
-    _folders = decoded.map((e) => RoutineFolder.fromJson(e as Map<String, dynamic>)).toList();
-  }
-
-  Future<void> _persistFolders() async {
-    await _prefs?.setString(_foldersKey, jsonEncode(_folders.map((e) => e.toJson()).toList()));
+    final parsed = <RoutineFolder>[];
+    _foldersReadError = null;
+    try {
+      for (final item in jsonDecode(raw) as List) {
+        try {
+          parsed.add(
+            RoutineFolder.fromJson(Map<String, dynamic>.from(item as Map)),
+          );
+        } catch (error) {
+          _foldersReadError = error;
+        }
+      }
+    } catch (error) {
+      _foldersReadError = error;
+    }
+    _folders = parsed;
   }
 
   Future<void> _loadDraft() async {
     _draftRaw = _prefs?.getString(_draftKey);
   }
-
 
   void _onRoutinesChanged() {
     _routines = _routinesRepository.watchRoutines().value;
@@ -409,6 +480,7 @@ class TrainingHomeController extends ChangeNotifier {
 
   @override
   void dispose() {
+    _disposed = true;
     _routinesRepository.watchRoutines().removeListener(_onRoutinesChanged);
     super.dispose();
   }

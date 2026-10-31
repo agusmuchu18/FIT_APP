@@ -11,7 +11,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'push',
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
@@ -26,7 +26,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'push',
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
@@ -41,7 +41,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'push',
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
@@ -55,7 +55,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     equipment: 'bodyweight',
     movementPattern: 'push',
     defaultMeasurement: 'reps',
-    loadType: LoadType.bodyweight_effective,
+    loadType: LoadType.bodyweightEffective,
     bodyweightFactor: 0.64,
     allowExternalLoad: false,
     isUnilateral: false,
@@ -70,7 +70,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     equipment: 'bodyweight',
     movementPattern: 'push',
     defaultMeasurement: 'reps',
-    loadType: LoadType.bodyweight_effective,
+    loadType: LoadType.bodyweightEffective,
     bodyweightFactor: 0.5,
     allowExternalLoad: false,
     isUnilateral: false,
@@ -85,7 +85,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     equipment: 'bodyweight',
     movementPattern: 'push',
     defaultMeasurement: 'reps',
-    loadType: LoadType.bodyweight_effective,
+    loadType: LoadType.bodyweightEffective,
     bodyweightFactor: 0.7,
     allowExternalLoad: false,
     isUnilateral: false,
@@ -101,7 +101,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'push',
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
@@ -116,7 +116,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'isolation',
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
@@ -131,7 +131,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'isolation',
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
@@ -146,7 +146,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'push',
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
@@ -161,7 +161,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'isolation',
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
@@ -175,8 +175,8 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     equipment: 'bodyweight',
     movementPattern: 'push',
     defaultMeasurement: 'reps',
-    loadType: LoadType.bodyweight_plus_external,
-    
+    loadType: LoadType.bodyweightPlusExternal,
+
     allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
@@ -190,8 +190,8 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     equipment: 'machine',
     movementPattern: 'push',
     defaultMeasurement: 'reps',
-    loadType: LoadType.assisted_bodyweight,
-    
+    loadType: LoadType.assistedBodyweight,
+
     allowExternalLoad: false,
     isUnilateral: false,
     isTimed: false,
@@ -205,8 +205,8 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     equipment: 'bodyweight',
     movementPattern: 'pull',
     defaultMeasurement: 'reps',
-    loadType: LoadType.bodyweight_plus_external,
-    
+    loadType: LoadType.bodyweightPlusExternal,
+
     allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
@@ -220,8 +220,8 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     equipment: 'bodyweight',
     movementPattern: 'pull',
     defaultMeasurement: 'reps',
-    loadType: LoadType.bodyweight_plus_external,
-    
+    loadType: LoadType.bodyweightPlusExternal,
+
     allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
@@ -235,8 +235,8 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     equipment: 'bodyweight',
     movementPattern: 'pull',
     defaultMeasurement: 'reps',
-    loadType: LoadType.bodyweight_plus_external,
-    
+    loadType: LoadType.bodyweightPlusExternal,
+
     allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
@@ -250,8 +250,8 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     equipment: 'machine',
     movementPattern: 'pull',
     defaultMeasurement: 'reps',
-    loadType: LoadType.assisted_bodyweight,
-    
+    loadType: LoadType.assistedBodyweight,
+
     allowExternalLoad: false,
     isUnilateral: false,
     isTimed: false,
@@ -266,7 +266,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'pull',
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
@@ -281,7 +281,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'pull',
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
@@ -296,7 +296,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'pull', // NOTE: Clasificado como movimiento de tracción/aislamiento, no bisagra.
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
@@ -311,7 +311,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'pull',
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
@@ -326,7 +326,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'pull',
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: true,
     isTimed: false,
@@ -341,7 +341,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'pull',
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
@@ -356,7 +356,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'pull',
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
@@ -371,7 +371,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'pull',
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
@@ -385,7 +385,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     equipment: 'bodyweight',
     movementPattern: 'pull',
     defaultMeasurement: 'reps',
-    loadType: LoadType.bodyweight_effective,
+    loadType: LoadType.bodyweightEffective,
     bodyweightFactor: 0.5,
     allowExternalLoad: false,
     isUnilateral: false,
@@ -401,7 +401,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'hinge',
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
@@ -416,7 +416,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'hinge',
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
@@ -431,7 +431,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'hinge',
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
@@ -446,7 +446,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'hinge',
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
@@ -461,7 +461,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'hinge',
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
@@ -476,7 +476,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'hinge',
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
@@ -490,7 +490,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     equipment: 'bodyweight',
     movementPattern: 'hinge',
     defaultMeasurement: 'reps',
-    loadType: LoadType.bodyweight_effective,
+    loadType: LoadType.bodyweightEffective,
     bodyweightFactor: 0.5,
     allowExternalLoad: true,
     isUnilateral: false,
@@ -506,10 +506,22 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'squat',
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
+  ),
+  ExerciseDefinition(
+    id: 'bodyweight_squat',
+    name: 'Sentadilla corporal',
+    aliases: ['sentadilla sin peso', 'sentadilla corporal', 'air squat'],
+    primaryMuscles: ['cuádriceps'],
+    secondaryMuscles: ['glúteos'],
+    equipment: 'bodyweight',
+    movementPattern: 'squat',
+    defaultMeasurement: 'reps',
+    loadType: LoadType.bodyweightEffective,
+    allowExternalLoad: true,
   ),
   ExerciseDefinition(
     id: 'back_squat',
@@ -521,7 +533,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'squat',
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
@@ -536,7 +548,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'squat',
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
@@ -551,7 +563,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'squat',
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
@@ -566,7 +578,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'squat',
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: true,
     isTimed: false,
@@ -581,7 +593,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'squat',
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: true,
     isTimed: false,
@@ -596,7 +608,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'squat',
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: true,
     isTimed: false,
@@ -611,7 +623,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'squat',
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: true,
     isTimed: false,
@@ -626,7 +638,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'isolation',
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
@@ -641,7 +653,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'isolation',
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
@@ -656,7 +668,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'isolation',
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
@@ -671,7 +683,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'isolation',
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
@@ -686,7 +698,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'isolation',
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
@@ -701,7 +713,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'isolation',
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
@@ -716,7 +728,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'isolation',
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
@@ -731,7 +743,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'push',
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
@@ -746,7 +758,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'push',
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
@@ -761,7 +773,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'push',
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
@@ -776,7 +788,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'isolation',
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
@@ -791,7 +803,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'isolation',
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
@@ -806,7 +818,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'pull',
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
@@ -821,7 +833,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'pull',
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
@@ -836,7 +848,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'isolation',
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
@@ -851,7 +863,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'carry',
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
@@ -866,7 +878,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'pull',
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
@@ -881,7 +893,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'pull',
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: true,
     isTimed: false,
@@ -896,7 +908,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'pull',
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: true,
     isTimed: false,
@@ -911,7 +923,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'pull',
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
@@ -926,7 +938,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'pull',
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
@@ -941,7 +953,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'push',
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
@@ -956,7 +968,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'push',
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
@@ -971,7 +983,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'push',
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
@@ -986,7 +998,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'push',
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
@@ -1000,7 +1012,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     equipment: 'bodyweight',
     movementPattern: 'push',
     defaultMeasurement: 'reps',
-    loadType: LoadType.bodyweight_effective,
+    loadType: LoadType.bodyweightEffective,
     bodyweightFactor: 0.4,
     allowExternalLoad: true,
     isUnilateral: false,
@@ -1016,7 +1028,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'push',
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
@@ -1030,7 +1042,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     equipment: 'bodyweight',
     movementPattern: 'core',
     defaultMeasurement: 'time',
-    loadType: LoadType.bodyweight_effective,
+    loadType: LoadType.bodyweightEffective,
     bodyweightFactor: 0.1,
     allowExternalLoad: false,
     isUnilateral: false,
@@ -1045,7 +1057,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     equipment: 'bodyweight',
     movementPattern: 'core',
     defaultMeasurement: 'time',
-    loadType: LoadType.bodyweight_effective,
+    loadType: LoadType.bodyweightEffective,
     bodyweightFactor: 0.1,
     allowExternalLoad: false,
     isUnilateral: true,
@@ -1060,7 +1072,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     equipment: 'bodyweight',
     movementPattern: 'core',
     defaultMeasurement: 'reps',
-    loadType: LoadType.bodyweight_effective,
+    loadType: LoadType.bodyweightEffective,
     bodyweightFactor: 0.2,
     allowExternalLoad: false,
     isUnilateral: false,
@@ -1076,7 +1088,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'core',
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
@@ -1090,7 +1102,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     equipment: 'bodyweight',
     movementPattern: 'core',
     defaultMeasurement: 'reps',
-    loadType: LoadType.bodyweight_effective,
+    loadType: LoadType.bodyweightEffective,
     bodyweightFactor: 0.15,
     allowExternalLoad: false,
     isUnilateral: false,
@@ -1105,7 +1117,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     equipment: 'bodyweight',
     movementPattern: 'core',
     defaultMeasurement: 'reps',
-    loadType: LoadType.bodyweight_effective,
+    loadType: LoadType.bodyweightEffective,
     bodyweightFactor: 0.1,
     allowExternalLoad: false,
     isUnilateral: false,
@@ -1121,7 +1133,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'core',
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
@@ -1135,7 +1147,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     equipment: 'bodyweight',
     movementPattern: 'core',
     defaultMeasurement: 'reps',
-    loadType: LoadType.bodyweight_effective,
+    loadType: LoadType.bodyweightEffective,
     bodyweightFactor: 0.2,
     allowExternalLoad: false,
     isUnilateral: false,
@@ -1150,7 +1162,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     equipment: 'bodyweight',
     movementPattern: 'core',
     defaultMeasurement: 'reps',
-    loadType: LoadType.bodyweight_effective,
+    loadType: LoadType.bodyweightEffective,
     bodyweightFactor: 0.15,
     allowExternalLoad: false,
     isUnilateral: false,
@@ -1165,7 +1177,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     equipment: 'bodyweight',
     movementPattern: 'core',
     defaultMeasurement: 'reps',
-    loadType: LoadType.bodyweight_effective,
+    loadType: LoadType.bodyweightEffective,
     bodyweightFactor: 0.1,
     allowExternalLoad: false,
     isUnilateral: false,
@@ -1181,7 +1193,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'core',
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
@@ -1195,7 +1207,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     equipment: 'bodyweight',
     movementPattern: 'core',
     defaultMeasurement: 'reps',
-    loadType: LoadType.bodyweight_effective,
+    loadType: LoadType.bodyweightEffective,
     bodyweightFactor: 0.05,
     allowExternalLoad: false,
     isUnilateral: false,
@@ -1210,7 +1222,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     equipment: 'bodyweight',
     movementPattern: 'core',
     defaultMeasurement: 'reps',
-    loadType: LoadType.bodyweight_effective,
+    loadType: LoadType.bodyweightEffective,
     bodyweightFactor: 0.05,
     allowExternalLoad: false,
     isUnilateral: true,
@@ -1226,7 +1238,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'carry',
     defaultMeasurement: 'distance',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
@@ -1241,7 +1253,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'carry',
     defaultMeasurement: 'distance',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: true,
     isTimed: false,
@@ -1256,7 +1268,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'hinge',
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: true,
     isTimed: false,
@@ -1271,7 +1283,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'hinge',
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
@@ -1286,7 +1298,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'carry',
     defaultMeasurement: 'distance',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
@@ -1301,7 +1313,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'carry',
     defaultMeasurement: 'distance',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
@@ -1316,7 +1328,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'hinge',
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
@@ -1330,7 +1342,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     equipment: 'bodyweight',
     movementPattern: 'squat',
     defaultMeasurement: 'reps',
-    loadType: LoadType.bodyweight_effective,
+    loadType: LoadType.bodyweightEffective,
     bodyweightFactor: 0.35,
     allowExternalLoad: false,
     isUnilateral: false,
@@ -1345,7 +1357,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     equipment: 'bodyweight',
     movementPattern: 'squat',
     defaultMeasurement: 'reps',
-    loadType: LoadType.bodyweight_effective,
+    loadType: LoadType.bodyweightEffective,
     bodyweightFactor: 0.35,
     allowExternalLoad: false,
     isUnilateral: false,
@@ -1361,7 +1373,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'pull',
     defaultMeasurement: 'time',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: false,
     isTimed: true,
@@ -1376,7 +1388,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'hinge',
     defaultMeasurement: 'time',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: false,
     isTimed: true,
@@ -1391,7 +1403,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'push',
     defaultMeasurement: 'time',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: false,
     isTimed: true,
@@ -1406,7 +1418,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'hinge',
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
@@ -1420,7 +1432,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     equipment: 'bodyweight',
     movementPattern: 'hinge',
     defaultMeasurement: 'reps',
-    loadType: LoadType.bodyweight_effective,
+    loadType: LoadType.bodyweightEffective,
     bodyweightFactor: 0.4,
     allowExternalLoad: false,
     isUnilateral: false,
@@ -1435,7 +1447,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     equipment: 'bodyweight',
     movementPattern: 'core',
     defaultMeasurement: 'reps',
-    loadType: LoadType.bodyweight_effective,
+    loadType: LoadType.bodyweightEffective,
     bodyweightFactor: 0.15,
     allowExternalLoad: false,
     isUnilateral: false,
@@ -1450,7 +1462,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     equipment: 'bodyweight',
     movementPattern: 'core',
     defaultMeasurement: 'time',
-    loadType: LoadType.bodyweight_effective,
+    loadType: LoadType.bodyweightEffective,
     bodyweightFactor: 0.2,
     allowExternalLoad: false,
     isUnilateral: true,
@@ -1466,7 +1478,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'hinge',
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
@@ -1481,7 +1493,7 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     movementPattern: 'hinge',
     defaultMeasurement: 'reps',
     loadType: LoadType.external,
-    
+
     allowExternalLoad: true,
     isUnilateral: false,
     isTimed: false,
@@ -1524,11 +1536,15 @@ List<ExerciseDefinition> _applyAdditionalExerciseRules() {
 
     if (skipped.isNotEmpty) {
       // ignore: avoid_print
-      print('additionalExercises ignorados (ya existen en base): ${skipped.toSet().join(', ')}');
+      print(
+        'additionalExercises ignorados (ya existen en base): ${skipped.toSet().join(', ')}',
+      );
     }
     if (dupInsideAdditional.isNotEmpty) {
       // ignore: avoid_print
-      print('IDs duplicados dentro de additionalExercises: ${dupInsideAdditional.toSet().join(', ')}');
+      print(
+        'IDs duplicados dentro de additionalExercises: ${dupInsideAdditional.toSet().join(', ')}',
+      );
     }
     return true;
   }());
@@ -1554,7 +1570,9 @@ final List<ExerciseDefinition> exerciseLibrary = (() {
       counts.update(exercise.id, (value) => value + 1, ifAbsent: () => 1);
     }
 
-    final duplicates = counts.entries.where((entry) => entry.value > 1).toList();
+    final duplicates = counts.entries
+        .where((entry) => entry.value > 1)
+        .toList();
     if (duplicates.isNotEmpty) {
       final message = duplicates
           .map((entry) => 'id: ${entry.key}, count: ${entry.value}')
@@ -1594,14 +1612,16 @@ ExerciseDefinition simpleExercise({
   String equipment = 'bodyweight',
   String movementPattern = 'general',
   String defaultMeasurement = 'reps',
-  LoadType loadType = LoadType.bodyweight_effective,
+  LoadType loadType = LoadType.bodyweightEffective,
   double? bodyweightFactor,
   bool allowExternalLoad = false,
   bool isUnilateral = false,
   bool isTimed = false,
 }) {
   final double? effectiveBodyweightFactor =
-      loadType == LoadType.bodyweight_effective ? (bodyweightFactor ?? 1.0) : null;
+      loadType == LoadType.bodyweightEffective
+      ? (bodyweightFactor ?? 1.0)
+      : null;
 
   return ExerciseDefinition(
     id: id,
@@ -1639,7 +1659,7 @@ ExerciseDefinition bwPush({
     secondaryMuscles: secondaryMuscles,
     movementPattern: 'push',
     defaultMeasurement: defaultMeasurement,
-    loadType: LoadType.bodyweight_effective,
+    loadType: LoadType.bodyweightEffective,
     bodyweightFactor: bodyweightFactor,
     isTimed: isTimed,
     isUnilateral: isUnilateral,
@@ -1665,7 +1685,7 @@ ExerciseDefinition bwSquat({
     secondaryMuscles: secondaryMuscles,
     movementPattern: 'squat',
     defaultMeasurement: defaultMeasurement,
-    loadType: LoadType.bodyweight_effective,
+    loadType: LoadType.bodyweightEffective,
     bodyweightFactor: bodyweightFactor,
     isTimed: isTimed,
     isUnilateral: isUnilateral,
@@ -1988,11 +2008,7 @@ final List<ExerciseDefinition> additionalExercises = [
     movementPattern: 'hinge',
   ),
   coreTimed(id: 'hollow_rock', name: 'Hollow rock'),
-  coreReps(
-    id: 'v_up',
-    name: 'V-up',
-    secondaryMuscles: ['flexores de cadera'],
-  ),
+  coreReps(id: 'v_up', name: 'V-up', secondaryMuscles: ['flexores de cadera']),
   coreReps(id: 'toe_touch_crunch', name: 'Toe touch crunch'),
   coreTimed(
     id: 'hip_dip_plank',
@@ -2081,7 +2097,11 @@ final List<ExerciseDefinition> additionalExercises = [
     name: 'Heel elevated squat',
     secondaryMuscles: ['glúteos', 'core'],
   ),
-  bwSquat(id: 'tempo_squat', name: 'Tempo squat', secondaryMuscles: ['glúteos', 'core']),
+  bwSquat(
+    id: 'tempo_squat',
+    name: 'Tempo squat',
+    secondaryMuscles: ['glúteos', 'core'],
+  ),
   plyo(
     id: 'box_squat_jump',
     name: 'Box squat jump',
@@ -2243,7 +2263,11 @@ final List<ExerciseDefinition> additionalExercises = [
     movementPattern: 'hinge',
     isUnilateral: true,
   ),
-  bwSquat(id: 'knee_tap_squat', name: 'Knee tap squat', secondaryMuscles: ['glúteos', 'core']),
+  bwSquat(
+    id: 'knee_tap_squat',
+    name: 'Knee tap squat',
+    secondaryMuscles: ['glúteos', 'core'],
+  ),
   bwSquat(
     id: 'lateral_box_step_over',
     name: 'Lateral box step-over',
@@ -2305,104 +2329,704 @@ final List<ExerciseDefinition> additionalExercises = [
     secondaryMuscles: ['core'],
     movementPattern: 'general',
   ),
-  simpleExercise(id: 'dumbbell_floor_press', name: 'Dumbbell floor press', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_bench_supported_row', name: 'Dumbbell bench supported row', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_renegade_row', name: 'Dumbbell renegade row', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_pullover', name: 'Dumbbell pullover', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_pullover_crunch', name: 'Dumbbell pullover crunch', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_flye_on_floor', name: 'Dumbbell flye on floor', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_incline_flye', name: 'Dumbbell incline flye', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_decline_press', name: 'Dumbbell decline press', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_crush_press', name: 'Dumbbell crush press', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_squeeze_press', name: 'Dumbbell squeeze press', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_around_the_world', name: 'Dumbbell around the world', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_z_press', name: 'Dumbbell Z press', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_push_press', name: 'Dumbbell push press', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_thruster', name: 'Dumbbell thruster', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_hang_clean', name: 'Dumbbell hang clean', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_power_clean', name: 'Dumbbell power clean', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_split_jerk', name: 'Dumbbell split jerk', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_high_pull', name: 'Dumbbell high pull', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_front_raise', name: 'Dumbbell front raise', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_lateral_raise', name: 'Dumbbell lateral raise', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_bent_arm_lateral_raise', name: 'Dumbbell bent-arm lateral raise', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_rear_delt_row', name: 'Dumbbell rear delt row', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_reverse_flye', name: 'Dumbbell reverse flye', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_chest_supported_reverse_flye', name: 'Dumbbell chest-supported reverse flye', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_cuban_press', name: 'Dumbbell Cuban press', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_hammer_curl', name: 'Dumbbell hammer curl', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_cross_body_curl', name: 'Dumbbell cross-body curl', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_incline_curl', name: 'Dumbbell incline curl', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_spider_curl', name: 'Dumbbell spider curl', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_concentration_curl', name: 'Dumbbell concentration curl', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_drag_curl', name: 'Dumbbell drag curl', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_preacher_curl', name: 'Dumbbell preacher curl', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_kickback', name: 'Dumbbell kickback', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_skull_crusher', name: 'Dumbbell skull crusher', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_jm_press', name: 'Dumbbell JM press', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_tate_press', name: 'Dumbbell Tate press', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_overhead_extension', name: 'Dumbbell overhead extension', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_french_press', name: 'Dumbbell French press', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_pullover_triceps_extension', name: 'Dumbbell pullover triceps extension', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_wrist_curl', name: 'Dumbbell wrist curl', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_reverse_wrist_curl', name: 'Dumbbell reverse wrist curl', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_farmer_carry', name: 'Dumbbell farmer carry', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_suitcase_carry', name: 'Dumbbell suitcase carry', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_rack_carry', name: 'Dumbbell rack carry', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_waiters_carry', name: 'Dumbbell waiters carry', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_walking_lunge', name: 'Dumbbell walking lunge', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_lateral_lunge', name: 'Dumbbell lateral lunge', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_reverse_lunge', name: 'Dumbbell reverse lunge', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_forward_lunge', name: 'Dumbbell forward lunge', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_curtsey_lunge', name: 'Dumbbell curtsey lunge', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_bulgarian_split_squat', name: 'Dumbbell Bulgarian split squat', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_split_squat_with_rotation', name: 'Dumbbell split squat with rotation', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_step_up', name: 'Dumbbell step-up', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_deficit_reverse_lunge', name: 'Dumbbell deficit reverse lunge', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_cross_over_step_up', name: 'Dumbbell cross-over step-up', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_single_leg_deadlift', name: 'Dumbbell single-leg deadlift', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_romanian_deadlift', name: 'Dumbbell Romanian deadlift', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_staggered_deadlift', name: 'Dumbbell staggered deadlift', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_sumo_deadlift', name: 'Dumbbell sumo deadlift', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_goblet_squat', name: 'Dumbbell goblet squat', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_front_squat', name: 'Dumbbell front squat', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_box_squat', name: 'Dumbbell box squat', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_overhead_squat', name: 'Dumbbell overhead squat', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_hack_squat', name: 'Dumbbell hack squat', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_split_squat_jump', name: 'Dumbbell split squat jump', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_jump_squat', name: 'Dumbbell jump squat', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_lateral_squat', name: 'Dumbbell lateral squat', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_thruster_to_press', name: 'Dumbbell thruster to press', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_push_jerk', name: 'Dumbbell push jerk', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_clean_and_press', name: 'Dumbbell clean and press', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_snatch', name: 'Dumbbell snatch', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'alternating_dumbbell_snatch', name: 'Alternating dumbbell snatch', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_half_snatch', name: 'Dumbbell half snatch', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_windmill', name: 'Dumbbell windmill', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_turkish_sit_up', name: 'Dumbbell Turkish sit-up', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_windmill_squat', name: 'Dumbbell windmill squat', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_overhead_lunge', name: 'Dumbbell overhead lunge', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_overhead_walk', name: 'Dumbbell overhead walk', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_power_step_up', name: 'Dumbbell power step-up', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_calf_raise', name: 'Dumbbell calf raise', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_seated_calf_raise', name: 'Dumbbell seated calf raise', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_shrug', name: 'Dumbbell shrug', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_incline_shrug', name: 'Dumbbell incline shrug', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_trap_raise', name: 'Dumbbell trap raise', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_row_to_hip', name: 'Dumbbell row to hip', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_meadows_row', name: 'Dumbbell meadows row', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_pullover_row', name: 'Dumbbell pullover row', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_incline_row', name: 'Dumbbell incline row', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_iso_hold_row', name: 'Dumbbell iso hold row', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_chest_supported_row', name: 'Dumbbell chest-supported row', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_plank_row', name: 'Dumbbell plank row', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_alternating_bench_press', name: 'Dumbbell alternating bench press', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_alternating_curl_press', name: 'Dumbbell alternating curl press', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_lateral_lunge_to_curl', name: 'Dumbbell lateral lunge to curl', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_curl_to_press', name: 'Dumbbell curl to press', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_halo', name: 'Dumbbell halo', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_wood_chop', name: 'Dumbbell wood chop', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_weighted_sit_up', name: 'Dumbbell weighted sit-up', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_russian_twist', name: 'Dumbbell Russian twist', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
-  simpleExercise(id: 'dumbbell_side_bend', name: 'Dumbbell side bend', equipment: 'dumbbell', loadType: LoadType.external, allowExternalLoad: true),
+  simpleExercise(
+    id: 'dumbbell_floor_press',
+    name: 'Dumbbell floor press',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_bench_supported_row',
+    name: 'Dumbbell bench supported row',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_renegade_row',
+    name: 'Dumbbell renegade row',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_pullover',
+    name: 'Dumbbell pullover',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_pullover_crunch',
+    name: 'Dumbbell pullover crunch',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_flye_on_floor',
+    name: 'Dumbbell flye on floor',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_incline_flye',
+    name: 'Dumbbell incline flye',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_decline_press',
+    name: 'Dumbbell decline press',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_crush_press',
+    name: 'Dumbbell crush press',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_squeeze_press',
+    name: 'Dumbbell squeeze press',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_around_the_world',
+    name: 'Dumbbell around the world',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_z_press',
+    name: 'Dumbbell Z press',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_push_press',
+    name: 'Dumbbell push press',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_thruster',
+    name: 'Dumbbell thruster',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_hang_clean',
+    name: 'Dumbbell hang clean',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_power_clean',
+    name: 'Dumbbell power clean',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_split_jerk',
+    name: 'Dumbbell split jerk',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_high_pull',
+    name: 'Dumbbell high pull',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_front_raise',
+    name: 'Dumbbell front raise',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_lateral_raise',
+    name: 'Dumbbell lateral raise',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_bent_arm_lateral_raise',
+    name: 'Dumbbell bent-arm lateral raise',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_rear_delt_row',
+    name: 'Dumbbell rear delt row',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_reverse_flye',
+    name: 'Dumbbell reverse flye',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_chest_supported_reverse_flye',
+    name: 'Dumbbell chest-supported reverse flye',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_cuban_press',
+    name: 'Dumbbell Cuban press',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_hammer_curl',
+    name: 'Dumbbell hammer curl',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_cross_body_curl',
+    name: 'Dumbbell cross-body curl',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_incline_curl',
+    name: 'Dumbbell incline curl',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_spider_curl',
+    name: 'Dumbbell spider curl',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_concentration_curl',
+    name: 'Dumbbell concentration curl',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_drag_curl',
+    name: 'Dumbbell drag curl',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_preacher_curl',
+    name: 'Dumbbell preacher curl',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_kickback',
+    name: 'Dumbbell kickback',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_skull_crusher',
+    name: 'Dumbbell skull crusher',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_jm_press',
+    name: 'Dumbbell JM press',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_tate_press',
+    name: 'Dumbbell Tate press',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_overhead_extension',
+    name: 'Dumbbell overhead extension',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_french_press',
+    name: 'Dumbbell French press',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_pullover_triceps_extension',
+    name: 'Dumbbell pullover triceps extension',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_wrist_curl',
+    name: 'Dumbbell wrist curl',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_reverse_wrist_curl',
+    name: 'Dumbbell reverse wrist curl',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_farmer_carry',
+    name: 'Dumbbell farmer carry',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_suitcase_carry',
+    name: 'Dumbbell suitcase carry',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_rack_carry',
+    name: 'Dumbbell rack carry',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_waiters_carry',
+    name: 'Dumbbell waiters carry',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_walking_lunge',
+    name: 'Dumbbell walking lunge',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_lateral_lunge',
+    name: 'Dumbbell lateral lunge',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_reverse_lunge',
+    name: 'Dumbbell reverse lunge',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_forward_lunge',
+    name: 'Dumbbell forward lunge',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_curtsey_lunge',
+    name: 'Dumbbell curtsey lunge',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_bulgarian_split_squat',
+    name: 'Dumbbell Bulgarian split squat',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_split_squat_with_rotation',
+    name: 'Dumbbell split squat with rotation',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_step_up',
+    name: 'Dumbbell step-up',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_deficit_reverse_lunge',
+    name: 'Dumbbell deficit reverse lunge',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_cross_over_step_up',
+    name: 'Dumbbell cross-over step-up',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_single_leg_deadlift',
+    name: 'Dumbbell single-leg deadlift',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_romanian_deadlift',
+    name: 'Dumbbell Romanian deadlift',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_staggered_deadlift',
+    name: 'Dumbbell staggered deadlift',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_sumo_deadlift',
+    name: 'Dumbbell sumo deadlift',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_goblet_squat',
+    name: 'Dumbbell goblet squat',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_front_squat',
+    name: 'Dumbbell front squat',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_box_squat',
+    name: 'Dumbbell box squat',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_overhead_squat',
+    name: 'Dumbbell overhead squat',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_hack_squat',
+    name: 'Dumbbell hack squat',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_split_squat_jump',
+    name: 'Dumbbell split squat jump',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_jump_squat',
+    name: 'Dumbbell jump squat',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_lateral_squat',
+    name: 'Dumbbell lateral squat',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_thruster_to_press',
+    name: 'Dumbbell thruster to press',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_push_jerk',
+    name: 'Dumbbell push jerk',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_clean_and_press',
+    name: 'Dumbbell clean and press',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_snatch',
+    name: 'Dumbbell snatch',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'alternating_dumbbell_snatch',
+    name: 'Alternating dumbbell snatch',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_half_snatch',
+    name: 'Dumbbell half snatch',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_windmill',
+    name: 'Dumbbell windmill',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_turkish_sit_up',
+    name: 'Dumbbell Turkish sit-up',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_windmill_squat',
+    name: 'Dumbbell windmill squat',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_overhead_lunge',
+    name: 'Dumbbell overhead lunge',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_overhead_walk',
+    name: 'Dumbbell overhead walk',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_power_step_up',
+    name: 'Dumbbell power step-up',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_calf_raise',
+    name: 'Dumbbell calf raise',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_seated_calf_raise',
+    name: 'Dumbbell seated calf raise',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_shrug',
+    name: 'Dumbbell shrug',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_incline_shrug',
+    name: 'Dumbbell incline shrug',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_trap_raise',
+    name: 'Dumbbell trap raise',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_row_to_hip',
+    name: 'Dumbbell row to hip',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_meadows_row',
+    name: 'Dumbbell meadows row',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_pullover_row',
+    name: 'Dumbbell pullover row',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_incline_row',
+    name: 'Dumbbell incline row',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_iso_hold_row',
+    name: 'Dumbbell iso hold row',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_chest_supported_row',
+    name: 'Dumbbell chest-supported row',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_plank_row',
+    name: 'Dumbbell plank row',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_alternating_bench_press',
+    name: 'Dumbbell alternating bench press',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_alternating_curl_press',
+    name: 'Dumbbell alternating curl press',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_lateral_lunge_to_curl',
+    name: 'Dumbbell lateral lunge to curl',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_curl_to_press',
+    name: 'Dumbbell curl to press',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_halo',
+    name: 'Dumbbell halo',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_wood_chop',
+    name: 'Dumbbell wood chop',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_weighted_sit_up',
+    name: 'Dumbbell weighted sit-up',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_russian_twist',
+    name: 'Dumbbell Russian twist',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
+  simpleExercise(
+    id: 'dumbbell_side_bend',
+    name: 'Dumbbell side bend',
+    equipment: 'dumbbell',
+    loadType: LoadType.external,
+    allowExternalLoad: true,
+  ),
 ];

@@ -27,19 +27,17 @@ class SleepRegularityScreen extends StatelessWidget {
             return const Center(child: CircularProgressIndicator.adaptive());
           }
 
-          final entries = (snapshot.data ?? [])
-              .where((e) => !e.deleted)
-              .toList()
-            ..sort((a, b) => sleepEntryDate(b).compareTo(sleepEntryDate(a)));
+          final entries =
+              (snapshot.data ?? []).where((e) => !e.deleted).toList()..sort(
+                (a, b) => sleepEntryDate(b).compareTo(sleepEntryDate(a)),
+              );
 
           final today = dateOnly(DateTime.now());
           final start = today.subtract(const Duration(days: 6));
-          final filtered = entries
-              .where((e) {
-                final date = sleepEntryDate(e);
-                return !date.isBefore(start) && !date.isAfter(today);
-              })
-              .toList();
+          final filtered = entries.where((e) {
+            final date = sleepEntryDate(e);
+            return !date.isBefore(start) && !date.isAfter(today);
+          }).toList();
 
           final bedTimes = filtered
               .map((e) => parseHHmmToMinutes(e.bedtime))
@@ -120,91 +118,89 @@ class SleepRegularityScreen extends StatelessWidget {
                         ),
                       )
                     else
-                      ...filtered.take(7).map(
-                        (entry) {
-                          final date = sleepEntryDate(entry);
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 44,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 8,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.surface,
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Column(
-                                    children: [
-                                      Text(
-                                        _weekdayLabel(date),
-                                        style: const TextStyle(
-                                          color: AppColors.textMuted,
-                                          fontSize: 11,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        date.day.toString().padLeft(2, '0'),
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
+                      ...filtered.take(7).map((entry) {
+                        final date = sleepEntryDate(entry);
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 44,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 8,
                                 ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        children: [
-                                          const Icon(
-                                            Icons.bedtime,
-                                            size: 16,
-                                            color: AppColors.textSecondary,
-                                          ),
-                                          const SizedBox(width: 6),
-                                          Text(
-                                            'Hora de dormir: ${_formatTime(entry.bedtime)}',
-                                            style: const TextStyle(
-                                              color: AppColors.textPrimary,
-                                              fontSize: 13,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 6),
-                                      Row(
-                                        children: [
-                                          const Icon(
-                                            Icons.wb_sunny_outlined,
-                                            size: 16,
-                                            color: AppColors.textSecondary,
-                                          ),
-                                          const SizedBox(width: 6),
-                                          Text(
-                                            'Despertar: ${_formatTime(entry.wakeTime)}',
-                                            style: const TextStyle(
-                                              color: AppColors.textPrimary,
-                                              fontSize: 13,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.surface,
+                                  borderRadius: BorderRadius.circular(12),
                                 ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
+                                child: Column(
+                                  children: [
+                                    Text(
+                                      _weekdayLabel(date),
+                                      style: const TextStyle(
+                                        color: AppColors.textMuted,
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      date.day.toString().padLeft(2, '0'),
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        const Icon(
+                                          Icons.bedtime,
+                                          size: 16,
+                                          color: AppColors.textSecondary,
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          'Hora de dormir: ${_formatTime(entry.bedtime)}',
+                                          style: const TextStyle(
+                                            color: AppColors.textPrimary,
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Row(
+                                      children: [
+                                        const Icon(
+                                          Icons.wb_sunny_outlined,
+                                          size: 16,
+                                          color: AppColors.textSecondary,
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          'Despertar: ${_formatTime(entry.wakeTime)}',
+                                          style: const TextStyle(
+                                            color: AppColors.textPrimary,
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
                   ],
                 ),
               ),
@@ -227,7 +223,8 @@ class SleepRegularityScreen extends StatelessWidget {
                     SizedBox(height: 10),
                     _TipRow(
                       icon: Icons.schedule_rounded,
-                      label: 'Acuéstate y despierta en una ventana de 30 min diaria.',
+                      label:
+                          'Acuéstate y despierta en una ventana de 30 min diaria.',
                     ),
                     SizedBox(height: 8),
                     _TipRow(
@@ -237,7 +234,8 @@ class SleepRegularityScreen extends StatelessWidget {
                     SizedBox(height: 8),
                     _TipRow(
                       icon: Icons.bedroom_baby_outlined,
-                      label: 'Reduce la luz brillante 60 minutos antes de acostarte.',
+                      label:
+                          'Reduce la luz brillante 60 minutos antes de acostarte.',
                     ),
                   ],
                 ),
@@ -268,10 +266,7 @@ class _MetricBox extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              label,
-              style: const TextStyle(color: AppColors.textMuted),
-            ),
+            Text(label, style: const TextStyle(color: AppColors.textMuted)),
             const SizedBox(height: 4),
             Text(
               value,
@@ -298,11 +293,7 @@ class _TipRow extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(
-          icon,
-          size: 16,
-          color: AppColors.textSecondary,
-        ),
+        Icon(icon, size: 16, color: AppColors.textSecondary),
         const SizedBox(width: 8),
         Expanded(
           child: Text(

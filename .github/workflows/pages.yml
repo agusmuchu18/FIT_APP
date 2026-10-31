@@ -2,7 +2,7 @@ name: Deploy Flutter Web to GitHub Pages
 
 on:
   push:
-    branches: [ "master" ]
+    branches: [master]
   workflow_dispatch:
 
 permissions:
@@ -11,38 +11,46 @@ permissions:
   id-token: write
 
 concurrency:
-  group: "pages"
+  group: pages
   cancel-in-progress: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup Flutter
-        uses: subosito/flutter-action@v2
+        uses: subosito/flutter-action@v2.23.0
         with:
+          flutter-version: 3.47.3
           channel: stable
+          cache: true
 
       - name: Install dependencies
-        run: flutter pub get
+        run: flutter pub get --enforce-lockfile
+
+      - name: Analyze
+        run: flutter analyze --fatal-infos
 
       - name: Build web
-        # TODO(security): En Flutter Web esta key queda expuesta en el bundle; migrar a proxy/backend.
-        run: flutter build web --release --base-href "/FIT_APP/" --dart-define=USDA_API_KEY=${{ secrets.USDA_API_KEY }}
+        run: >-
+          flutter build web --release --base-href "/FIT_APP/"
+          --dart-define=USDA_PROXY_BASE_URL=https://fit-app-usda-proxy.agusmuchu18-fit-app.workers.dev
 
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: build/web
 
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     environment:
       name: github-pages
     steps:
       - name: Deploy to GitHub Pages
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5

@@ -20,12 +20,7 @@ import '../domain/entities.dart';
 /// Tipos base de Sync
 /// ------------------------------
 
-enum SyncEntityKind {
-  workout,
-  meal,
-  sleep,
-  preferences,
-}
+enum SyncEntityKind { workout, meal, sleep, preferences }
 
 enum SyncWriteMode {
   /// Escritura normal: el backend puede rechazar por conflicto.
@@ -115,10 +110,7 @@ class SyncFlushCompleted extends SyncEvent {
 }
 
 class SyncConflictEvent extends SyncEvent {
-  const SyncConflictEvent({
-    required this.kind,
-    required this.entityId,
-  });
+  const SyncConflictEvent({required this.kind, required this.entityId});
 
   final SyncEntityKind kind;
   final String entityId;
@@ -161,10 +153,7 @@ class SyncQueued extends SyncOutcome {
 }
 
 class SyncFailure extends SyncOutcome {
-  const SyncFailure({
-    required this.error,
-    this.isRetryable = true,
-  });
+  const SyncFailure({required this.error, this.isRetryable = true});
 
   final Object error;
   final bool isRetryable;
@@ -209,10 +198,12 @@ class SyncConflictResolution {
 
   final SyncConflictResolutionDecision decision;
 
-  static const manual =
-      SyncConflictResolution(SyncConflictResolutionDecision.manual);
-  static const acceptRemote =
-      SyncConflictResolution(SyncConflictResolutionDecision.acceptRemote);
+  static const manual = SyncConflictResolution(
+    SyncConflictResolutionDecision.manual,
+  );
+  static const acceptRemote = SyncConflictResolution(
+    SyncConflictResolutionDecision.acceptRemote,
+  );
   static const keepLocalForceWrite = SyncConflictResolution(
     SyncConflictResolutionDecision.keepLocalForceWrite,
   );
@@ -309,20 +300,14 @@ class TransportWriteConflict extends TransportWriteOutcome {
 }
 
 class TransportPullRequest {
-  TransportPullRequest({
-    required this.userId,
-    required this.since,
-  });
+  TransportPullRequest({required this.userId, required this.since});
 
   final String userId;
   final SyncCursor since;
 }
 
 class TransportPullResponse {
-  TransportPullResponse({
-    required this.nextCursor,
-    required this.items,
-  });
+  TransportPullResponse({required this.nextCursor, required this.items});
 
   final SyncCursor nextCursor;
 
@@ -424,8 +409,9 @@ class MemorySyncQueueStore implements SyncQueueStore {
 
   @override
   Future<void> enqueue(SyncTask task) async {
-    final idx =
-        _q.indexWhere((t) => t.kind == task.kind && t.entityId == task.entityId);
+    final idx = _q.indexWhere(
+      (t) => t.kind == task.kind && t.entityId == task.entityId,
+    );
     if (idx >= 0) {
       final existing = _q[idx];
       if (task.updatedAt.isAfter(existing.updatedAt)) {
@@ -446,18 +432,22 @@ class MemorySyncQueueStore implements SyncQueueStore {
 
   @override
   Future<void> remove(SyncTask task) async {
-    _q.removeWhere((t) =>
-        t.kind == task.kind &&
-        t.entityId == task.entityId &&
-        t.idempotencyKey == task.idempotencyKey);
+    _q.removeWhere(
+      (t) =>
+          t.kind == task.kind &&
+          t.entityId == task.entityId &&
+          t.idempotencyKey == task.idempotencyKey,
+    );
   }
 
   @override
   Future<void> update(SyncTask task) async {
-    final idx = _q.indexWhere((t) =>
-        t.kind == task.kind &&
-        t.entityId == task.entityId &&
-        t.idempotencyKey == task.idempotencyKey);
+    final idx = _q.indexWhere(
+      (t) =>
+          t.kind == task.kind &&
+          t.entityId == task.entityId &&
+          t.idempotencyKey == task.idempotencyKey,
+    );
     if (idx >= 0) _q[idx] = task;
   }
 
@@ -470,10 +460,7 @@ class MemorySyncQueueStore implements SyncQueueStore {
 /// ------------------------------
 
 class PullResult {
-  PullResult({
-    required this.nextCursor,
-    required this.items,
-  });
+  PullResult({required this.nextCursor, required this.items});
 
   final SyncCursor nextCursor;
   final List<TransportPullItem> items;
@@ -485,27 +472,17 @@ class PullResult {
 
 class RemoteSyncService {
   RemoteSyncService({
-    required RemoteSyncTransport transport,
-    required SyncSession session,
-    required NetworkStatus network,
-    required SyncQueueStore queue,
-    required SyncPolicy policy,
-    required SyncAdapter<WorkoutEntry> workoutAdapter,
-    required SyncAdapter<MealEntry> mealAdapter,
-    required SyncAdapter<SleepEntry> sleepAdapter,
-    required SyncAdapter<UserPreferences> preferencesAdapter,
-    Future<SyncConflictResolution> Function(SyncConflict conflict)? onConflict,
-  })  : _transport = transport,
-        _session = session,
-        _network = network,
-        _queue = queue,
-        _policy = policy,
-        _workoutAdapter = workoutAdapter,
-        _mealAdapter = mealAdapter,
-        _sleepAdapter = sleepAdapter,
-        _preferencesAdapter = preferencesAdapter,
-        _onConflict = onConflict,
-        _events = StreamController<SyncEvent>.broadcast();
+    required this._transport,
+    required this._session,
+    required this._network,
+    required this._queue,
+    required this._policy,
+    required this._workoutAdapter,
+    required this._mealAdapter,
+    required this._sleepAdapter,
+    required this._preferencesAdapter,
+    this._onConflict,
+  }) : _events = StreamController<SyncEvent>.broadcast();
 
   final RemoteSyncTransport _transport;
   final SyncSession _session;
@@ -519,7 +496,7 @@ class RemoteSyncService {
   final SyncAdapter<UserPreferences> _preferencesAdapter;
 
   final Future<SyncConflictResolution> Function(SyncConflict conflict)?
-      _onConflict;
+  _onConflict;
 
   final StreamController<SyncEvent> _events;
   Stream<SyncEvent> get events => _events.stream;
@@ -710,7 +687,7 @@ class RemoteSyncService {
       _events.add(SyncConflictEvent(kind: adapter.kind, entityId: entityId));
 
       if (_onConflict != null) {
-        final res = await _onConflict!(conflict);
+        final res = await _onConflict(conflict);
         return _handleConflictResolution(conflict, res);
       }
 
@@ -837,8 +814,8 @@ class RemoteSyncService {
 
     try {
       final dyn = local as dynamic;
-      final Map<String, Object?> json =
-          (dyn.toJson() as Map).cast<String, Object?>();
+      final Map<String, Object?> json = (dyn.toJson() as Map)
+          .cast<String, Object?>();
       return Map<String, Object?>.from(json);
     } catch (_) {
       return <String, Object?>{};
@@ -851,9 +828,8 @@ class RemoteSyncService {
 /// ------------------------------------------------------------------
 
 class FirestoreRemoteSyncTransport implements RemoteSyncTransport {
-  FirestoreRemoteSyncTransport({
-    FirebaseFirestore? firestore,
-  }) : _db = firestore ?? FirebaseFirestore.instance;
+  FirestoreRemoteSyncTransport({FirebaseFirestore? firestore})
+    : _db = firestore ?? FirebaseFirestore.instance;
 
   final FirebaseFirestore _db;
 
@@ -868,10 +844,6 @@ class FirestoreRemoteSyncTransport implements RemoteSyncTransport {
       case SyncEntityKind.preferences:
         return 'preferences';
     }
-  }
-
-  CollectionReference<Map<String, Object?>> _userRoot(String userId) {
-    return _db.collection('users').doc(userId).collection('_root');
   }
 
   /// Guardamos por subcolecciones “reales” dentro de users/{uid}/
@@ -996,18 +968,12 @@ class FirestoreRemoteSyncTransport implements RemoteSyncTransport {
         nextCursor: SyncCursor.fromMillis(nextMillis),
         items: all,
       );
-    } on FirebaseException catch (e) {
+    } on FirebaseException {
       // Pull falla => devolvemos cursor igual (no avanzamos) y lista vacía
       // y dejamos que el caller reintente más tarde.
-      return TransportPullResponse(
-        nextCursor: request.since,
-        items: const [],
-      );
+      return TransportPullResponse(nextCursor: request.since, items: const []);
     } catch (_) {
-      return TransportPullResponse(
-        nextCursor: request.since,
-        items: const [],
-      );
+      return TransportPullResponse(nextCursor: request.since, items: const []);
     }
   }
 

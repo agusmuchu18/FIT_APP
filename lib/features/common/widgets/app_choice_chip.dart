@@ -30,7 +30,9 @@ class AppChoiceChip extends StatelessWidget {
       selectedColor: const Color(0xFF223045),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(18),
-        side: BorderSide(color: selected ? AppColors.accent : Colors.transparent),
+        side: BorderSide(
+          color: selected ? AppColors.accent : Colors.transparent,
+        ),
       ),
       elevation: 0,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),

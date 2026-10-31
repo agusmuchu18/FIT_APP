@@ -11,26 +11,10 @@ Set<DateTime> buildActiveDaysSet({
   final activeDays = <DateTime>{};
 
   for (final workout in workouts) {
-    activeDays.add(
-      normalizeDay(
-        _entryDate(
-          rawId: workout.id,
-          createdAt: workout.meta.createdAt,
-          updatedAt: workout.meta.updatedAt,
-        ),
-      ),
-    );
+    activeDays.add(normalizeDay(workoutEntryDate(workout)));
   }
   for (final meal in meals) {
-    activeDays.add(
-      normalizeDay(
-        _entryDate(
-          rawId: meal.id,
-          createdAt: meal.meta.createdAt,
-          updatedAt: meal.meta.updatedAt,
-        ),
-      ),
-    );
+    activeDays.add(normalizeDay(meal.recordedAt));
   }
   for (final sleep in sleepEntries) {
     activeDays.add(normalizeDay(sleepEntryDate(sleep)));
@@ -39,10 +23,7 @@ Set<DateTime> buildActiveDaysSet({
   return activeDays;
 }
 
-bool hasActivity({
-  required DateTime day,
-  required Set<DateTime> activeDays,
-}) {
+bool hasActivity({required DateTime day, required Set<DateTime> activeDays}) {
   return activeDays.contains(normalizeDay(day));
 }
 
@@ -54,38 +35,22 @@ HomeDayActivitySummary getActivityForDay({
 }) {
   final normalized = normalizeDay(day);
   final dayWorkouts = workouts
-      .where(
-        (workout) =>
-            normalizeDay(
-              _entryDate(
-                rawId: workout.id,
-                createdAt: workout.meta.createdAt,
-                updatedAt: workout.meta.updatedAt,
-              ),
-            ) ==
-            normalized,
-      )
+      .where((workout) => normalizeDay(workoutEntryDate(workout)) == normalized)
       .toList(growable: false);
   final dayMeals = meals
-      .where(
-        (meal) =>
-            normalizeDay(
-              _entryDate(
-                rawId: meal.id,
-                createdAt: meal.meta.createdAt,
-                updatedAt: meal.meta.updatedAt,
-              ),
-            ) ==
-            normalized,
-      )
+      .where((meal) => normalizeDay(meal.recordedAt) == normalized)
       .toList(growable: false);
   final daySleep = sleepEntries
       .where((sleep) => normalizeDay(sleepEntryDate(sleep)) == normalized)
       .toList(growable: false);
 
-  final trainingMinutes =
-      dayWorkouts.fold<int>(0, (sum, workout) => sum + workout.durationMinutes);
-  final calories = dayMeals.fold<int>(0, (sum, meal) => sum + meal.calories);
+  final trainingMinutes = dayWorkouts.fold<int>(
+    0,
+    (sum, workout) => sum + workout.durationMinutes,
+  );
+  final calories = dayMeals
+      .fold<double>(0, (sum, meal) => sum + meal.energyKcal)
+      .round();
 
   return HomeDayActivitySummary(
     day: normalized,
@@ -94,25 +59,9 @@ HomeDayActivitySummary getActivityForDay({
     sleepEntries: daySleep,
     totalTrainingMinutes: trainingMinutes,
     totalCalories: calories,
-    hasActivity: dayWorkouts.isNotEmpty || dayMeals.isNotEmpty || daySleep.isNotEmpty,
+    hasActivity:
+        dayWorkouts.isNotEmpty || dayMeals.isNotEmpty || daySleep.isNotEmpty,
   );
-}
-
-DateTime _entryDate({
-  required String rawId,
-  required DateTime createdAt,
-  required DateTime updatedAt,
-  DateTime? performedAt,
-}) {
-  if (performedAt != null) {
-    return performedAt;
-  }
-  final parsedFromId = DateTime.tryParse(rawId);
-  if (parsedFromId != null) {
-    return parsedFromId;
-  }
-  // TODO(activity-entry-date): Prefer entry.performedAt when workout/meal entities add it.
-  return createdAt.isUtc ? createdAt.toLocal() : createdAt;
 }
 
 class HomeDayActivitySummary {
@@ -132,5 +81,7 @@ class HomeDayActivitySummary {
   final List<SleepEntry> sleepEntries;
   final int totalTrainingMinutes;
   final int totalCalories;
+  bool get hasIncompleteEnergy =>
+      meals.any((m) => m.unknownNutrients.contains('kcal'));
   final bool hasActivity;
 }

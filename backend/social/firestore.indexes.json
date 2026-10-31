@@ -1,0 +1,7 @@
+{
+  "indexes": [
+    { "collectionGroup": "socialFollows", "queryScope": "COLLECTION", "fields": [{"fieldPath":"from","order":"ASCENDING"},{"fieldPath":"state","order":"ASCENDING"}] },
+    { "collectionGroup": "socialFollows", "queryScope": "COLLECTION", "fields": [{"fieldPath":"to","order":"ASCENDING"},{"fieldPath":"state","order":"ASCENDING"}] }
+  ],
+  "fieldOverrides": []
+}

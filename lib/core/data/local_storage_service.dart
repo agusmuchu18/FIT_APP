@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:hive_flutter/hive_flutter.dart';
 
 import '../domain/entities.dart';
+import 'account_storage_scope.dart';
 
 /// Local storage facade to keep data layer swappable (Hive, Sqflite, etc.).
 class LocalStorageService {
@@ -18,11 +19,20 @@ class LocalStorageService {
   final Box<String> _sleepBox;
   final Box<String> _prefsBox;
 
-  static Future<LocalStorageService> create() async {
-    final workoutsBox = await Hive.openBox<String>('fit_workouts');
-    final mealsBox = await Hive.openBox<String>('fit_meals');
-    final sleepBox = await Hive.openBox<String>('fit_sleep');
-    final prefsBox = await Hive.openBox<String>('fit_prefs');
+  static Future<LocalStorageService> create({String? scope}) async {
+    final owner = scope ?? AccountStorageScope.current;
+    final workoutsBox = await Hive.openBox<String>(
+      AccountStorageScope.boxName('fit_workouts', owner),
+    );
+    final mealsBox = await Hive.openBox<String>(
+      AccountStorageScope.boxName('fit_meals', owner),
+    );
+    final sleepBox = await Hive.openBox<String>(
+      AccountStorageScope.boxName('fit_sleep', owner),
+    );
+    final prefsBox = await Hive.openBox<String>(
+      AccountStorageScope.boxName('fit_prefs', owner),
+    );
     return LocalStorageService._(workoutsBox, mealsBox, sleepBox, prefsBox);
   }
 

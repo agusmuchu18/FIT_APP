@@ -1,13 +1,10 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 
 import '../../../../core/data/app_preferences.dart';
-import '../../../../core/integrations/fitbit_service.dart';
-import '../../../../core/integrations/google_fit_service.dart';
-import '../../../../core/integrations/healthkit_service.dart';
+
 import 'integration_detail_screen.dart';
 import 'integration_models.dart';
+import 'integration_readiness.dart';
 import 'widgets/integration_section_card.dart';
 import 'widgets/integration_tile.dart';
 import 'widgets/integrations_filter_chips.dart';
@@ -16,11 +13,14 @@ class IntegrationsSettingsScreen extends StatefulWidget {
   const IntegrationsSettingsScreen({super.key});
 
   @override
-  State<IntegrationsSettingsScreen> createState() => _IntegrationsSettingsScreenState();
+  State<IntegrationsSettingsScreen> createState() =>
+      _IntegrationsSettingsScreenState();
 }
 
-class _IntegrationsSettingsScreenState extends State<IntegrationsSettingsScreen> {
+class _IntegrationsSettingsScreenState
+    extends State<IntegrationsSettingsScreen> {
   AppPreferences? _prefs;
+  bool _failed = false;
   final TextEditingController _searchController = TextEditingController();
   IntegrationsFilter _selectedFilter = IntegrationsFilter.all;
   Map<IntegrationId, IntegrationStatus> _statuses = {};
@@ -33,12 +33,18 @@ class _IntegrationsSettingsScreenState extends State<IntegrationsSettingsScreen>
   }
 
   Future<void> _load() async {
-    final prefs = await AppPreferences.load();
-    if (!mounted) return;
-    setState(() {
-      _prefs = prefs;
-      _statuses = prefs.integrationStatuses;
-    });
+    try {
+      final prefs = await AppPreferences.load();
+      final statuses = prefs.integrationStatuses;
+      if (!mounted) return;
+      setState(() {
+        _prefs = prefs;
+        _statuses = statuses;
+        _failed = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _failed = true);
+    }
   }
 
   Future<void> _persist(IntegrationId id, IntegrationStatus status) async {
@@ -50,7 +56,11 @@ class _IntegrationsSettingsScreenState extends State<IntegrationsSettingsScreen>
     setState(() => _statuses = updated);
   }
 
-  IntegrationStatus _statusFor(IntegrationId id) => _statuses[id] ?? const IntegrationStatus();
+  IntegrationStatus _statusFor(IntegrationId id) =>
+      IntegrationReadiness.verifiedStatus(
+        id,
+        _statuses[id] ?? const IntegrationStatus(),
+      );
 
   @override
   void dispose() {
@@ -74,7 +84,25 @@ class _IntegrationsSettingsScreenState extends State<IntegrationsSettingsScreen>
           ),
         ],
       ),
-      body: _prefs == null
+      body: _failed
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'No se pudieron leer los estados guardados. Se conservan para reintentar.',
+                    ),
+                    TextButton(
+                      onPressed: _load,
+                      child: const Text('Reintentar'),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          : _prefs == null
           ? const Center(child: CircularProgressIndicator())
           : ListView(
               padding: const EdgeInsets.all(16),
@@ -84,7 +112,9 @@ class _IntegrationsSettingsScreenState extends State<IntegrationsSettingsScreen>
                   decoration: InputDecoration(
                     hintText: 'Buscar integración…',
                     prefixIcon: const Icon(Icons.search_rounded),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(20)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
                     filled: true,
                   ),
                 ),
@@ -126,28 +156,35 @@ class _IntegrationsSettingsScreenState extends State<IntegrationsSettingsScreen>
                 onTap: () => _openDetail(list[i]),
                 onConnect: () => _handleConnect(list[i]),
               ),
-              if (i != list.length - 1) Divider(color: Colors.white.withOpacity(0.08)),
-            ]
+              if (i != list.length - 1)
+                Divider(color: Colors.white.withValues(alpha: 0.08)),
+            ],
           ],
         ),
       );
     });
 
     if (out.isEmpty) {
-      out.add(const Padding(
-        padding: EdgeInsets.only(top: 24),
-        child: Center(child: Text('No encontramos integraciones para ese filtro.')),
-      ));
+      out.add(
+        const Padding(
+          padding: EdgeInsets.only(top: 24),
+          child: Center(
+            child: Text('No encontramos integraciones para ese filtro.'),
+          ),
+        ),
+      );
     }
     return out;
   }
 
   bool _passesFilters(IntegrationItem item) {
     final query = _searchController.text.trim().toLowerCase();
-    final matchesSearch = query.isEmpty || item.title.toLowerCase().contains(query);
+    final matchesSearch =
+        query.isEmpty || item.title.toLowerCase().contains(query);
     if (!matchesSearch) return false;
 
-    if (_selectedFilter == IntegrationsFilter.connected && !_statusFor(item.id).connected) {
+    if (_selectedFilter == IntegrationsFilter.connected &&
+        !_statusFor(item.id).connected) {
       return false;
     }
 
@@ -168,52 +205,17 @@ class _IntegrationsSettingsScreenState extends State<IntegrationsSettingsScreen>
   }
 
   Future<void> _handleConnect(IntegrationItem item) async {
-    if (!item.isAvailable) {
-      _showSoonDialog(item);
-      return;
-    }
-
-    bool success = false;
-    switch (item.id) {
-      case IntegrationId.appleHealth:
-        if (!Platform.isIOS) {
-          _showSoonDialog(item, message: 'Apple Health requiere iOS para conectarse.');
-          return;
-        }
-        final service = HealthKitService();
-        success = await service.hasPermissions() || await service.requestPermissions();
-        break;
-      case IntegrationId.googleFit:
-        if (!Platform.isAndroid) {
-          _showSoonDialog(item, message: 'Google Fit requiere Android para conectarse.');
-          return;
-        }
-        final service = GoogleFitService();
-        success = await service.hasPermissions() || await service.requestPermissions();
-        break;
-      case IntegrationId.fitbit:
-        final service = FitbitService();
-        success = await service.hasPermissions() || await service.requestPermissions();
-        break;
-      default:
-        success = true;
-    }
-
-    if (!success) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No se pudo completar la conexión.')));
-      return;
-    }
-
-    await _persist(item.id, IntegrationStatus(enabled: true, connected: true, lastSync: DateTime.now()));
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${item.title} conectado.')));
+    _showSoonDialog(item, message: IntegrationReadiness.reason(item.id));
   }
 
   Future<void> _disconnect(IntegrationItem item) async {
-    await _persist(item.id, const IntegrationStatus(enabled: false, connected: false));
+    await _persist(
+      item.id,
+      const IntegrationStatus(enabled: false, connected: false),
+    );
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${item.title} desconectado.')));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text('${item.title} desconectado.')));
   }
 
   Future<void> _openDetail(IntegrationItem item) async {
@@ -265,8 +267,15 @@ class _IntegrationsSettingsScreenState extends State<IntegrationsSettingsScreen>
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Ayuda'),
-        content: const Text('Conectá tus apps y dispositivos para importar actividad, salud, sueño y nutrición automáticamente.'),
-        actions: [TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cerrar'))],
+        content: const Text(
+          'Conectá tus apps y dispositivos para importar actividad, salud, sueño y nutrición automáticamente.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cerrar'),
+          ),
+        ],
       ),
     );
   }
@@ -294,7 +303,11 @@ const List<IntegrationItem> _allItems = [
     isAvailable: false,
     iconData: Icons.route_rounded,
     description: 'Sincroniza entrenamientos al aire libre, segmentos y métricas de actividad.',
-    importableData: ['Carreras y ciclismo', 'Distancia y ritmo', 'Frecuencia cardíaca'],
+    importableData: [
+      'Carreras y ciclismo',
+      'Distancia y ritmo',
+      'Frecuencia cardíaca',
+    ],
   ),
   IntegrationItem(
     id: IntegrationId.trainingPeaks,
@@ -304,7 +317,11 @@ const List<IntegrationItem> _allItems = [
     isAvailable: false,
     iconData: Icons.trending_up_rounded,
     description: 'Importa métricas de entrenamiento estructurado y cumplimiento de planificación.',
-    importableData: ['TSS y carga', 'Sesiones completadas', 'Duración e intensidad'],
+    importableData: [
+      'TSS y carga',
+      'Sesiones completadas',
+      'Duración e intensidad',
+    ],
   ),
   IntegrationItem(
     id: IntegrationId.garmin,
@@ -343,15 +360,20 @@ const List<IntegrationItem> _allItems = [
     category: IntegrationCategory.activityTraining,
     isAvailable: false,
     iconData: Icons.sports_soccer_rounded,
-    description: 'Integra métricas de rendimiento usadas en deportes de equipo.',
-    importableData: ['Player load', 'Aceleraciones', 'Distancias de alta intensidad'],
+    description:
+        'Integra métricas de rendimiento usadas en deportes de equipo.',
+    importableData: [
+      'Player load',
+      'Aceleraciones',
+      'Distancias de alta intensidad',
+    ],
   ),
   IntegrationItem(
     id: IntegrationId.fitbit,
     title: 'Fitbit (reloj)',
     subtitle: 'Pasos, calorías y actividad.',
     category: IntegrationCategory.activityTraining,
-    isAvailable: true,
+    isAvailable: false,
     iconData: Icons.fitness_center_rounded,
     description: 'Importa actividad, sueño y señales de salud desde Fitbit.',
     importableData: ['Pasos', 'Entrenamientos', 'Sueño básico'],
@@ -381,7 +403,7 @@ const List<IntegrationItem> _allItems = [
     title: 'Apple Health',
     subtitle: 'Hub de salud en iPhone.',
     category: IntegrationCategory.healthSensors,
-    isAvailable: true,
+    isAvailable: false,
     iconData: Icons.health_and_safety_rounded,
     description: 'Permite leer entrenamientos, sueño, pasos y nutrición desde HealthKit.',
     importableData: ['Pasos', 'Sueño', 'Entrenamientos', 'Nutrición'],
@@ -391,7 +413,7 @@ const List<IntegrationItem> _allItems = [
     title: 'Google Fit',
     subtitle: 'Actividad y métricas en Android.',
     category: IntegrationCategory.healthSensors,
-    isAvailable: true,
+    isAvailable: false,
     iconData: Icons.favorite_rounded,
     description: 'Conecta Google Fit para sincronizar actividad y métricas de bienestar.',
     importableData: ['Pasos', 'Puntos cardio', 'Entrenamientos', 'Sueño'],
@@ -403,8 +425,13 @@ const List<IntegrationItem> _allItems = [
     category: IntegrationCategory.healthSensors,
     isAvailable: false,
     iconData: Icons.sensors_rounded,
-    description: 'Conecta bandas pectorales para capturar pulsaciones en tiempo real.',
-    importableData: ['Frecuencia cardíaca en vivo', 'Zonas de pulso', 'Promedio por sesión'],
+    description:
+        'Conecta bandas pectorales para capturar pulsaciones en tiempo real.',
+    importableData: [
+      'Frecuencia cardíaca en vivo',
+      'Zonas de pulso',
+      'Promedio por sesión',
+    ],
   ),
   IntegrationItem(
     id: IntegrationId.ring,
@@ -414,7 +441,11 @@ const List<IntegrationItem> _allItems = [
     isAvailable: false,
     iconData: Icons.radio_button_checked_rounded,
     description: 'Sincroniza sensores en formato anillo para métricas de pulso y recuperación.',
-    importableData: ['Pulso basal', 'Variabilidad cardíaca', 'Tendencias diarias'],
+    importableData: [
+      'Pulso basal',
+      'Variabilidad cardíaca',
+      'Tendencias diarias',
+    ],
   ),
   IntegrationItem(
     id: IntegrationId.oura,
@@ -423,7 +454,8 @@ const List<IntegrationItem> _allItems = [
     category: IntegrationCategory.healthSensors,
     isAvailable: false,
     iconData: Icons.nightlight_round,
-    description: 'Conecta Oura para métricas de descanso, readiness y recuperación.',
+    description:
+        'Conecta Oura para métricas de descanso, readiness y recuperación.',
     importableData: ['Sleep score', 'Readiness score', 'Frecuencia nocturna'],
   ),
   IntegrationItem(
@@ -434,7 +466,11 @@ const List<IntegrationItem> _allItems = [
     isAvailable: false,
     iconData: Icons.bedtime_rounded,
     description: 'Importa análisis de ciclos de sueño y consistencia nocturna.',
-    importableData: ['Duración de sueño', 'Calidad', 'Hora de dormir/despertar'],
+    importableData: [
+      'Duración de sueño',
+      'Calidad',
+      'Hora de dormir/despertar',
+    ],
   ),
   IntegrationItem(
     id: IntegrationId.openFoodFacts,
@@ -443,8 +479,13 @@ const List<IntegrationItem> _allItems = [
     category: IntegrationCategory.nutrition,
     isAvailable: false,
     iconData: Icons.qr_code_scanner_rounded,
-    description: 'Escanea productos y sincroniza datos nutricionales en tu registro.',
-    importableData: ['Macros por producto', 'Ingredientes', 'Información por código de barras'],
+    description:
+        'Escanea productos y sincroniza datos nutricionales en tu registro.',
+    importableData: [
+      'Macros por producto',
+      'Ingredientes',
+      'Información por código de barras',
+    ],
   ),
   IntegrationItem(
     id: IntegrationId.myFitnessPal,

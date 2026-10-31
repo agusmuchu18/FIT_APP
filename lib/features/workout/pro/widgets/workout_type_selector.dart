@@ -55,11 +55,7 @@ class _WorkoutTypeSelectorState extends State<WorkoutTypeSelector> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: chips,
-        ),
+        Wrap(spacing: 8, runSpacing: 8, children: chips),
         if (widget.selected == WorkoutType.custom)
           Padding(
             padding: const EdgeInsets.only(top: 12),

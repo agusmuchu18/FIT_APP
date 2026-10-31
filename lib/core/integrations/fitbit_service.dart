@@ -57,7 +57,8 @@ class IntegrationResult<T> {
   bool get isOk => failure == null;
   bool get isErr => failure != null;
 
-  static IntegrationResult<T> ok<T>(T data) => IntegrationResult<T>._(data: data);
+  static IntegrationResult<T> ok<T>(T data) =>
+      IntegrationResult<T>._(data: data);
   static IntegrationResult<T> err<T>(IntegrationFailure failure) =>
       IntegrationResult<T>._(failure: failure);
 
@@ -73,11 +74,9 @@ class IntegrationResult<T> {
 class FitbitService implements PlatformIntegrationService {
   FitbitService({
     MethodChannel? channel,
-    Duration timeout = const Duration(seconds: 8),
-    void Function(String message, Object error, StackTrace st)? onError,
-  })  : _channel = channel ?? const MethodChannel('fit_app/integrations/fitbit'),
-        _timeout = timeout,
-        _onError = onError;
+    this._timeout = const Duration(seconds: 8),
+    this._onError,
+  }) : _channel = channel ?? const MethodChannel('fit_app/integrations/fitbit');
 
   final MethodChannel _channel;
   final Duration _timeout;
@@ -105,7 +104,9 @@ class FitbitService implements PlatformIntegrationService {
 
   @override
   Future<List<ExternalFitnessSample>> fetchLatestSamples() async =>
-      (await fetchLatestSamplesResult()).unwrapOr(const <ExternalFitnessSample>[]);
+      (await fetchLatestSamplesResult()).unwrapOr(
+        const <ExternalFitnessSample>[],
+      );
 
   // ---------------------------------------------------------------------------
   // PRO API (use these in UI to differentiate errors)
@@ -136,12 +137,13 @@ class FitbitService implements PlatformIntegrationService {
       op: 'enableBackgroundSync',
       call: () async {
         await _channel.invokeMethod<void>('enableBackgroundSync');
-        return null;
+        return;
       },
     );
   }
 
-  Future<IntegrationResult<List<ExternalFitnessSample>>> fetchLatestSamplesResult() async {
+  Future<IntegrationResult<List<ExternalFitnessSample>>>
+  fetchLatestSamplesResult() async {
     return _guard<List<ExternalFitnessSample>>(
       op: 'fetchSamples',
       call: () async {
@@ -164,7 +166,10 @@ class FitbitService implements PlatformIntegrationService {
   // Error mapping (customize per operation if needed)
   // ---------------------------------------------------------------------------
 
-  IntegrationFailure _mapFetchSamplesPlatformException(PlatformException e, StackTrace st) {
+  IntegrationFailure _mapFetchSamplesPlatformException(
+    PlatformException e,
+    StackTrace st,
+  ) {
     // If your native side uses consistent codes, map them here.
     // Examples (adjust to your implementation):
     // - "UNAUTHORIZED" (token expired)
@@ -226,7 +231,8 @@ class FitbitService implements PlatformIntegrationService {
   Future<IntegrationResult<T>> _guard<T>({
     required String op,
     required Future<T> Function() call,
-    IntegrationFailure Function(PlatformException e, StackTrace st)? mapPlatformException,
+    IntegrationFailure Function(PlatformException e, StackTrace st)?
+    mapPlatformException,
   }) async {
     try {
       final value = await call().timeout(_timeout);
@@ -243,7 +249,10 @@ class FitbitService implements PlatformIntegrationService {
       );
     } on PlatformException catch (e, st) {
       _report('Fitbit $op platform error', e, st);
-      final failure = (mapPlatformException ?? _defaultPlatformExceptionMapper)(e, st);
+      final failure = (mapPlatformException ?? _defaultPlatformExceptionMapper)(
+        e,
+        st,
+      );
       return IntegrationResult.err<T>(failure);
     } on TimeoutException catch (e, st) {
       _report('Fitbit $op timeout', e, st);
@@ -268,7 +277,10 @@ class FitbitService implements PlatformIntegrationService {
     }
   }
 
-  IntegrationFailure _defaultPlatformExceptionMapper(PlatformException e, StackTrace st) {
+  IntegrationFailure _defaultPlatformExceptionMapper(
+    PlatformException e,
+    StackTrace st,
+  ) {
     final code = (e.code).toUpperCase();
 
     if (code.contains('UNAUTH')) {
@@ -348,7 +360,10 @@ class FitbitService implements PlatformIntegrationService {
       case 'steps':
         return ExternalFitnessSample.steps(
           externalId: externalId,
-          durationMinutes: _asInt(json['minutes'] ?? json['duration'], fallback: 0),
+          durationMinutes: _asInt(
+            json['minutes'] ?? json['duration'],
+            fallback: 0,
+          ),
           source: source,
           notes: notes,
           startTime: startTime,
@@ -360,7 +375,10 @@ class FitbitService implements PlatformIntegrationService {
         return ExternalFitnessSample.workout(
           externalId: externalId,
           title: _asString(json['title']) ?? 'Workout',
-          durationMinutes: _asInt(json['duration'] ?? json['minutes'], fallback: 0),
+          durationMinutes: _asInt(
+            json['duration'] ?? json['minutes'],
+            fallback: 0,
+          ),
           intensity: _asString(json['intensity']) ?? 'auto',
           source: source,
           notes: notes,
@@ -434,7 +452,7 @@ class FitbitService implements PlatformIntegrationService {
 
   void _report(String message, Object error, StackTrace st) {
     if (_onError != null) {
-      _onError!(message, error, st);
+      _onError(message, error, st);
       return;
     }
     dev.log(message, name: 'FitbitService', error: error, stackTrace: st);

@@ -1,7 +1,9 @@
 import 'package:intl/intl.dart';
 
 class NutritionFormatters {
-  static final NumberFormat _thousandFormat = NumberFormat.decimalPattern('es_AR');
+  static final NumberFormat _thousandFormat = NumberFormat.decimalPattern(
+    'es_AR',
+  );
 
   static String formatNumberCompact(int value) {
     final abs = value.abs();

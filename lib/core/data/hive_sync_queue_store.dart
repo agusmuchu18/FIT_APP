@@ -1,6 +1,7 @@
 import 'package:hive/hive.dart';
 
 import 'remote_sync_service.dart';
+import 'account_storage_scope.dart';
 
 class HiveSyncQueueStore implements SyncQueueStore {
   HiveSyncQueueStore._(this._box);
@@ -9,8 +10,13 @@ class HiveSyncQueueStore implements SyncQueueStore {
 
   final Box<Map> _box;
 
-  static Future<HiveSyncQueueStore> create() async {
-    final box = await Hive.openBox<Map>(_boxName);
+  static Future<HiveSyncQueueStore> create({String? scope}) async {
+    final box = await Hive.openBox<Map>(
+      AccountStorageScope.boxName(
+        _boxName,
+        scope ?? AccountStorageScope.current,
+      ),
+    );
     return HiveSyncQueueStore._(box);
   }
 

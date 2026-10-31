@@ -7,7 +7,8 @@ import 'platform_integration_service.dart';
 /// HealthKit implementation using a [MethodChannel].
 class HealthKitService implements PlatformIntegrationService {
   HealthKitService({MethodChannel? channel})
-      : _channel = channel ?? const MethodChannel('fit_app/integrations/healthkit');
+    : _channel =
+          channel ?? const MethodChannel('fit_app/integrations/healthkit');
 
   final MethodChannel _channel;
 
@@ -33,7 +34,9 @@ class HealthKitService implements PlatformIntegrationService {
 
   @override
   Future<List<ExternalFitnessSample>> fetchLatestSamples() async {
-    final raw = await _channel.invokeListMethod<Map<dynamic, dynamic>>('fetchSamples');
+    final raw = await _channel.invokeListMethod<Map<dynamic, dynamic>>(
+      'fetchSamples',
+    );
     final samples = raw ?? [];
     return samples.map(_mapSample).toList();
   }

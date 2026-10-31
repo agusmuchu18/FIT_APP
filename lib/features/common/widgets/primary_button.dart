@@ -19,10 +19,7 @@ class PrimaryButton extends StatelessWidget {
     final child = icon == null
         ? Text(
             label,
-            style: const TextStyle(
-              fontWeight: FontWeight.w600,
-              fontSize: 16,
-            ),
+            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
           )
         : Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -51,7 +48,7 @@ class PrimaryButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(32),
           ),
           textStyle: const TextStyle(fontFamily: 'Inter'),
-          shadowColor: AppColors.accentSecondary.withOpacity(0.35),
+          shadowColor: AppColors.accentSecondary.withValues(alpha: 0.35),
           elevation: 2,
         ),
         onPressed: onPressed,

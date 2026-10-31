@@ -1,154 +1,374 @@
+import '../workout/presentation/widgets/workout_report_widgets.dart';
+import '../workout/presentation/widgets/workout_units_host.dart';
+import '../workout/presentation/workout_insights_screen.dart';
+import '../workout/presentation/workout_profile_summary.dart';
+import '../workout/domain/training_units.dart';
+import '../workout/data/workout_repository.dart';
+import '../workout/presentation/workout_records_panel.dart';
+
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
 import '../common/theme/app_colors.dart';
 import 'profile_controller.dart';
+import 'body_measurements_screen.dart';
 import 'profile_settings_screen.dart';
 import 'profile_social_models.dart';
 import 'widgets/profile_social_widgets.dart';
 
-class ProfileSocialScreen extends StatelessWidget {
-  const ProfileSocialScreen({super.key});
+class ProfileSocialScreen extends StatefulWidget {
+  static List<ProfileProgressPhoto> get _photos =>
+      _ProfileSocialScreenState._photos;
+  const ProfileSocialScreen({
+    super.key,
+    this.repository,
+    this.now,
+    this.photos,
+    this.active = true,
+  });
+  final WorkoutRepository? repository;
+  final DateTime? now;
+  final List<ProfileProgressPhoto>? photos;
+  final bool active;
+  @override
+  State<ProfileSocialScreen> createState() => _ProfileSocialScreenState();
+}
 
-  static final List<ProfileProgressPhoto> _photos = [
-    const ProfileProgressPhoto(id: 'p1', url: 'https://picsum.photos/300/420?1', dateLabel: '10 Mar 2026'),
-    const ProfileProgressPhoto(id: 'p2', url: 'https://picsum.photos/300/420?2', dateLabel: '18 Mar 2026'),
-    const ProfileProgressPhoto(id: 'p3', url: 'https://picsum.photos/300/420?3', dateLabel: '27 Mar 2026'),
-    const ProfileProgressPhoto(id: 'p4', url: 'https://picsum.photos/300/420?4', dateLabel: '03 Abr 2026'),
-    const ProfileProgressPhoto(id: 'p5', url: 'https://picsum.photos/300/420?5', dateLabel: '11 Abr 2026'),
-    const ProfileProgressPhoto(id: 'p6', url: 'https://picsum.photos/300/420?6', dateLabel: '19 Abr 2026'),
-  ];
+class _ProfileSocialScreenState extends State<ProfileSocialScreen> {
+  late WorkoutRepository _repository;
+  WorkoutProfileSummary? _training;
+  var _loading = true;
+  bool _failed = false;
+  var _generation = 0;
+  var _needsRefresh = true;
+  DateTime? _loadedDay;
+  @override
+  void initState() {
+    super.initState();
+    _repository = widget.repository ?? WorkoutRepository();
+    _repository.historyRevision.addListener(_loadTraining);
+    _loadTraining();
+  }
 
-  static const List<ProfileStatItem> _heroStats = [
-    ProfileStatItem(label: 'Entrenos', value: '148'),
-    ProfileStatItem(label: 'Racha', value: '12', unit: 'días'),
-    ProfileStatItem(label: 'Peso', value: '77.8', unit: 'kg'),
-    ProfileStatItem(label: 'Último PR', value: '120', unit: 'kg'),
-  ];
+  @override
+  void didUpdateWidget(covariant ProfileSocialScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.repository != widget.repository) {
+      _generation++;
+      _training = null;
+      _loading = true;
+      _failed = false;
+      _loadedDay = null;
+      _repository.historyRevision.removeListener(_loadTraining);
+      _repository = widget.repository ?? WorkoutRepository();
+      _repository.historyRevision.addListener(_loadTraining);
+      _loadTraining();
+    } else if (oldWidget.now != widget.now) {
+      _loadTraining();
+    } else if (!oldWidget.active &&
+        widget.active &&
+        (_needsRefresh ||
+            _failed ||
+            !DateUtils.isSameDay(_loadedDay, widget.now ?? DateTime.now()))) {
+      _loadTraining();
+    } else if (oldWidget.active && !widget.active && _loading) {
+      _generation++;
+      _needsRefresh = true;
+    }
+  }
 
-  static const List<ProfileStatItem> _metrics = [
-    ProfileStatItem(label: 'Adherencia semanal', value: '92', unit: '%'),
-    ProfileStatItem(label: 'Volumen promedio', value: '14.2', unit: 't/sem'),
-    ProfileStatItem(label: 'Descanso medio', value: '7.6', unit: 'h'),
-    ProfileStatItem(label: 'Recuperación', value: 'Óptima'),
-  ];
+  @override
+  void dispose() {
+    _generation++;
+    _repository.historyRevision.removeListener(_loadTraining);
+    super.dispose();
+  }
 
-  static const List<ProfilePRItem> _prs = [
-    ProfilePRItem(exercise: 'Sentadilla', value: '140 kg', detail: '5 reps · Hace 4 días', icon: Icons.fitness_center_rounded),
-    ProfilePRItem(exercise: 'Press banca', value: '105 kg', detail: '3 reps · Hace 1 semana', icon: Icons.sports_gymnastics_rounded),
-    ProfilePRItem(exercise: 'Peso muerto', value: '180 kg', detail: '2 reps · Hace 9 días', icon: Icons.bolt_rounded),
-  ];
+  Future<void> _loadTraining() async {
+    if (!widget.active) {
+      _needsRefresh = true;
+      return;
+    }
+    _needsRefresh = false;
+    final generation = ++_generation;
+    setState(() {
+      _loading = true;
+      _failed = false;
+      _training = null;
+    });
+    try {
+      final index = await _repository.performanceIndex();
+      if (!mounted ||
+          generation != _generation ||
+          !_repository.isCurrentScope) {
+        return;
+      }
+      setState(() {
+        _training = WorkoutProfileSummary.fromIndex(index, now: widget.now);
+        _loadedDay = DateUtils.dateOnly(widget.now ?? DateTime.now());
+        _loading = false;
+      });
+    } catch (_) {
+      if (mounted && generation == _generation && _repository.isCurrentScope) {
+        setState(() {
+          _failed = true;
+          _loading = false;
+        });
+      }
+    }
+  }
+
+  List<ProfileStatItem> get _heroStats {
+    final data = _training,
+        empty = _loading ? '…' : '—',
+        units = WorkoutUnits.of(context),
+        mark = data?.latestRecord;
+    return [
+      ProfileStatItem(
+        label: 'Entrenos',
+        value: data == null ? empty : '${data.allSessions}',
+      ),
+      ProfileStatItem(
+        label: 'Series (30d)',
+        value: data == null ? empty : '${data.recent.sets}',
+      ),
+      ProfileStatItem(
+        label: 'Días (30d)',
+        value: data == null ? empty : '${data.recent.sessionsByDay.length}',
+      ),
+      ProfileStatItem(
+        label: 'Última marca',
+        value: mark == null
+            ? data == null
+                  ? empty
+                  : '—'
+            : TrainingUnits.number(units.metricValue(mark.unit, mark.value)),
+        unit: mark == null ? null : units.metricUnit(mark.unit),
+      ),
+    ];
+  }
+
+  List<ProfileStatItem> get _metrics {
+    final stats = _training?.recent,
+        units = WorkoutUnits.of(context),
+        empty = _loading ? '…' : '—';
+    return [
+      ProfileStatItem(
+        label: 'Frecuencia (30d)',
+        value: stats == null
+            ? empty
+            : TrainingUnits.number(stats.weeklyFrequency),
+        unit: stats == null ? null : 'sesiones/sem',
+      ),
+      ProfileStatItem(
+        label: 'Volumen externo (30d)',
+        value: stats == null
+            ? empty
+            : TrainingUnits.number(units.weight.fromKg(stats.volume)),
+        unit: stats == null ? null : '${units.weight.label}·rep',
+      ),
+      ProfileStatItem(
+        label: 'Tiempo registrado (30d)',
+        value: stats == null
+            ? empty
+            : stats.knownDurations == 0
+            ? 'Sin registro'
+            : workoutDuration(Duration(seconds: stats.durationSeconds)),
+      ),
+      ProfileStatItem(
+        label: 'Duración media (30d)',
+        value: stats == null
+            ? empty
+            : stats.averageDurationSeconds == null
+            ? 'Sin registro comparable'
+            : workoutDuration(
+                Duration(seconds: stats.averageDurationSeconds!.round()),
+              ),
+      ),
+    ];
+  }
+
+  void _openTrainingInsights() => Navigator.of(context).push(
+    MaterialPageRoute<void>(
+      builder: (_) =>
+          WorkoutInsightsScreen(repository: _repository, now: widget.now),
+    ),
+  );
+
+  static const List<ProfileProgressPhoto> _photos = [];
 
   @override
   Widget build(BuildContext context) {
+    final compact =
+        MediaQuery.sizeOf(context).width < 360 ||
+        MediaQuery.textScalerOf(context).scale(1) > 1.3;
+    final tabHeight = MediaQuery.textScalerOf(context).scale(20) + 32;
     return DefaultTabController(
       length: 3,
       child: Scaffold(
         backgroundColor: AppColors.background,
-        body: CustomScrollView(
-          slivers: [
-            SliverAppBar(
-              pinned: true,
-              expandedHeight: 410,
-              backgroundColor: AppColors.background,
-              actions: [
-                IconButton(
-                  onPressed: () => Navigator.of(context).pushNamed('/settings'),
-                  icon: const Icon(Icons.settings_rounded),
-                ),
-              ],
-              flexibleSpace: FlexibleSpaceBar(
-                background: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    Container(
-                      decoration: const BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [Color(0xCC4A6BFF), Color(0x995D43FF), Color(0x3336D0B4), AppColors.background],
-                          stops: [0, 0.35, 0.7, 1],
-                        ),
-                      ),
-                    ),
-                    BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-                      child: Container(color: Colors.black.withOpacity(0.16)),
-                    ),
-                    SafeArea(
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 26, 20, 8),
-                        child: ValueListenableBuilder<String>(
-                          valueListenable: ProfileController.instance.displayName,
-                          builder: (context, name, _) {
-                            return ValueListenableBuilder(
-                              valueListenable: ProfileController.instance.avatarBytes,
-                              builder: (context, avatar, __) {
-                                return ProfileHero(
-                                  displayName: name,
-                                  username: '@fit_user',
-                                  subtitle: 'En definición',
-                                  avatarProvider: avatar == null ? null : MemoryImage(avatar),
-                                  stats: _heroStats,
-                                  onAvatarTap: () => Navigator.of(context).push(_avatarViewerRoute(context, avatar == null ? null : MemoryImage(avatar))),
-                                );
-                              },
-                            );
-                          },
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              bottom: PreferredSize(
-                preferredSize: const Size.fromHeight(52),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: AppColors.background.withOpacity(0.92),
-                    border: Border(top: BorderSide(color: Colors.white.withOpacity(0.05))),
-                  ),
-                  child: const TabBar(
-                    indicatorSize: TabBarIndicatorSize.tab,
-                    labelColor: AppColors.textPrimary,
-                    unselectedLabelColor: AppColors.textMuted,
-                    indicator: BoxDecoration(
-                      color: AppColors.card,
-                      borderRadius: BorderRadius.all(Radius.circular(24)),
-                    ),
-                    tabs: [
-                      Tab(text: 'Fotos'),
-                      Tab(text: 'Estadísticas'),
-                      Tab(text: 'PRs'),
-                    ],
-                  ),
-                ),
-              ),
+        appBar: AppBar(
+          backgroundColor: AppColors.background,
+          actions: [
+            IconButton(
+              onPressed: () => Navigator.of(context).pushNamed('/settings'),
+              icon: const Icon(Icons.settings_rounded),
             ),
-            SliverFillRemaining(
-              child: TabBarView(
-                children: [
-                  _PhotosTab(photos: _photos),
-                  _StatsTab(metrics: _metrics),
-                  _PRsTab(items: _prs),
-                ],
+          ],
+        ),
+        body: NestedScrollView(
+          headerSliverBuilder: (context, innerScrolled) => [
+            SliverToBoxAdapter(child: _profileHeader(context, intrinsic: true)),
+            SliverOverlapAbsorber(
+              handle: NestedScrollView.sliverOverlapAbsorberHandleFor(context),
+              sliver: SliverPersistentHeader(
+                pinned: true,
+                delegate: _ProfileTrainingTabs(
+                  height: tabHeight,
+                  child: _profileTabs(context, compact, tabHeight),
+                ),
               ),
             ),
           ],
+          // The pinned tab strip is opaque and has a known, text-scaled extent.
+          // Reserve its absorbed overlap outside each lazy inner list so content
+          // never paints underneath the controls, including after header collapse.
+          body: Padding(
+            padding: EdgeInsets.only(top: tabHeight),
+            child: TabBarView(
+              children: [
+                _PhotosTab(photos: widget.photos ?? _photos),
+                _StatsTab(
+                  metrics: _metrics,
+                  training: _training,
+                  loading: _loading,
+                  failed: _failed,
+                  onRetry: _loadTraining,
+                  onOpen: _openTrainingInsights,
+                ),
+                WorkoutRecordsPanel(
+                  key: ObjectKey(_repository),
+                  repository: _repository,
+                  primary: true,
+                  active: widget.active,
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
   }
 
-  Route<void> _avatarViewerRoute(BuildContext context, ImageProvider<Object>? avatarProvider) {
+  Widget _profileHeader(BuildContext context, {required bool intrinsic}) =>
+      ClipRect(
+        child: Stack(
+          fit: intrinsic ? StackFit.loose : StackFit.expand,
+          children: [
+            Positioned.fill(
+              child: Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Color(0xCC4A6BFF),
+                      Color(0x995D43FF),
+                      Color(0x3336D0B4),
+                      AppColors.background,
+                    ],
+                    stops: [0, 0.35, 0.7, 1],
+                  ),
+                ),
+              ),
+            ),
+            Positioned.fill(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+                child: Container(color: Colors.black.withValues(alpha: 0.16)),
+              ),
+            ),
+            SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 26, 20, 8),
+                child: ValueListenableBuilder<String>(
+                  valueListenable: ProfileController.instance.displayName,
+                  builder: (context, name, _) {
+                    return ValueListenableBuilder(
+                      valueListenable: ProfileController.instance.avatarBytes,
+                      builder: (context, avatar, _) {
+                        return ProfileHero(
+                          displayName: name,
+                          username: 'Perfil privado',
+                          subtitle: 'Solo vos',
+                          avatarProvider: avatar == null
+                              ? null
+                              : MemoryImage(avatar),
+                          stats: _heroStats,
+                          onAvatarTap: () => Navigator.of(context).push(
+                            _avatarViewerRoute(
+                              context,
+                              avatar == null ? null : MemoryImage(avatar),
+                            ),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+  Widget _profileTabs(BuildContext context, bool compact, double tabHeight) =>
+      SizedBox(
+        height: tabHeight,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          decoration: BoxDecoration(
+            color: AppColors.background,
+            border: Border(
+              top: BorderSide(color: Colors.white.withValues(alpha: 0.05)),
+            ),
+          ),
+          child: TabBar(
+            isScrollable: compact,
+            tabAlignment: compact ? TabAlignment.start : TabAlignment.fill,
+            indicatorSize: TabBarIndicatorSize.tab,
+            labelColor: AppColors.textPrimary,
+            unselectedLabelColor: AppColors.textMuted,
+            indicator: BoxDecoration(
+              color: AppColors.card,
+              borderRadius: BorderRadius.all(Radius.circular(24)),
+            ),
+            tabs: [
+              Tab(text: 'Fotos'),
+              Tab(text: 'Estadísticas'),
+              Tab(text: 'PRs'),
+            ],
+          ),
+        ),
+      );
+
+  Route<void> _avatarViewerRoute(
+    BuildContext context,
+    ImageProvider<Object>? avatarProvider,
+  ) {
     return PageRouteBuilder(
       transitionDuration: const Duration(milliseconds: 280),
       reverseTransitionDuration: const Duration(milliseconds: 260),
-      pageBuilder: (_, __, ___) => ProfileAvatarFullscreen(imageProvider: avatarProvider),
+      pageBuilder: (_, _, _) =>
+          ProfileAvatarFullscreen(imageProvider: avatarProvider),
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
-        return FadeTransition(opacity: CurvedAnimation(parent: animation, curve: Curves.easeOutCubic), child: child);
+        return FadeTransition(
+          opacity: CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutCubic,
+          ),
+          child: child,
+        );
       },
     );
   }
@@ -163,7 +383,8 @@ class _PhotosTab extends StatefulWidget {
   State<_PhotosTab> createState() => _PhotosTabState();
 }
 
-class _PhotosTabState extends State<_PhotosTab> with AutomaticKeepAliveClientMixin {
+class _PhotosTabState extends State<_PhotosTab>
+    with AutomaticKeepAliveClientMixin {
   @override
   bool get wantKeepAlive => true;
 
@@ -194,74 +415,147 @@ class _PhotosTabState extends State<_PhotosTab> with AutomaticKeepAliveClientMix
 }
 
 class _StatsTab extends StatefulWidget {
-  const _StatsTab({required this.metrics});
-
+  const _StatsTab({
+    required this.metrics,
+    required this.training,
+    required this.loading,
+    required this.failed,
+    required this.onRetry,
+    required this.onOpen,
+  });
   final List<ProfileStatItem> metrics;
-
+  final WorkoutProfileSummary? training;
+  final bool loading, failed;
+  final VoidCallback onRetry, onOpen;
   @override
   State<_StatsTab> createState() => _StatsTabState();
 }
 
-class _StatsTabState extends State<_StatsTab> with AutomaticKeepAliveClientMixin {
+class _StatsTabState extends State<_StatsTab>
+    with AutomaticKeepAliveClientMixin {
   @override
   bool get wantKeepAlive => true;
-
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 18, 16, 24),
-      child: GridView.builder(
-        itemCount: widget.metrics.length,
-        physics: const NeverScrollableScrollPhysics(),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          mainAxisSpacing: 12,
-          crossAxisSpacing: 12,
-          childAspectRatio: 1.35,
+    if (widget.loading) {
+      return const Center(
+        child: CircularProgressIndicator(
+          semanticsLabel: 'Cargando estadísticas de entrenamiento',
         ),
-        itemBuilder: (context, index) {
-          final metric = widget.metrics[index];
-          return MinimalMetricCard(item: metric);
-        },
-      ),
-    );
-  }
-}
-
-class _PRsTab extends StatefulWidget {
-  const _PRsTab({required this.items});
-
-  final List<ProfilePRItem> items;
-
-  @override
-  State<_PRsTab> createState() => _PRsTabState();
-}
-
-class _PRsTabState extends State<_PRsTab> with AutomaticKeepAliveClientMixin {
-  @override
-  bool get wantKeepAlive => true;
-
-  @override
-  Widget build(BuildContext context) {
-    super.build(context);
-    return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(16, 18, 16, 24),
-      itemCount: widget.items.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
-      itemBuilder: (context, index) => ProfilePRCard(item: widget.items[index]),
+      );
+    }
+    if (widget.failed) {
+      return ListView(
+        primary: true,
+        padding: const EdgeInsets.all(24),
+        children: [
+          const Text(
+            'No se pudieron leer tus entrenamientos. Tus registros se conservan. Reintentá para ver tus estadísticas.',
+          ),
+          TextButton(
+            onPressed: widget.onRetry,
+            child: const Text('Reintentar estadísticas'),
+          ),
+        ],
+      );
+    }
+    final stats = widget.training!.recent, mark = widget.training!.latestRecord;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns =
+            constraints.maxWidth < 360 ||
+                MediaQuery.textScalerOf(context).scale(1) > 1.3
+            ? 1
+            : 2;
+        final width =
+            (constraints.maxWidth - 32 - 12 * (columns - 1)) / columns;
+        return ListView(
+          primary: true,
+          padding: const EdgeInsets.fromLTRB(16, 18, 16, 24),
+          children: [
+            OutlinedButton.icon(
+              icon: const Icon(Icons.straighten_outlined),
+              label: const Text('Medidas corporales privadas'),
+              onPressed: () => Navigator.push<void>(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const BodyMeasurementsScreen(),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Tu entrenamiento · últimos 30 días',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 12),
+            if (stats.sessions.isEmpty)
+              const Text('Sin sesiones guardadas en los últimos 30 días.'),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                for (final item in widget.metrics)
+                  SizedBox(
+                    width: width,
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minHeight:
+                            120 * MediaQuery.textScalerOf(context).scale(1),
+                      ),
+                      child: MinimalMetricCard(item: item),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Duración disponible en ${stats.knownDurations} de ${stats.sessions.length} sesiones. La media requiere el mismo criterio de medición.',
+            ),
+            const Text(
+              'El tiempo sin pausas incluye los descansos. No estima tiempo efectivo de ejercicio ni recuperación.',
+            ),
+            if (stats.ambiguousVolumes > 0)
+              const Text(
+                'Volumen conocido parcial: las cargas antiguas sin clasificación se excluyen.',
+              ),
+            if (stats.unknownCompletion)
+              const Text(
+                'Incluye registros antiguos sin confirmación de finalización; no certifican récords.',
+              ),
+            const SizedBox(height: 16),
+            Text(
+              mark == null
+                  ? 'Todavía no hay marcas verificables.'
+                  : 'Última marca vigente: ${mark.exerciseName} · ${mark.kind.label} · ${mark.loadLabel} · ${workoutDate(mark.date)}${mark.estimated ? '. Es una estimación, no un máximo medido.' : ''}',
+            ),
+            const SizedBox(height: 16),
+            OutlinedButton.icon(
+              onPressed: widget.onOpen,
+              icon: const Icon(Icons.insights_outlined),
+              label: const Text('Ver análisis de entrenamiento'),
+            ),
+          ],
+        );
+      },
     );
   }
 }
 
 class ProgressPhotoViewerScreen extends StatefulWidget {
-  const ProgressPhotoViewerScreen({super.key, required this.photos, required this.initialIndex});
+  const ProgressPhotoViewerScreen({
+    super.key,
+    required this.photos,
+    required this.initialIndex,
+  });
 
   final List<ProfileProgressPhoto> photos;
   final int initialIndex;
 
   @override
-  State<ProgressPhotoViewerScreen> createState() => _ProgressPhotoViewerScreenState();
+  State<ProgressPhotoViewerScreen> createState() =>
+      _ProgressPhotoViewerScreenState();
 }
 
 class _ProgressPhotoViewerScreenState extends State<ProgressPhotoViewerScreen> {
@@ -319,9 +613,12 @@ class _ProgressPhotoViewerScreenState extends State<ProgressPhotoViewerScreen> {
             bottom: 30,
             child: Center(
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.44),
+                  color: Colors.black.withValues(alpha: 0.44),
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
@@ -330,7 +627,7 @@ class _ProgressPhotoViewerScreenState extends State<ProgressPhotoViewerScreen> {
                 ),
               ),
             ),
-          )
+          ),
         ],
       ),
     );
@@ -343,7 +640,8 @@ class ProfileAvatarFullscreen extends StatefulWidget {
   final ImageProvider<Object>? imageProvider;
 
   @override
-  State<ProfileAvatarFullscreen> createState() => _ProfileAvatarFullscreenState();
+  State<ProfileAvatarFullscreen> createState() =>
+      _ProfileAvatarFullscreenState();
 }
 
 class _ProfileAvatarFullscreenState extends State<ProfileAvatarFullscreen> {
@@ -361,7 +659,8 @@ class _ProfileAvatarFullscreenState extends State<ProfileAvatarFullscreen> {
           setState(() => _dragOffset += details.primaryDelta ?? 0);
         },
         onVerticalDragEnd: (details) {
-          if (_dragOffset.abs() > 120 || (details.primaryVelocity ?? 0).abs() > 900) {
+          if (_dragOffset.abs() > 120 ||
+              (details.primaryVelocity ?? 0).abs() > 900) {
             Navigator.of(context).pop();
             return;
           }
@@ -370,7 +669,7 @@ class _ProfileAvatarFullscreenState extends State<ProfileAvatarFullscreen> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 280),
           curve: Curves.easeOutCubic,
-          color: Colors.black.withOpacity(opacity),
+          color: Colors.black.withValues(alpha: opacity),
           child: Stack(
             fit: StackFit.expand,
             children: [
@@ -388,9 +687,18 @@ class _ProfileAvatarFullscreenState extends State<ProfileAvatarFullscreen> {
                                 width: 320,
                                 height: 320,
                                 color: AppColors.card,
-                                child: const Icon(Icons.person, size: 140, color: AppColors.textMuted),
+                                child: const Icon(
+                                  Icons.person,
+                                  size: 140,
+                                  color: AppColors.textMuted,
+                                ),
                               )
-                            : Image(image: widget.imageProvider!, width: 340, height: 340, fit: BoxFit.cover),
+                            : Image(
+                                image: widget.imageProvider!,
+                                width: 340,
+                                height: 340,
+                                fit: BoxFit.cover,
+                              ),
                       ),
                     ),
                   ),
@@ -400,9 +708,19 @@ class _ProfileAvatarFullscreenState extends State<ProfileAvatarFullscreen> {
                 top: MediaQuery.paddingOf(context).top + 12,
                 right: 16,
                 child: TextButton.icon(
-                  onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ProfileSettingsScreen())),
-                  icon: const Icon(Icons.photo_camera_outlined, color: Colors.white),
-                  label: const Text('Cambiar foto', style: TextStyle(color: Colors.white)),
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const ProfileSettingsScreen(),
+                    ),
+                  ),
+                  icon: const Icon(
+                    Icons.photo_camera_outlined,
+                    color: Colors.white,
+                  ),
+                  label: const Text(
+                    'Cambiar foto',
+                    style: TextStyle(color: Colors.white),
+                  ),
                 ),
               ),
             ],
@@ -412,7 +730,6 @@ class _ProfileAvatarFullscreenState extends State<ProfileAvatarFullscreen> {
     );
   }
 }
-
 
 class ProgressPhotosGalleryScreen extends StatelessWidget {
   const ProgressPhotosGalleryScreen({super.key});
@@ -450,8 +767,30 @@ class ProfileActivityHistoryScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Historial de actividad')),
       body: const Center(
-        child: Text('Próximamente: historial completo de actividad', style: TextStyle(color: AppColors.textMuted)),
+        child: Text(
+          'Próximamente: historial completo de actividad',
+          style: TextStyle(color: AppColors.textMuted),
+        ),
       ),
     );
   }
+}
+
+class _ProfileTrainingTabs extends SliverPersistentHeaderDelegate {
+  _ProfileTrainingTabs({required this.height, required this.child});
+  final double height;
+  final Widget child;
+  @override
+  double get minExtent => height;
+  @override
+  double get maxExtent => height;
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) => child;
+  @override
+  bool shouldRebuild(covariant _ProfileTrainingTabs old) =>
+      height != old.height || child != old.child;
 }

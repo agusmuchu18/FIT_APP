@@ -33,13 +33,16 @@ class HabitGallerySheet extends StatefulWidget {
 
 class _HabitGallerySheetState extends State<HabitGallerySheet>
     with TickerProviderStateMixin {
-  late final TabController _tabController =
-      TabController(length: habitCategories.length, vsync: this);
+  late final TabController _tabController = TabController(
+    length: habitCategories.length,
+    vsync: this,
+  );
   final TextEditingController _searchController = TextEditingController();
 
   final Set<String> selectedTemplateIds = <String>{};
   late final Set<String> alreadyAddedTemplateIds;
-  final Map<String, HabitCreationConfig> _configs = <String, HabitCreationConfig>{};
+  final Map<String, HabitCreationConfig> _configs =
+      <String, HabitCreationConfig>{};
   late final Map<String, int> _popularityByTemplate;
 
   HabitSearchScope _searchScope = HabitSearchScope.currentCategory;
@@ -113,77 +116,89 @@ class _HabitGallerySheetState extends State<HabitGallerySheet>
       context: context,
       backgroundColor: Colors.transparent,
       builder: (context) {
-        return StatefulBuilder(builder: (context, setModal) {
-          return Padding(
-            padding: EdgeInsets.only(
-              left: 20,
-              right: 20,
-              top: 20,
-              bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-            ),
-            child: Container(
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                color: AppColors.card,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.white.withOpacity(0.06)),
+        return StatefulBuilder(
+          builder: (context, setModal) {
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 20,
+                right: 20,
+                top: 20,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 20,
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Configurar ${template.name}',
-                    style: const TextStyle(
-                      color: AppColors.textPrimary,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 18,
-                    ),
+              child: Container(
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: AppColors.card,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.06),
                   ),
-                  const SizedBox(height: 12),
-                  SegmentedButton<HabitFrequency>(
-                    segments: HabitFrequency.values
-                        .map((f) => ButtonSegment(value: f, label: Text(f.label)))
-                        .toList(),
-                    selected: {current.frequency},
-                    onSelectionChanged: (selection) =>
-                        setModal(() => current = current.copyWith(frequency: selection.first)),
-                  ),
-                  const SizedBox(height: 8),
-                  SwitchListTile.adaptive(
-                    contentPadding: EdgeInsets.zero,
-                    value: current.isCountable,
-                    title: const Text(
-                      'Contable',
-                      style: TextStyle(
-                        color: AppColors.textSecondary,
-                        fontWeight: FontWeight.w600,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Configurar ${template.name}',
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 18,
                       ),
                     ),
-                    onChanged: (value) =>
-                        setModal(() => current = current.copyWith(isCountable: value)),
-                  ),
-                  if (current.isCountable)
-                    TextField(
-                      keyboardType: TextInputType.number,
-                      style: const TextStyle(color: AppColors.textPrimary),
-                      decoration: const InputDecoration(
-                        labelText: 'Meta diaria',
-                        labelStyle: TextStyle(color: AppColors.textMuted),
+                    const SizedBox(height: 12),
+                    SegmentedButton<HabitFrequency>(
+                      segments: HabitFrequency.values
+                          .map(
+                            (f) =>
+                                ButtonSegment(value: f, label: Text(f.label)),
+                          )
+                          .toList(),
+                      selected: {current.frequency},
+                      onSelectionChanged: (selection) => setModal(
+                        () => current = current.copyWith(
+                          frequency: selection.first,
+                        ),
                       ),
-                      onChanged: (value) =>
-                          current = current.copyWith(targetCount: int.tryParse(value) ?? 1),
                     ),
-                  const SizedBox(height: 12),
-                  PrimaryButton(
-                    label: 'Guardar configuración',
-                    onPressed: () => Navigator.pop(context, current),
-                  ),
-                ],
+                    const SizedBox(height: 8),
+                    SwitchListTile.adaptive(
+                      contentPadding: EdgeInsets.zero,
+                      value: current.isCountable,
+                      title: const Text(
+                        'Contable',
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      onChanged: (value) => setModal(
+                        () => current = current.copyWith(isCountable: value),
+                      ),
+                    ),
+                    if (current.isCountable)
+                      TextField(
+                        keyboardType: TextInputType.number,
+                        style: const TextStyle(color: AppColors.textPrimary),
+                        decoration: const InputDecoration(
+                          labelText: 'Meta diaria',
+                          labelStyle: TextStyle(color: AppColors.textMuted),
+                        ),
+                        onChanged: (value) => current = current.copyWith(
+                          targetCount: int.tryParse(value) ?? 1,
+                        ),
+                      ),
+                    const SizedBox(height: 12),
+                    PrimaryButton(
+                      label: 'Guardar configuración',
+                      onPressed: () => Navigator.pop(context, current),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          );
-        });
+            );
+          },
+        );
       },
     );
 
@@ -200,13 +215,19 @@ class _HabitGallerySheetState extends State<HabitGallerySheet>
     if (selectedTemplateIds.isEmpty) return;
 
     final selectedTemplates = kHabitTemplates
-        .where((template) =>
-            selectedTemplateIds.contains(template.templateId) &&
-            !alreadyAddedTemplateIds.contains(template.templateId))
+        .where(
+          (template) =>
+              selectedTemplateIds.contains(template.templateId) &&
+              !alreadyAddedTemplateIds.contains(template.templateId),
+        )
         .toList(growable: false);
 
     final toAdd = selectedTemplates
-        .map((template) => template.buildHabit(overrideConfig: _configs[template.templateId]))
+        .map(
+          (template) => template.buildHabit(
+            overrideConfig: _configs[template.templateId],
+          ),
+        )
         .toList(growable: false);
 
     if (toAdd.isEmpty) {
@@ -225,7 +246,9 @@ class _HabitGallerySheetState extends State<HabitGallerySheet>
     setState(() {
       for (final template in selectedTemplates) {
         _popularityByTemplate[template.templateId] =
-            (_popularityByTemplate[template.templateId] ?? template.popularityScore) + 1;
+            (_popularityByTemplate[template.templateId] ??
+                template.popularityScore) +
+            1;
       }
     });
 
@@ -244,6 +267,7 @@ class _HabitGallerySheetState extends State<HabitGallerySheet>
       MaterialPageRoute(builder: (_) => const HabitCreateScreen()),
     );
     if (created == null) return;
+    if (!mounted) return;
     final messenger = ScaffoldMessenger.of(context);
     await widget.onAddHabit(created);
     if (!mounted) return;
@@ -273,7 +297,9 @@ class _HabitGallerySheetState extends State<HabitGallerySheet>
                   ),
                   const Spacer(),
                   IconButton.filled(
-                    onPressed: selectedTemplateIds.isEmpty ? null : _confirmBatch,
+                    onPressed: selectedTemplateIds.isEmpty
+                        ? null
+                        : _confirmBatch,
                     icon: const Icon(Icons.check_rounded),
                   ),
                 ],
@@ -294,7 +320,10 @@ class _HabitGallerySheetState extends State<HabitGallerySheet>
                 decoration: InputDecoration(
                   hintText: 'Buscar hábitos...',
                   hintStyle: const TextStyle(color: AppColors.textMuted),
-                  prefixIcon: const Icon(Icons.search_rounded, color: AppColors.textMuted),
+                  prefixIcon: const Icon(
+                    Icons.search_rounded,
+                    color: AppColors.textMuted,
+                  ),
                   suffixIcon: _searchController.text.isEmpty
                       ? null
                       : IconButton(
@@ -303,17 +332,24 @@ class _HabitGallerySheetState extends State<HabitGallerySheet>
                             _onSearchChanged('');
                             setState(() {});
                           },
-                          icon: const Icon(Icons.close_rounded, color: AppColors.textMuted),
+                          icon: const Icon(
+                            Icons.close_rounded,
+                            color: AppColors.textMuted,
+                          ),
                         ),
                   filled: true,
-                  fillColor: Colors.white.withOpacity(0.05),
+                  fillColor: Colors.white.withValues(alpha: 0.05),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide(color: Colors.white.withOpacity(0.08)),
+                    borderSide: BorderSide(
+                      color: Colors.white.withValues(alpha: 0.08),
+                    ),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide(color: Colors.white.withOpacity(0.08)),
+                    borderSide: BorderSide(
+                      color: Colors.white.withValues(alpha: 0.08),
+                    ),
                   ),
                 ),
               ),
@@ -331,8 +367,9 @@ class _HabitGallerySheetState extends State<HabitGallerySheet>
                   ChoiceChip(
                     label: const Text('En todas'),
                     selected: _searchScope == HabitSearchScope.allCategories,
-                    onSelected: (_) =>
-                        setState(() => _searchScope = HabitSearchScope.allCategories),
+                    onSelected: (_) => setState(
+                      () => _searchScope = HabitSearchScope.allCategories,
+                    ),
                   ),
                   const Spacer(),
                   DropdownButton<HabitSortMode>(
@@ -365,168 +402,224 @@ class _HabitGallerySheetState extends State<HabitGallerySheet>
                 child: TabBarView(
                   controller: _tabController,
                   physics: const BouncingScrollPhysics(),
-                  children: habitCategories.map((category) {
-                    final templates = buildGalleryTemplates(
-                      allTemplates: kHabitTemplates,
-                      currentCategory: category,
-                      searchScope: _searchScope,
-                      query: _query,
-                      sortMode: _sortMode,
-                      user: widget.userContext,
-                      popularityByTemplate: _popularityByTemplate,
-                      alreadyAddedTemplateIds: alreadyAddedTemplateIds,
-                    );
-
-                    if (templates.isEmpty) {
-                      return const Center(
-                        child: Text(
-                          'No se encontraron hábitos',
-                          style: TextStyle(color: AppColors.textMuted),
-                        ),
-                      );
-                    }
-
-                    return AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 200),
-                      transitionBuilder: (child, animation) {
-                        final slide = Tween<Offset>(
-                          begin: const Offset(0, 0.02),
-                          end: Offset.zero,
-                        ).animate(animation);
-                        return FadeTransition(
-                          opacity: animation,
-                          child: SlideTransition(position: slide, child: child),
+                  children: habitCategories
+                      .map((category) {
+                        final templates = buildGalleryTemplates(
+                          allTemplates: kHabitTemplates,
+                          currentCategory: category,
+                          searchScope: _searchScope,
+                          query: _query,
+                          sortMode: _sortMode,
+                          user: widget.userContext,
+                          popularityByTemplate: _popularityByTemplate,
+                          alreadyAddedTemplateIds: alreadyAddedTemplateIds,
                         );
-                      },
-                      child: ListView.separated(
-                        key: ValueKey('$category-$_query-$_searchScope-$_sortMode'),
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        physics: const BouncingScrollPhysics(),
-                        itemCount: templates.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 8),
-                        itemBuilder: (context, index) {
-                          final template = templates[index];
-                          final selected = selectedTemplateIds.contains(template.templateId);
-                          final isAdded = _isAlreadyAdded(template);
-                          final color = Color(template.colorArgb);
-                          return InkWell(
-                            borderRadius: BorderRadius.circular(16),
-                            onTap: () => _toggleSelect(template),
-                            onLongPress: () => _configureTemplate(template),
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 180),
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                              decoration: BoxDecoration(
-                                color: selected ? color.withOpacity(0.12) : Colors.transparent,
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                  color: selected
-                                      ? color.withOpacity(0.8)
-                                      : Colors.white.withOpacity(0.05),
-                                ),
+
+                        if (templates.isEmpty) {
+                          return const Center(
+                            child: Text(
+                              'No se encontraron hábitos',
+                              style: TextStyle(color: AppColors.textMuted),
+                            ),
+                          );
+                        }
+
+                        return AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 200),
+                          transitionBuilder: (child, animation) {
+                            final slide = Tween<Offset>(
+                              begin: const Offset(0, 0.02),
+                              end: Offset.zero,
+                            ).animate(animation);
+                            return FadeTransition(
+                              opacity: animation,
+                              child: SlideTransition(
+                                position: slide,
+                                child: child,
                               ),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 42,
-                                    height: 42,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: color.withOpacity(0.2),
-                                    ),
-                                    child: Icon(iconForKey(template.iconKey), color: color),
+                            );
+                          },
+                          child: ListView.separated(
+                            key: ValueKey(
+                              '$category-$_query-$_searchScope-$_sortMode',
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            physics: const BouncingScrollPhysics(),
+                            itemCount: templates.length,
+                            separatorBuilder: (_, _) =>
+                                const SizedBox(height: 8),
+                            itemBuilder: (context, index) {
+                              final template = templates[index];
+                              final selected = selectedTemplateIds.contains(
+                                template.templateId,
+                              );
+                              final isAdded = _isAlreadyAdded(template);
+                              final color = Color(template.colorArgb);
+                              return InkWell(
+                                borderRadius: BorderRadius.circular(16),
+                                onTap: () => _toggleSelect(template),
+                                onLongPress: () => _configureTemplate(template),
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 180),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 10,
                                   ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Row(
-                                          children: [
-                                            Expanded(
-                                              child: Text(
-                                                template.name,
-                                                style: const TextStyle(
-                                                  color: AppColors.textPrimary,
-                                                  fontWeight: FontWeight.w700,
-                                                ),
-                                              ),
+                                  decoration: BoxDecoration(
+                                    color: selected
+                                        ? color.withValues(alpha: 0.12)
+                                        : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: selected
+                                          ? color.withValues(alpha: 0.8)
+                                          : Colors.white.withValues(
+                                              alpha: 0.05,
                                             ),
-                                            if (_sortMode == HabitSortMode.relevance && index < 3)
-                                              Container(
-                                                padding: const EdgeInsets.symmetric(
-                                                    horizontal: 8, vertical: 2),
-                                                decoration: BoxDecoration(
-                                                  borderRadius: BorderRadius.circular(20),
-                                                  color: Colors.white.withOpacity(0.08),
-                                                ),
-                                                child: const Text(
-                                                  'Recomendado',
-                                                  style: TextStyle(
-                                                    color: AppColors.textSecondary,
-                                                    fontSize: 10,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        width: 42,
+                                        height: 42,
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: color.withValues(alpha: 0.2),
+                                        ),
+                                        child: Icon(
+                                          iconForKey(template.iconKey),
+                                          color: color,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Row(
+                                              children: [
+                                                Expanded(
+                                                  child: Text(
+                                                    template.name,
+                                                    style: const TextStyle(
+                                                      color:
+                                                          AppColors.textPrimary,
+                                                      fontWeight:
+                                                          FontWeight.w700,
+                                                    ),
                                                   ),
                                                 ),
+                                                if (_sortMode ==
+                                                        HabitSortMode
+                                                            .relevance &&
+                                                    index < 3)
+                                                  Container(
+                                                    padding:
+                                                        const EdgeInsets.symmetric(
+                                                          horizontal: 8,
+                                                          vertical: 2,
+                                                        ),
+                                                    decoration: BoxDecoration(
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            20,
+                                                          ),
+                                                      color: Colors.white
+                                                          .withValues(
+                                                            alpha: 0.08,
+                                                          ),
+                                                    ),
+                                                    child: const Text(
+                                                      'Recomendado',
+                                                      style: TextStyle(
+                                                        color: AppColors
+                                                            .textSecondary,
+                                                        fontSize: 10,
+                                                      ),
+                                                    ),
+                                                  ),
+                                              ],
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              template.subtitle,
+                                              style: const TextStyle(
+                                                color: AppColors.textMuted,
+                                                fontSize: 12,
                                               ),
+                                            ),
                                           ],
                                         ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          template.subtitle,
-                                          style: const TextStyle(
-                                            color: AppColors.textMuted,
-                                            fontSize: 12,
-                                          ),
+                                      ),
+                                      IconButton(
+                                        tooltip: 'Configurar',
+                                        onPressed: isAdded
+                                            ? _showAlreadyAddedSnackBar
+                                            : () =>
+                                                  _configureTemplate(template),
+                                        icon: Icon(
+                                          Icons.more_horiz_rounded,
+                                          color: isAdded
+                                              ? AppColors.textMuted.withValues(
+                                                  alpha: 0.45,
+                                                )
+                                              : AppColors.textMuted,
                                         ),
-                                      ],
-                                    ),
-                                  ),
-                                  IconButton(
-                                    tooltip: 'Configurar',
-                                    onPressed: isAdded
-                                        ? _showAlreadyAddedSnackBar
-                                        : () => _configureTemplate(template),
-                                    icon: Icon(
-                                      Icons.more_horiz_rounded,
-                                      color: isAdded
-                                          ? AppColors.textMuted.withOpacity(0.45)
-                                          : AppColors.textMuted,
-                                    ),
-                                  ),
-                                  Container(
-                                    width: 42,
-                                    height: 42,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: isAdded
-                                          ? Colors.white.withOpacity(0.07)
-                                          : selected
+                                      ),
+                                      Container(
+                                        width: 42,
+                                        height: 42,
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: isAdded
+                                              ? Colors.white.withValues(
+                                                  alpha: 0.07,
+                                                )
+                                              : selected
                                               ? color
                                               : Colors.transparent,
-                                      border: Border.all(
-                                        color: isAdded
-                                            ? Colors.white.withOpacity(0.24)
-                                            : selected
+                                          border: Border.all(
+                                            color: isAdded
+                                                ? Colors.white.withValues(
+                                                    alpha: 0.24,
+                                                  )
+                                                : selected
                                                 ? color
-                                                : color.withOpacity(0.8),
-                                      ),
-                                    ),
-                                    child: IconButton(
-                                      tooltip: isAdded ? 'Agregado' : 'Seleccionar',
-                                      onPressed: () => _toggleSelect(template),
-                                      icon: AnimatedSwitcher(
-                                        duration: const Duration(milliseconds: 220),
-                                        switchInCurve: Curves.easeOut,
-                                        switchOutCurve: Curves.easeOut,
-                                        transitionBuilder: (child, animation) =>
-                                            ScaleTransition(scale: animation, child: child),
-                                        child: isAdded
-                                            ? Icon(
-                                                Icons.check_rounded,
-                                                key: const ValueKey('added'),
-                                                color: Colors.white.withOpacity(0.45),
-                                              )
-                                            : selected
+                                                : color.withValues(alpha: 0.8),
+                                          ),
+                                        ),
+                                        child: IconButton(
+                                          tooltip: isAdded
+                                              ? 'Agregado'
+                                              : 'Seleccionar',
+                                          onPressed: () =>
+                                              _toggleSelect(template),
+                                          icon: AnimatedSwitcher(
+                                            duration: const Duration(
+                                              milliseconds: 220,
+                                            ),
+                                            switchInCurve: Curves.easeOut,
+                                            switchOutCurve: Curves.easeOut,
+                                            transitionBuilder:
+                                                (child, animation) =>
+                                                    ScaleTransition(
+                                                      scale: animation,
+                                                      child: child,
+                                                    ),
+                                            child: isAdded
+                                                ? Icon(
+                                                    Icons.check_rounded,
+                                                    key: const ValueKey(
+                                                      'added',
+                                                    ),
+                                                    color: Colors.white
+                                                        .withValues(
+                                                          alpha: 0.45,
+                                                        ),
+                                                  )
+                                                : selected
                                                 ? const Icon(
                                                     Icons.check_rounded,
                                                     key: ValueKey('check'),
@@ -537,17 +630,18 @@ class _HabitGallerySheetState extends State<HabitGallerySheet>
                                                     key: const ValueKey('add'),
                                                     color: color,
                                                   ),
+                                          ),
+                                        ),
                                       ),
-                                    ),
+                                    ],
                                   ),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    );
-                  }).toList(growable: false),
+                                ),
+                              );
+                            },
+                          ),
+                        );
+                      })
+                      .toList(growable: false),
                 ),
               ),
               Container(

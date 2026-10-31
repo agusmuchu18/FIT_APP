@@ -8,7 +8,8 @@ class AppearanceSettingsScreen extends StatefulWidget {
   const AppearanceSettingsScreen({super.key});
 
   @override
-  State<AppearanceSettingsScreen> createState() => _AppearanceSettingsScreenState();
+  State<AppearanceSettingsScreen> createState() =>
+      _AppearanceSettingsScreenState();
 }
 
 class _AppearanceSettingsScreenState extends State<AppearanceSettingsScreen> {
@@ -36,21 +37,36 @@ class _AppearanceSettingsScreenState extends State<AppearanceSettingsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Appearance')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: AppAppearanceMode.values
-            .map((mode) => Container(
+      body: RadioGroup<AppAppearanceMode>(
+        groupValue: _selected,
+        onChanged: (value) {
+          if (value != null) _select(value);
+        },
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: AppAppearanceMode.values
+              .map(
+                (mode) => Container(
                   margin: const EdgeInsets.only(bottom: 10),
-                  decoration: BoxDecoration(color: AppColors.card, borderRadius: BorderRadius.circular(18), border: Border.all(color: Colors.white.withOpacity(0.06))),
+                  decoration: BoxDecoration(
+                    color: AppColors.card,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.06),
+                    ),
+                  ),
                   child: RadioListTile<AppAppearanceMode>(
                     value: mode,
-                    groupValue: _selected,
-                    onChanged: (value) => value == null ? null : _select(value),
                     title: Text(_appearanceLabel(mode)),
-                    subtitle: Text(_appearanceHint(mode), style: const TextStyle(color: AppColors.textMuted)),
+                    subtitle: Text(
+                      _appearanceHint(mode),
+                      style: const TextStyle(color: AppColors.textMuted),
+                    ),
                   ),
-                ))
-            .toList(),
+                ),
+              )
+              .toList(),
+        ),
       ),
     );
   }
@@ -86,10 +102,12 @@ class NotificationsSettingsScreen extends StatefulWidget {
   const NotificationsSettingsScreen({super.key});
 
   @override
-  State<NotificationsSettingsScreen> createState() => _NotificationsSettingsScreenState();
+  State<NotificationsSettingsScreen> createState() =>
+      _NotificationsSettingsScreenState();
 }
 
-class _NotificationsSettingsScreenState extends State<NotificationsSettingsScreen> {
+class _NotificationsSettingsScreenState
+    extends State<NotificationsSettingsScreen> {
   AppPreferences? _prefs;
 
   @override
@@ -104,35 +122,62 @@ class _NotificationsSettingsScreenState extends State<NotificationsSettingsScree
   @override
   Widget build(BuildContext context) {
     final prefs = _prefs;
-    if (prefs == null) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    if (prefs == null) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
     return Scaffold(
       appBar: AppBar(title: const Text('Notificaciones')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          SettingsCardGroup(children: [
-            SwitchListTile(
-              value: prefs.notificationsEnabled,
-              onChanged: (v) async {
-                await prefs.setNotificationsEnabled(v);
-                setState(() {});
-              },
-              title: const Text('Activar/Desactivar'),
-            ),
-            const Divider(height: 1),
-            _buildSwitch('Recordatorios de hábitos', prefs.habitReminders, (v) => prefs.setHabitReminders(v)),
-            _buildSwitch('Recordatorios de entrenamiento', prefs.workoutReminders, (v) => prefs.setWorkoutReminders(v)),
-            _buildSwitch('Recordatorios de sueño', prefs.sleepReminders, (v) => prefs.setSleepReminders(v)),
-            _buildSwitch('Resumen diario', prefs.dailySummary, (v) => prefs.setDailySummary(v)),
-          ]),
+          SettingsCardGroup(
+            children: [
+              SwitchListTile(
+                value: prefs.notificationsEnabled,
+                onChanged: (v) async {
+                  await prefs.setNotificationsEnabled(v);
+                  setState(() {});
+                },
+                title: const Text('Activar/Desactivar'),
+              ),
+              const Divider(height: 1),
+              _buildSwitch(
+                'Recordatorios de hábitos',
+                prefs.habitReminders,
+                (v) => prefs.setHabitReminders(v),
+              ),
+              _buildSwitch(
+                'Recordatorios de entrenamiento',
+                prefs.workoutReminders,
+                (v) => prefs.setWorkoutReminders(v),
+              ),
+              _buildSwitch(
+                'Recordatorios de sueño',
+                prefs.sleepReminders,
+                (v) => prefs.setSleepReminders(v),
+              ),
+              _buildSwitch(
+                'Resumen diario',
+                prefs.dailySummary,
+                (v) => prefs.setDailySummary(v),
+              ),
+            ],
+          ),
           const SizedBox(height: 12),
-          const Text('Se activarán cuando el módulo de push notifications esté habilitado.', style: TextStyle(color: AppColors.textMuted)),
+          const Text(
+            'Se activarán cuando el módulo de push notifications esté habilitado.',
+            style: TextStyle(color: AppColors.textMuted),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildSwitch(String title, bool value, Future<void> Function(bool) onSave) {
+  Widget _buildSwitch(
+    String title,
+    bool value,
+    Future<void> Function(bool) onSave,
+  ) {
     return SwitchListTile(
       value: value,
       onChanged: (v) async {
@@ -166,43 +211,63 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final prefs = _prefs;
-    if (prefs == null) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    if (prefs == null) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
     return Scaffold(
       appBar: AppBar(title: const Text('Privacidad y seguridad')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          SettingsCardGroup(children: [
-            SwitchListTile(
-              value: prefs.biometricLock,
-              onChanged: (v) async {
-                await prefs.setBiometricLock(v);
-                setState(() {});
-              },
-              title: const Text('Bloqueo con biometría / PIN'),
-              subtitle: const Text('Se habilitará cuando se configure seguridad del dispositivo.'),
-            ),
-            const Divider(height: 1),
-            ListTile(
-              title: const Text('Visibilidad de fotos de progreso'),
-              subtitle: Text(prefs.progressVisibility == ProgressVisibilityMode.privateOnly ? 'Solo yo' : 'Compartir en grupos'),
-              trailing: DropdownButton<ProgressVisibilityMode>(
-                value: prefs.progressVisibility,
-                underline: const SizedBox.shrink(),
-                onChanged: (value) async {
-                  if (value == null) return;
-                  await prefs.setProgressVisibility(value);
+          SettingsCardGroup(
+            children: [
+              SwitchListTile(
+                value: prefs.biometricLock,
+                onChanged: (v) async {
+                  await prefs.setBiometricLock(v);
                   setState(() {});
                 },
-                items: const [
-                  DropdownMenuItem(value: ProgressVisibilityMode.privateOnly, child: Text('Solo yo')),
-                  DropdownMenuItem(value: ProgressVisibilityMode.groupShared, child: Text('Grupos')),
-                ],
+                title: const Text('Bloqueo con biometría / PIN'),
+                subtitle: const Text(
+                  'Se habilitará cuando se configure seguridad del dispositivo.',
+                ),
               ),
-            ),
-            const Divider(height: 1),
-            SettingsTile(icon: Icons.folder_shared_rounded, title: 'Gestión de datos', onTap: () => Navigator.of(context).pushNamed('/settings/data')),
-          ]),
+              const Divider(height: 1),
+              ListTile(
+                title: const Text('Visibilidad de fotos de progreso'),
+                subtitle: Text(
+                  prefs.progressVisibility == ProgressVisibilityMode.privateOnly
+                      ? 'Solo yo'
+                      : 'Compartir en grupos',
+                ),
+                trailing: DropdownButton<ProgressVisibilityMode>(
+                  value: prefs.progressVisibility,
+                  underline: const SizedBox.shrink(),
+                  onChanged: (value) async {
+                    if (value == null) return;
+                    await prefs.setProgressVisibility(value);
+                    setState(() {});
+                  },
+                  items: const [
+                    DropdownMenuItem(
+                      value: ProgressVisibilityMode.privateOnly,
+                      child: Text('Solo yo'),
+                    ),
+                    DropdownMenuItem(
+                      value: ProgressVisibilityMode.groupShared,
+                      child: Text('Grupos'),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              SettingsTile(
+                icon: Icons.folder_shared_rounded,
+                title: 'Gestión de datos',
+                onTap: () => Navigator.of(context).pushNamed('/settings/data'),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -219,27 +284,44 @@ class DataSettingsScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          SettingsCardGroup(children: [
-            SettingsTile(icon: Icons.upload_file_rounded, title: 'Exportar datos (JSON/CSV)', subtitle: 'TODO: conectar con módulo de exportación', onTap: () {}),
-            const Divider(height: 1),
-            SettingsTile(
-              icon: Icons.download_rounded,
-              title: 'Importar datos',
-              subtitle: 'Puede reemplazar información existente',
-              onTap: () async {
-                await showDialog<void>(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    title: const Text('Importar datos'),
-                    content: const Text('Próximamente: podrás importar backups de tu cuenta.'),
-                    actions: [TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Entendido'))],
-                  ),
-                );
-              },
-            ),
-          ]),
+          SettingsCardGroup(
+            children: [
+              SettingsTile(
+                icon: Icons.upload_file_rounded,
+                title: 'Exportar datos (JSON/CSV)',
+                subtitle: 'TODO: conectar con módulo de exportación',
+                onTap: () {},
+              ),
+              const Divider(height: 1),
+              SettingsTile(
+                icon: Icons.download_rounded,
+                title: 'Importar datos',
+                subtitle: 'Puede reemplazar información existente',
+                onTap: () async {
+                  await showDialog<void>(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('Importar datos'),
+                      content: const Text(
+                        'Próximamente: podrás importar backups de tu cuenta.',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Text('Entendido'),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
           const SizedBox(height: 12),
-          const Text('Nota de privacidad: tus exportaciones pueden contener datos sensibles.', style: TextStyle(color: AppColors.textMuted)),
+          const Text(
+            'Nota de privacidad: tus exportaciones pueden contener datos sensibles.',
+            style: TextStyle(color: AppColors.textMuted),
+          ),
         ],
       ),
     );
@@ -250,10 +332,12 @@ class AccessibilitySettingsScreen extends StatefulWidget {
   const AccessibilitySettingsScreen({super.key});
 
   @override
-  State<AccessibilitySettingsScreen> createState() => _AccessibilitySettingsScreenState();
+  State<AccessibilitySettingsScreen> createState() =>
+      _AccessibilitySettingsScreenState();
 }
 
-class _AccessibilitySettingsScreenState extends State<AccessibilitySettingsScreen> {
+class _AccessibilitySettingsScreenState
+    extends State<AccessibilitySettingsScreen> {
   AppPreferences? _prefs;
 
   @override
@@ -268,49 +352,62 @@ class _AccessibilitySettingsScreenState extends State<AccessibilitySettingsScree
   @override
   Widget build(BuildContext context) {
     final prefs = _prefs;
-    if (prefs == null) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    if (prefs == null) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
     return Scaffold(
       appBar: AppBar(title: const Text('Accesibilidad')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          SettingsCardGroup(children: [
-            ListTile(
-              leading: const Icon(Icons.text_fields_rounded),
-              title: const Text('Tamaño de texto'),
-              trailing: DropdownButton<AppTextSize>(
-                value: prefs.textSize,
-                underline: const SizedBox.shrink(),
-                onChanged: (value) async {
-                  if (value == null) return;
-                  await prefs.setTextSize(value);
+          SettingsCardGroup(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.text_fields_rounded),
+                title: const Text('Tamaño de texto'),
+                trailing: DropdownButton<AppTextSize>(
+                  value: prefs.textSize,
+                  underline: const SizedBox.shrink(),
+                  onChanged: (value) async {
+                    if (value == null) return;
+                    await prefs.setTextSize(value);
+                    setState(() {});
+                  },
+                  items: const [
+                    DropdownMenuItem(
+                      value: AppTextSize.small,
+                      child: Text('Pequeño'),
+                    ),
+                    DropdownMenuItem(
+                      value: AppTextSize.normal,
+                      child: Text('Normal'),
+                    ),
+                    DropdownMenuItem(
+                      value: AppTextSize.large,
+                      child: Text('Grande'),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              SwitchListTile(
+                value: prefs.highContrast,
+                onChanged: (v) async {
+                  await prefs.setHighContrast(v);
                   setState(() {});
                 },
-                items: const [
-                  DropdownMenuItem(value: AppTextSize.small, child: Text('Pequeño')),
-                  DropdownMenuItem(value: AppTextSize.normal, child: Text('Normal')),
-                  DropdownMenuItem(value: AppTextSize.large, child: Text('Grande')),
-                ],
+                title: const Text('Alto contraste'),
               ),
-            ),
-            const Divider(height: 1),
-            SwitchListTile(
-              value: prefs.highContrast,
-              onChanged: (v) async {
-                await prefs.setHighContrast(v);
-                setState(() {});
-              },
-              title: const Text('Alto contraste'),
-            ),
-            SwitchListTile(
-              value: prefs.reduceAnimations,
-              onChanged: (v) async {
-                await prefs.setReduceAnimations(v);
-                setState(() {});
-              },
-              title: const Text('Reducir animaciones'),
-            ),
-          ]),
+              SwitchListTile(
+                value: prefs.reduceAnimations,
+                onChanged: (v) async {
+                  await prefs.setReduceAnimations(v);
+                  setState(() {});
+                },
+                title: const Text('Reducir animaciones'),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -327,15 +424,29 @@ class AboutSettingsScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: const [
-          SettingsCardGroup(children: [
-            SettingsTile(icon: Icons.info_outline_rounded, title: 'Acerca de FIT_APP'),
-            Divider(height: 1),
-            SettingsTile(icon: Icons.description_outlined, title: 'Términos y condiciones'),
-            Divider(height: 1),
-            SettingsTile(icon: Icons.privacy_tip_outlined, title: 'Política de privacidad'),
-          ]),
+          SettingsCardGroup(
+            children: [
+              SettingsTile(
+                icon: Icons.info_outline_rounded,
+                title: 'Acerca de FIT_APP',
+              ),
+              Divider(height: 1),
+              SettingsTile(
+                icon: Icons.description_outlined,
+                title: 'Términos y condiciones',
+              ),
+              Divider(height: 1),
+              SettingsTile(
+                icon: Icons.privacy_tip_outlined,
+                title: 'Política de privacidad',
+              ),
+            ],
+          ),
           SizedBox(height: 12),
-          Text('Versión de la app: ver pubspec.yaml', style: TextStyle(color: AppColors.textMuted)),
+          Text(
+            'Versión de la app: ver pubspec.yaml',
+            style: TextStyle(color: AppColors.textMuted),
+          ),
         ],
       ),
     );

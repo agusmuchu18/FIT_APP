@@ -1,36 +1,50 @@
-﻿name: CI
+name: CI
 
 on:
   workflow_dispatch:
   pull_request:
   push:
-    branches: [ master ]
+    branches: [master]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
+    timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@v2.23.0
         with:
+          flutter-version: 3.47.2
           channel: stable
           cache: true
 
       - name: Pub get
-        run: flutter pub get
+        run: flutter pub get --enforce-lockfile
+
+      - name: Format
+        run: dart format --output=none --set-exit-if-changed lib test
 
       - name: Analyze
-        run: flutter analyze
+        run: flutter analyze --fatal-infos
 
       - name: Tests (includes goldens)
         run: flutter test
 
       - name: Upload golden diffs (only if failure)
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: golden-diffs
+          if-no-files-found: ignore
+          retention-days: 7
           path: |
             **/failures/**/*.png
             **/failures/**/*.txt

@@ -40,7 +40,10 @@ void main() {
 
     final score = habitTemplateScore(
       template: template,
-      user: const HabitUserContext(goalType: GoalType.maintenance, trains: false),
+      user: const HabitUserContext(
+        goalType: GoalType.maintenance,
+        trains: false,
+      ),
       popularityScore: 0,
     );
     expect(score, lessThan(0));
@@ -58,6 +61,9 @@ void main() {
       alreadyAddedTemplateIds: const {},
     );
 
-    expect(results, everyElement(predicate<HabitTemplate>((t) => t.category == 'Salud')));
+    expect(
+      results,
+      everyElement(predicate<HabitTemplate>((t) => t.category == 'Salud')),
+    );
   });
 }

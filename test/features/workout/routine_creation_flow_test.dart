@@ -1,3 +1,5 @@
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:fit_app/features/workout/domain/sport_activity.dart';
 import 'package:fit_app/features/workout/pro/data/exercise_definition.dart';
 import 'package:fit_app/features/workout/pro/models/workout_models.dart';
 import 'package:fit_app/features/workout/training_home/routine_draft_controller.dart';
@@ -15,6 +17,10 @@ class FakeRoutinesRepository extends RoutinesRepository {
     required WorkoutType workoutType,
     required List<WorkoutExercise> exercises,
     String? activityName,
+    String? folderId,
+    String? routineId,
+    String? notes,
+    FootballMode? footballMode,
   }) async {
     saveCalled = true;
     return WorkoutTemplate(
@@ -23,70 +29,74 @@ class FakeRoutinesRepository extends RoutinesRepository {
       type: workoutType,
       exercises: exercises,
       activityName: activityName,
+      folderId: folderId,
       origin: TemplateOrigin.user,
     );
   }
 }
 
 void main() {
-  testWidgets('con selección, Listo navega a review y Guardar llama saveRoutine', (tester) async {
-    final controller = ExercisePickerController(
-      exercises: [
-        ExerciseDefinition(
-          id: 'curl_biceps',
-          name: 'Curl clásico',
-          aliases: const ['biceps curl'],
-          primaryMuscles: const ['bíceps'],
-          secondaryMuscles: const ['antebrazo'],
-          equipment: 'dumbbell',
-          movementPattern: 'pull',
-          defaultMeasurement: 'reps',
-          loadType: LoadType.external,
-        )
-      ],
-    );
-    final repo = FakeRoutinesRepository();
-    final draft = RoutineDraftController();
+  setUp(() => SharedPreferences.setMockInitialValues({}));
+  testWidgets(
+    'con selección, Listo navega a review y Guardar llama saveRoutine',
+    (tester) async {
+      final controller = ExercisePickerController(
+        exercises: [
+          ExerciseDefinition(
+            id: 'curl_biceps',
+            name: 'Curl clásico',
+            aliases: const ['biceps curl'],
+            primaryMuscles: const ['bíceps'],
+            secondaryMuscles: const ['antebrazo'],
+            equipment: 'dumbbell',
+            movementPattern: 'pull',
+            defaultMeasurement: 'reps',
+            loadType: LoadType.external,
+          ),
+        ],
+      );
+      final repo = FakeRoutinesRepository();
+      final draft = RoutineDraftController();
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: Builder(
-            builder: (context) => ElevatedButton(
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => TemplateExercisePickerScreen(
-                    controller: controller,
-                    repository: repo,
-                    draftController: draft,
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => ElevatedButton(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => TemplateExercisePickerScreen(
+                      controller: controller,
+                      repository: repo,
+                      draftController: draft,
+                    ),
                   ),
                 ),
+                child: const Text('open'),
               ),
-              child: const Text('open'),
             ),
           ),
         ),
-      ),
-    );
+      );
 
-    await tester.tap(find.text('open'));
-    await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField).first, 'curl');
-    await tester.pump(const Duration(milliseconds: 260));
-    await tester.tap(find.text('Curl clásico'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(FilledButton, 'Agregar'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).first, 'curl');
+      await tester.pump(const Duration(milliseconds: 260));
+      await tester.tap(find.byTooltip('Agregar Curl clásico'));
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Listo'));
-    await tester.pumpAndSettle();
-    expect(find.text('Nueva rutina'), findsOneWidget);
+      await tester.tap(find.text('Listo'));
+      await tester.pumpAndSettle();
+      expect(find.text('Nueva rutina'), findsOneWidget);
 
-    await tester.enterText(find.byType(TextField).first, 'Upper A');
-    await tester.tap(find.text('Guardar'));
-    await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).first, 'Upper A');
+      await tester.pump();
+      await tester.tap(find.text('Guardar rutina'));
+      await tester.pumpAndSettle();
 
-    expect(repo.saveCalled, isTrue);
-    expect(find.text('Nueva rutina'), findsNothing);
-  });
+      expect(repo.saveCalled, isTrue);
+      expect(find.text('Nueva rutina'), findsNothing);
+    },
+  );
 }

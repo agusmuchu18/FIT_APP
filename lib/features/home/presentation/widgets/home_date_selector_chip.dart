@@ -27,20 +27,24 @@ class HomeDateSelectorChip extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(999),
-                border: Border.all(color: Colors.white.withOpacity(0.12)),
-                color: Colors.white.withOpacity(0.06),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+                color: Colors.white.withValues(alpha: 0.06),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.calendar_today_rounded, size: 16, color: Colors.white),
+                  const Icon(
+                    Icons.calendar_today_rounded,
+                    size: 16,
+                    color: Colors.white,
+                  ),
                   const SizedBox(width: 6),
                   Text(
                     text,
-                    style: Theme.of(context)
-                        .textTheme
-                        .labelMedium
-                        ?.copyWith(color: Colors.white, fontWeight: FontWeight.w700),
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ],
               ),

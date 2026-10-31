@@ -9,10 +9,7 @@ import 'widgets/activity_day_components.dart';
 import 'widgets/home_date_selector_chip.dart';
 
 class ActivityDayScreen extends StatefulWidget {
-  const ActivityDayScreen({
-    super.key,
-    required this.date,
-  });
+  const ActivityDayScreen({super.key, required this.date});
 
   final DateTime date;
 
@@ -74,11 +71,7 @@ class _ActivityDayScreenState extends State<ActivityDayScreen> {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF0B1220),
-              Color(0xFF0E1624),
-              Color(0xFF070B12),
-            ],
+            colors: [Color(0xFF0B1220), Color(0xFF0E1624), Color(0xFF070B12)],
           ),
         ),
         child: SafeArea(
@@ -86,10 +79,13 @@ class _ActivityDayScreenState extends State<ActivityDayScreen> {
             future: _dayFuture,
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator.adaptive());
+                return const Center(
+                  child: CircularProgressIndicator.adaptive(),
+                );
               }
 
-              final data = snapshot.data ?? _ActivityDayData.empty(_selectedDay);
+              final data =
+                  snapshot.data ?? _ActivityDayData.empty(_selectedDay);
               final summary = data.summary;
 
               return SingleChildScrollView(
@@ -107,7 +103,8 @@ class _ActivityDayScreenState extends State<ActivityDayScreen> {
                         Expanded(
                           child: Text(
                             'Actividad del día',
-                            style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                            style: Theme.of(context).textTheme.displaySmall
+                                ?.copyWith(
                                   color: Colors.white,
                                   fontWeight: FontWeight.w800,
                                   letterSpacing: -0.6,
@@ -124,9 +121,9 @@ class _ActivityDayScreenState extends State<ActivityDayScreen> {
                     Text(
                       'Tu día, de un vistazo.',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: AppColors.textMuted,
-                            fontWeight: FontWeight.w600,
-                          ),
+                        color: AppColors.textMuted,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     const SizedBox(height: 18),
                     ActivityModuleTile(
@@ -138,7 +135,8 @@ class _ActivityDayScreenState extends State<ActivityDayScreen> {
                       hasActivity: summary.workouts.isNotEmpty,
                       onTap: () => Navigator.of(context).push(
                         MaterialPageRoute(
-                          builder: (_) => WorkoutDayDetailScreen(date: _selectedDay),
+                          builder: (_) =>
+                              WorkoutDayDetailScreen(date: _selectedDay),
                         ),
                       ),
                     ),
@@ -147,12 +145,13 @@ class _ActivityDayScreenState extends State<ActivityDayScreen> {
                       module: ActivityModuleType.meal,
                       subtitle: summary.meals.isEmpty
                           ? 'Sin comidas cargadas'
-                          : '${summary.meals.length} comida(s) · ${summary.totalCalories} kcal',
+                          : '${summary.meals.length} comida(s) · ${summary.hasIncompleteEnergy ? '—' : summary.totalCalories} kcal',
                       count: summary.meals.length,
                       hasActivity: summary.meals.isNotEmpty,
                       onTap: () => Navigator.of(context).push(
                         MaterialPageRoute(
-                          builder: (_) => MealsDayDetailScreen(date: _selectedDay),
+                          builder: (_) =>
+                              MealsDayDetailScreen(date: _selectedDay),
                         ),
                       ),
                     ),
@@ -166,7 +165,8 @@ class _ActivityDayScreenState extends State<ActivityDayScreen> {
                       hasActivity: summary.sleepEntries.isNotEmpty,
                       onTap: () => Navigator.of(context).push(
                         MaterialPageRoute(
-                          builder: (_) => SleepDayDetailScreen(date: _selectedDay),
+                          builder: (_) =>
+                              SleepDayDetailScreen(date: _selectedDay),
                         ),
                       ),
                     ),
@@ -192,20 +192,25 @@ class _ActivityDayScreenState extends State<ActivityDayScreen> {
         TimelineEvent(
           module: ActivityModuleType.workout,
           description: '${workout.name} · ${workout.durationMinutes} min',
-          timeLabel: time.isNotEmpty ? time : fallbackTimeLabelForModule(ActivityModuleType.workout),
+          timeLabel: time.isNotEmpty
+              ? time
+              : fallbackTimeLabelForModule(ActivityModuleType.workout),
           orderDate: date,
         ),
       );
     }
 
     for (final meal in summary.meals) {
-      final date = parseEntryDate(meal.id);
+      final date = meal.recordedAt;
       final time = formatTimeLabel(date);
       events.add(
         TimelineEvent(
           module: ActivityModuleType.meal,
-          description: '${meal.title} · ${meal.calories} kcal',
-          timeLabel: time.isNotEmpty ? time : fallbackTimeLabelForModule(ActivityModuleType.meal),
+          description:
+              '${meal.title} · ${meal.unknownNutrients.contains('kcal') ? '—' : meal.energyKcal.round()} kcal',
+          timeLabel: time.isNotEmpty
+              ? time
+              : fallbackTimeLabelForModule(ActivityModuleType.meal),
           orderDate: date,
         ),
       );
@@ -216,12 +221,13 @@ class _ActivityDayScreenState extends State<ActivityDayScreen> {
       final time = sleep.wakeTime?.isNotEmpty == true
           ? sleep.wakeTime!
           : (formatTimeLabel(date).isNotEmpty
-              ? formatTimeLabel(date)
-              : fallbackTimeLabelForModule(ActivityModuleType.sleep));
+                ? formatTimeLabel(date)
+                : fallbackTimeLabelForModule(ActivityModuleType.sleep));
       events.add(
         TimelineEvent(
           module: ActivityModuleType.sleep,
-          description: 'Sueño ${sleep.quality.toLowerCase()} · ${compactNumber(sleep.hours)} h',
+          description:
+              'Sueño ${sleep.quality.toLowerCase()} · ${compactNumber(sleep.hours)} h',
           timeLabel: time,
           orderDate: date,
         ),
@@ -241,10 +247,7 @@ class _ActivityDayScreenState extends State<ActivityDayScreen> {
 }
 
 class _ActivityDayData {
-  const _ActivityDayData({
-    required this.summary,
-    required this.activeDays,
-  });
+  const _ActivityDayData({required this.summary, required this.activeDays});
 
   factory _ActivityDayData.empty(DateTime day) {
     return _ActivityDayData(

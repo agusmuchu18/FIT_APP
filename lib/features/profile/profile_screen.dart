@@ -32,7 +32,7 @@ class ProfileScreen extends StatelessWidget {
               decoration: BoxDecoration(
                 color: AppColors.card,
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.white.withOpacity(0.06)),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
               ),
               child: Row(
                 children: [
@@ -41,7 +41,7 @@ class ProfileScreen extends StatelessWidget {
                     builder: (context, bytes, _) {
                       return ValueListenableBuilder(
                         valueListenable: ProfileController.instance.displayName,
-                        builder: (context, name, __) {
+                        builder: (context, name, _) {
                           return ProfileAvatarWidget(
                             displayName: name,
                             avatarBytes: bytes,
@@ -78,9 +78,7 @@ class ProfileScreen extends StatelessWidget {
                               'Plan Premium activo',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: AppColors.textMuted,
-                              ),
+                              style: TextStyle(color: AppColors.textMuted),
                             ),
                           ],
                         );
@@ -102,14 +100,8 @@ class ProfileScreen extends StatelessWidget {
                 );
               },
             ),
-            _ProfileOption(
-              icon: Icons.flag_rounded,
-              label: 'Objetivos',
-            ),
-            _ProfileOption(
-              icon: Icons.straighten_rounded,
-              label: 'Unidades',
-            ),
+            _ProfileOption(icon: Icons.flag_rounded, label: 'Objetivos'),
+            _ProfileOption(icon: Icons.straighten_rounded, label: 'Unidades'),
             _ProfileOption(
               icon: Icons.logout_rounded,
               label: 'Cerrar sesión',
@@ -147,7 +139,7 @@ class _ProfileOption extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.card,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withOpacity(0.06)),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
         ),
         child: Row(
           children: [

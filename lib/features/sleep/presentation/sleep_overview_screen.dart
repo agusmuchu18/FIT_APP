@@ -74,13 +74,23 @@ class _SleepOverviewScreenState extends State<SleepOverviewScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.error_outline, color: AppColors.textSecondary),
+                      const Icon(
+                        Icons.error_outline,
+                        color: AppColors.textSecondary,
+                      ),
                       const SizedBox(height: 8),
-                      const Text('No se pudo cargar Sueño',
-                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+                      const Text(
+                        'No se pudo cargar Sueño',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                       const SizedBox(height: 6),
-                      const Text('Probá refrescar o volver a entrar.',
-                          style: TextStyle(color: AppColors.textMuted)),
+                      const Text(
+                        'Probá refrescar o volver a entrar.',
+                        style: TextStyle(color: AppColors.textMuted),
+                      ),
                       const SizedBox(height: 12),
                       FilledButton(
                         onPressed: _refresh,
@@ -93,9 +103,7 @@ class _SleepOverviewScreenState extends State<SleepOverviewScreen> {
             );
           }
 
-          final entries = data.entries
-              .where((e) => !e.deleted)
-              .toList()
+          final entries = data.entries.where((e) => !e.deleted).toList()
             ..sort((a, b) => sleepEntryDate(b).compareTo(sleepEntryDate(a)));
 
           final recent = entries.take(14).toList();
@@ -104,7 +112,7 @@ class _SleepOverviewScreenState extends State<SleepOverviewScreen> {
           final double avg7Days = lastSeven.isEmpty
               ? 0.0
               : lastSeven.map((e) => e.hours).reduce((a, b) => a + b) /
-                  lastSeven.length;
+                    lastSeven.length;
           final goal = data.prefs?.preferredSleep ?? 8.0;
 
           return RefreshIndicator(
@@ -113,10 +121,7 @@ class _SleepOverviewScreenState extends State<SleepOverviewScreen> {
               padding: const EdgeInsets.all(16),
               children: [
                 if (lastEntry != null)
-                  _LastNightCard(
-                    entry: lastEntry,
-                    avgHours: avg7Days,
-                  ),
+                  _LastNightCard(entry: lastEntry, avgHours: avg7Days),
                 const SizedBox(height: 16),
                 _TrendCard(entries: lastSeven),
                 const SizedBox(height: 16),
@@ -187,7 +192,10 @@ class _LastNightCard extends StatelessWidget {
                 ],
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: delta >= 0
                       ? const Color(0x1A34D27B)
@@ -266,14 +274,22 @@ class _TrendCard extends StatelessWidget {
                 borderData: FlBorderData(show: false),
                 gridData: FlGridData(show: false),
                 titlesData: FlTitlesData(
-                  leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  leftTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  topTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
                   bottomTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
                       getTitlesWidget: (value, meta) {
-                        final day = today.subtract(Duration(days: 6 - value.toInt()));
+                        final day = today.subtract(
+                          Duration(days: 6 - value.toInt()),
+                        );
                         const labels = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
                         return Text(
                           labels[day.weekday - 1],
@@ -308,14 +324,6 @@ class _ConsistencyCard extends StatelessWidget {
         .map((e) => parseHHmmToMinutes(e.wakeTime))
         .whereType<int>()
         .toList();
-    final midSleep = entries
-        .map((e) => computeMidSleepMinutes(
-              bedMin: parseHHmmToMinutes(e.bedtime),
-              wakeMin: parseHHmmToMinutes(e.wakeTime),
-            ))
-        .whereType<int>()
-        .toList();
-
     final bedStd = circularStdDevMinutes(bedMinutes).round();
     final wakeStd = circularStdDevMinutes(wakeMinutes).round();
     final totalStd = ((bedStd + wakeStd) / 2).round();
@@ -323,18 +331,22 @@ class _ConsistencyCard extends StatelessWidget {
     double? socialJetLag() {
       final weekdays = entries
           .where((e) => sleepEntryDate(e).weekday <= 5)
-          .map((e) => computeMidSleepMinutes(
-                bedMin: parseHHmmToMinutes(e.bedtime),
-                wakeMin: parseHHmmToMinutes(e.wakeTime),
-              ))
+          .map(
+            (e) => computeMidSleepMinutes(
+              bedMin: parseHHmmToMinutes(e.bedtime),
+              wakeMin: parseHHmmToMinutes(e.wakeTime),
+            ),
+          )
           .whereType<int>()
           .toList();
       final weekend = entries
           .where((e) => sleepEntryDate(e).weekday > 5)
-          .map((e) => computeMidSleepMinutes(
-                bedMin: parseHHmmToMinutes(e.bedtime),
-                wakeMin: parseHHmmToMinutes(e.wakeTime),
-              ))
+          .map(
+            (e) => computeMidSleepMinutes(
+              bedMin: parseHHmmToMinutes(e.bedtime),
+              wakeMin: parseHHmmToMinutes(e.wakeTime),
+            ),
+          )
           .whereType<int>()
           .toList();
       if (weekdays.isEmpty || weekend.isEmpty) return null;
@@ -386,7 +398,10 @@ class _DebtCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final debt = entries.fold<double>(0, (sum, e) => sum + (goal - e.hours).clamp(0, 24));
+    final debt = entries.fold<double>(
+      0,
+      (sum, e) => sum + (goal - e.hours).clamp(0, 24),
+    );
 
     return SummaryCard(
       padding: const EdgeInsets.all(16),
@@ -612,12 +627,10 @@ Widget _metricTile(String title, String value) {
 List<SleepEntry> _filterByDays(List<SleepEntry> entries, int days) {
   final today = dateOnly(DateTime.now());
   final start = today.subtract(Duration(days: days - 1));
-  return entries
-      .where((e) {
-        final date = sleepEntryDate(e);
-        return !date.isBefore(start) && !date.isAfter(today);
-      })
-      .toList();
+  return entries.where((e) {
+    final date = sleepEntryDate(e);
+    return !date.isBefore(start) && !date.isAfter(today);
+  }).toList();
 }
 
 String _weekdayLabel(DateTime date) {

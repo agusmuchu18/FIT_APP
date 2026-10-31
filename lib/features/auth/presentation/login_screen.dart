@@ -38,7 +38,9 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.toString().replaceFirst('Exception: ', ''))),
+        SnackBar(
+          content: Text(error.toString().replaceFirst('Exception: ', '')),
+        ),
       );
     } finally {
       if (mounted) {
@@ -47,8 +49,22 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  void _continueWithoutAccount() {
-    Navigator.pushReplacementNamed(context, '/home');
+  Future<void> _continueWithoutAccount() async {
+    setState(() => _isLoading = true);
+    try {
+      await AuthService.instance.signInAnonymously();
+      if (!mounted) return;
+      Navigator.pushReplacementNamed(context, '/home');
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.toString())));
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   void _goToSignup() {
@@ -133,7 +149,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                 width: 20,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2.5,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
                                 ),
                               )
                             : const Text('Iniciar sesión'),
@@ -154,7 +172,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     Align(
                       alignment: Alignment.center,
                       child: TextButton(
-                        onPressed: _continueWithoutAccount,
+                        onPressed: _isLoading ? null : _continueWithoutAccount,
                         child: const Text(
                           'Continuar sin cuenta',
                           style: TextStyle(color: AppColors.textMuted),

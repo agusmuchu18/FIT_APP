@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 
 import '../../../features/common/theme/app_colors.dart';
+import '../../../features/common/widgets/fit_glyph.dart';
 import '../controllers/motion_durations.dart';
 import '../motion_config.dart';
 import '../utils/stagger.dart';
@@ -66,7 +67,7 @@ class _SpeedDialMenuState extends State<SpeedDialMenu>
   Widget _buildMenuItem({
     required int index,
     required String label,
-    required IconData icon,
+    required FitGlyphKind icon,
     required VoidCallback onTap,
     required double width,
     required double height,
@@ -84,8 +85,10 @@ class _SpeedDialMenuState extends State<SpeedDialMenu>
     );
 
     final opacity = Tween<double>(begin: 0, end: 1).animate(entrance);
-    final offset = Tween<Offset>(begin: const Offset(0, 0.08), end: Offset.zero)
-        .animate(entrance);
+    final offset = Tween<Offset>(
+      begin: const Offset(0, 0.08),
+      end: Offset.zero,
+    ).animate(entrance);
     final scale = Tween<double>(begin: 0.98, end: 1.0).animate(entrance);
 
     return FadeTransition(
@@ -97,42 +100,52 @@ class _SpeedDialMenuState extends State<SpeedDialMenu>
           child: SizedBox(
             width: width,
             height: height,
-            child: GestureDetector(
-              onTap: () {
-                widget.onClose();
-                onTap();
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 18),
-                decoration: BoxDecoration(
-                  color: AppColors.card,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.35),
-                      blurRadius: 16,
-                      offset: const Offset(0, 8),
+            child: Semantics(
+              button: true,
+              label: label,
+              child: GestureDetector(
+                onTap: () {
+                  widget.onClose();
+                  onTap();
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 18),
+                  decoration: BoxDecoration(
+                    color: AppColors.card,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.35),
+                        blurRadius: 16,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.08),
                     ),
-                  ],
-                  border: Border.all(color: Colors.white.withOpacity(0.08)),
-                ),
-                child: Row(
-                  children: [
-                    Icon(icon, color: AppColors.accentSecondary, size: 20),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        label,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
+                  ),
+                  child: Row(
+                    children: [
+                      FitGlyph(
+                        kind: icon,
+                        color: AppColors.accentSecondary,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -172,7 +185,7 @@ class _SpeedDialMenuState extends State<SpeedDialMenu>
                       child: BackdropFilter(
                         filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
                         child: Container(
-                          color: Colors.black.withOpacity(0.3),
+                          color: Colors.black.withValues(alpha: 0.3),
                         ),
                       ),
                     ),
@@ -188,7 +201,7 @@ class _SpeedDialMenuState extends State<SpeedDialMenu>
                       _buildMenuItem(
                         index: 0,
                         label: 'Registrar Entrenamiento',
-                        icon: Icons.fitness_center_rounded,
+                        icon: FitGlyphKind.workout,
                         onTap: widget.onWorkout,
                         width: menuWidth,
                         height: menuHeight,
@@ -197,7 +210,7 @@ class _SpeedDialMenuState extends State<SpeedDialMenu>
                       _buildMenuItem(
                         index: 1,
                         label: 'Registrar Comida',
-                        icon: Icons.restaurant_rounded,
+                        icon: FitGlyphKind.nutrition,
                         onTap: widget.onMeal,
                         width: menuWidth,
                         height: menuHeight,
@@ -206,7 +219,7 @@ class _SpeedDialMenuState extends State<SpeedDialMenu>
                       _buildMenuItem(
                         index: 2,
                         label: 'Registrar Sueño',
-                        icon: Icons.nightlight_round,
+                        icon: FitGlyphKind.sleep,
                         onTap: widget.onSleep,
                         width: menuWidth,
                         height: menuHeight,

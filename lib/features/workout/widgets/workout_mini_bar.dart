@@ -1,9 +1,10 @@
 import 'dart:async';
-import 'dart:ui' show FontFeature;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../common/theme/app_colors.dart';
+import '../../common/widgets/fit_glyph.dart';
 import '../workout_in_progress_controller.dart';
 
 class WorkoutMiniBar extends StatefulWidget {
@@ -13,12 +14,17 @@ class WorkoutMiniBar extends StatefulWidget {
     required this.onContinue,
     required this.onPauseResume,
     required this.onDiscard,
+    this.alertOnRestEnd = true,
   });
 
   final WorkoutInProgressDraft draft;
   final VoidCallback onContinue;
   final VoidCallback onPauseResume;
   final VoidCallback onDiscard;
+
+  /// False while the bar is hidden behind the session screen, which already
+  /// signals the end of the rest itself.
+  final bool alertOnRestEnd;
 
   @override
   State<WorkoutMiniBar> createState() => _WorkoutMiniBarState();
@@ -45,10 +51,27 @@ class _WorkoutMiniBarState extends State<WorkoutMiniBar> {
     _ticker?.cancel();
     if (widget.draft.isPaused) return;
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted) {
-        setState(() {});
-      }
+      if (!mounted) return;
+      _alertWhenRestEnds();
+      setState(() {});
     });
+  }
+
+  String? _alertedRest;
+
+  /// Outside the session screen the bar is the only rest signal left, so it
+  /// vibrates and sounds once when the rest reaches zero.
+  void _alertWhenRestEnds() {
+    final draft = widget.draft;
+    final key = '${draft.workoutId}|${draft.restStartedAtElapsedSeconds}';
+    if (draft.restRemainingAt(DateTime.now()) != Duration.zero ||
+        _alertedRest == key) {
+      return;
+    }
+    _alertedRest = key;
+    if (!widget.alertOnRestEnd) return;
+    HapticFeedback.heavyImpact().catchError((Object _) {});
+    SystemSound.play(SystemSoundType.alert).catchError((Object _) {});
   }
 
   @override
@@ -62,6 +85,7 @@ class _WorkoutMiniBarState extends State<WorkoutMiniBar> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final elapsed = _elapsed(widget.draft);
+    final rest = widget.draft.restRemainingAt(DateTime.now());
 
     return Material(
       color: Colors.transparent,
@@ -70,8 +94,8 @@ class _WorkoutMiniBarState extends State<WorkoutMiniBar> {
         borderRadius: BorderRadius.circular(20),
         overlayColor: WidgetStateProperty.resolveWith(
           (states) => states.contains(WidgetState.pressed)
-              ? colorScheme.primary.withOpacity(0.06)
-              : colorScheme.primary.withOpacity(0.03),
+              ? colorScheme.primary.withValues(alpha: 0.06)
+              : colorScheme.primary.withValues(alpha: 0.03),
         ),
         child: Ink(
           height: 68,
@@ -79,7 +103,9 @@ class _WorkoutMiniBarState extends State<WorkoutMiniBar> {
           decoration: BoxDecoration(
             color: AppColors.surface,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: colorScheme.outlineVariant.withOpacity(0.55)),
+            border: Border.all(
+              color: colorScheme.outlineVariant.withValues(alpha: 0.55),
+            ),
           ),
           child: Row(
             children: [
@@ -88,9 +114,13 @@ class _WorkoutMiniBarState extends State<WorkoutMiniBar> {
                 height: 36,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: AppColors.accent.withOpacity(0.14),
+                  color: AppColors.accent.withValues(alpha: 0.14),
                 ),
-                child: const Icon(Icons.fitness_center, size: 18, color: AppColors.accent),
+                child: const FitGlyph(
+                  kind: FitGlyphKind.workout,
+                  size: 18,
+                  color: AppColors.accent,
+                ),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -102,7 +132,9 @@ class _WorkoutMiniBarState extends State<WorkoutMiniBar> {
                       'Entrenamiento en curso',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     const SizedBox(height: 2),
                     Row(
@@ -114,13 +146,36 @@ class _WorkoutMiniBarState extends State<WorkoutMiniBar> {
                             fontFeatures: const [FontFeature.tabularFigures()],
                           ),
                         ),
+                        if (rest != null && !widget.draft.isPaused) ...[
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Text(
+                              rest == Duration.zero
+                                  ? 'Descanso completo'
+                                  : 'Descanso ${_format(rest)}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.labelLarge?.copyWith(
+                                color: colorScheme.primary,
+                                fontFeatures: const [
+                                  FontFeature.tabularFigures(),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                         if (widget.draft.isPaused) ...[
                           const SizedBox(width: 8),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(999),
-                              color: colorScheme.secondary.withOpacity(0.15),
+                              color: colorScheme.secondary.withValues(
+                                alpha: 0.15,
+                              ),
                             ),
                             child: Text(
                               'Pausado',
@@ -139,20 +194,18 @@ class _WorkoutMiniBarState extends State<WorkoutMiniBar> {
                   IconButton(
                     visualDensity: VisualDensity.compact,
                     onPressed: widget.onPauseResume,
-                    icon: Semantics(
-                      label: widget.draft.isPaused ? 'Reanudar' : 'Pausar',
-                      button: true,
-                      child: Icon(widget.draft.isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded),
+                    tooltip: widget.draft.isPaused ? 'Reanudar' : 'Pausar',
+                    icon: Icon(
+                      widget.draft.isPaused
+                          ? Icons.play_arrow_rounded
+                          : Icons.pause_rounded,
                     ),
                   ),
                   IconButton(
                     visualDensity: VisualDensity.compact,
                     onPressed: widget.onDiscard,
-                    icon: Semantics(
-                      label: 'Descartar',
-                      button: true,
-                      child: Icon(Icons.delete_outline_rounded),
-                    ),
+                    tooltip: 'Descartar',
+                    icon: const Icon(Icons.delete_outline_rounded),
                   ),
                 ],
               ),
@@ -164,7 +217,9 @@ class _WorkoutMiniBarState extends State<WorkoutMiniBar> {
   }
 
   Duration _elapsed(WorkoutInProgressDraft draft) {
-    final now = draft.isPaused ? (draft.pausedAt ?? DateTime.now()) : DateTime.now();
+    final now = draft.isPaused
+        ? (draft.pausedAt ?? DateTime.now())
+        : DateTime.now();
     final value = now.difference(draft.startTime) - draft.accumulatedPaused;
     return value.isNegative ? Duration.zero : value;
   }

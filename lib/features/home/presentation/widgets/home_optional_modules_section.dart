@@ -97,9 +97,9 @@ class HomeOptionalModulesSection extends StatelessWidget {
       children: [
         Text(
           'Módulos',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 12),
         AnimatedSwitcher(
@@ -112,7 +112,9 @@ class HomeOptionalModulesSection extends StatelessWidget {
                   onOpenSettings: onOpenSettings,
                 )
               : Column(
-                  key: ValueKey('modules-${orderedEnabledModules.map((m) => m.id.name).join('-')}'),
+                  key: ValueKey(
+                    'modules-${orderedEnabledModules.map((m) => m.id.name).join('-')}',
+                  ),
                   children: [
                     for (final module in orderedEnabledModules) ...[
                       HomeModuleCard(
@@ -161,7 +163,7 @@ class HomeModuleCard extends StatelessWidget {
             color: AppColors.card,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: Colors.white.withOpacity(0.07),
+              color: Colors.white.withValues(alpha: 0.07),
               width: 1,
             ),
             boxShadow: const [
@@ -181,7 +183,7 @@ class HomeModuleCard extends StatelessWidget {
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.07),
+                    color: Colors.white.withValues(alpha: 0.07),
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: Icon(module.icon, size: 30, color: Colors.white),
@@ -203,7 +205,7 @@ class HomeModuleCard extends StatelessWidget {
                         module.subtitle,
                         style: textTheme.bodySmall?.copyWith(
                           fontSize: 12.5,
-                          color: Colors.white.withOpacity(0.68),
+                          color: Colors.white.withValues(alpha: 0.68),
                         ),
                       ),
                       const SizedBox(height: 10),
@@ -214,7 +216,7 @@ class HomeModuleCard extends StatelessWidget {
                               child: Text(
                                 module.emptyMessage,
                                 style: textTheme.bodySmall?.copyWith(
-                                  color: Colors.white.withOpacity(0.82),
+                                  color: Colors.white.withValues(alpha: 0.82),
                                 ),
                               ),
                             ),
@@ -222,7 +224,9 @@ class HomeModuleCard extends StatelessWidget {
                               onPressed: onTap,
                               style: TextButton.styleFrom(
                                 minimumSize: const Size(48, 32),
-                                padding: const EdgeInsets.symmetric(horizontal: 10),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                ),
                                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                               ),
                               child: Text(module.emptyCta),
@@ -233,7 +237,7 @@ class HomeModuleCard extends StatelessWidget {
                         Text(
                           module.insight ?? '',
                           style: textTheme.bodySmall?.copyWith(
-                            color: Colors.white.withOpacity(0.82),
+                            color: Colors.white.withValues(alpha: 0.82),
                           ),
                         ),
                     ],
@@ -281,23 +285,23 @@ class _ModulesEmptyState extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.card,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.06)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             'Personalizá tu Home',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 6),
           Text(
             'Activá módulos opcionales para ver insights y accesos rápidos acá.',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Colors.white.withOpacity(0.70),
-                ),
+              color: Colors.white.withValues(alpha: 0.70),
+            ),
           ),
           const SizedBox(height: 10),
           TextButton.icon(

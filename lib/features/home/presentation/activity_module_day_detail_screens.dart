@@ -127,11 +127,7 @@ class _ModuleDayDetailScreenState extends State<_ModuleDayDetailScreen> {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF0B1220),
-              Color(0xFF0E1624),
-              Color(0xFF070B12),
-            ],
+            colors: [Color(0xFF0B1220), Color(0xFF0E1624), Color(0xFF070B12)],
           ),
         ),
         child: SafeArea(
@@ -140,10 +136,13 @@ class _ModuleDayDetailScreenState extends State<_ModuleDayDetailScreen> {
             future: _dayFuture,
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator.adaptive());
+                return const Center(
+                  child: CircularProgressIndicator.adaptive(),
+                );
               }
 
-              final data = snapshot.data ?? _ActivityDayData.empty(_selectedDay);
+              final data =
+                  snapshot.data ?? _ActivityDayData.empty(_selectedDay);
               final summary = data.summary;
 
               return SingleChildScrollView(
@@ -159,7 +158,8 @@ class _ModuleDayDetailScreenState extends State<_ModuleDayDetailScreen> {
                             children: [
                               Text(
                                 widget.module.label,
-                                style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                                style: Theme.of(context).textTheme.displaySmall
+                                    ?.copyWith(
                                       color: Colors.white,
                                       fontWeight: FontWeight.w800,
                                       letterSpacing: -0.6,
@@ -168,7 +168,8 @@ class _ModuleDayDetailScreenState extends State<_ModuleDayDetailScreen> {
                               const SizedBox(height: 6),
                               Text(
                                 formatDateLong(_selectedDay),
-                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                style: Theme.of(context).textTheme.bodyMedium
+                                    ?.copyWith(
                                       color: AppColors.textMuted,
                                       fontWeight: FontWeight.w600,
                                     ),
@@ -188,9 +189,9 @@ class _ModuleDayDetailScreenState extends State<_ModuleDayDetailScreen> {
                     Text(
                       'Registros del día',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                          ),
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                     const SizedBox(height: 10),
                     _buildRecords(summary),
@@ -204,7 +205,10 @@ class _ModuleDayDetailScreenState extends State<_ModuleDayDetailScreen> {
     );
   }
 
-  Widget _buildStats(HomeDayActivitySummary summary, _NutritionGoals nutritionGoals) {
+  Widget _buildStats(
+    HomeDayActivitySummary summary,
+    _NutritionGoals nutritionGoals,
+  ) {
     switch (widget.module) {
       case ActivityModuleType.workout:
         const goalMinutes = 30;
@@ -215,7 +219,10 @@ class _ModuleDayDetailScreenState extends State<_ModuleDayDetailScreen> {
               child: Row(
                 children: [
                   RingStat(
-                    progress: percentage(summary.totalTrainingMinutes, goalMinutes),
+                    progress: percentage(
+                      summary.totalTrainingMinutes,
+                      goalMinutes,
+                    ),
                     color: AppColors.accentTraining,
                     value: '${summary.totalTrainingMinutes} min',
                     label: 'de $goalMinutes min',
@@ -235,9 +242,23 @@ class _ModuleDayDetailScreenState extends State<_ModuleDayDetailScreen> {
           ],
         );
       case ActivityModuleType.meal:
-        final carbs = summary.meals.fold<int>(0, (sum, meal) => sum + meal.macros.carbs);
-        final protein = summary.meals.fold<int>(0, (sum, meal) => sum + meal.macros.protein);
-        final fat = summary.meals.fold<int>(0, (sum, meal) => sum + meal.macros.fat);
+        if (summary.meals.any((m) => m.unknownNutrients.isNotEmpty)) {
+          return const Padding(
+            padding: EdgeInsets.all(16),
+            child: Text(
+              'Información nutricional incompleta. Los nutrientes ausentes no equivalen a cero.',
+            ),
+          );
+        }
+        final carbs = summary.meals
+            .fold<double>(0, (sum, meal) => sum + meal.carbohydrateGrams)
+            .round();
+        final protein = summary.meals
+            .fold<double>(0, (sum, meal) => sum + meal.proteinGrams)
+            .round();
+        final fat = summary.meals
+            .fold<double>(0, (sum, meal) => sum + meal.fatGrams)
+            .round();
 
         return ModuleStatsHeader(
           children: [
@@ -286,7 +307,10 @@ class _ModuleDayDetailScreenState extends State<_ModuleDayDetailScreen> {
         );
       case ActivityModuleType.sleep:
         const sleepGoal = 8.0;
-        final totalHours = summary.sleepEntries.fold<double>(0, (sum, e) => sum + e.hours);
+        final totalHours = summary.sleepEntries.fold<double>(
+          0,
+          (sum, e) => sum + e.hours,
+        );
         final scores = summary.sleepEntries
             .map((entry) => entry.qualityScore)
             .whereType<int>()
@@ -307,9 +331,13 @@ class _ModuleDayDetailScreenState extends State<_ModuleDayDetailScreen> {
                   const SizedBox(width: 18),
                   Expanded(
                     child: ProgressBar(
-                      value: qualityAvg > 0 ? (qualityAvg / 5).clamp(0.0, 1.0) : 0,
+                      value: qualityAvg > 0
+                          ? (qualityAvg / 5).clamp(0.0, 1.0)
+                          : 0,
                       label: 'Calidad del sueño',
-                      trailing: qualityAvg > 0 ? '${compactNumber(qualityAvg)}/5' : 'Sin datos',
+                      trailing: qualityAvg > 0
+                          ? '${compactNumber(qualityAvg)}/5'
+                          : 'Sin datos',
                       color: AppColors.accentSleep,
                     ),
                   ),
@@ -332,19 +360,22 @@ class _ModuleDayDetailScreenState extends State<_ModuleDayDetailScreen> {
           );
         }
         return Column(
-          children: summary.workouts.map((workout) {
-            final date = parseEntryDate(workout.id);
-            final time = formatTimeLabel(date);
-            return DayRecordTile(
-              title: workout.name,
-              subtitle: time.isEmpty ? 'Sin hora' : time,
-              value: '${workout.durationMinutes} min',
-              onTap: () => _showRecordModal(
-                title: workout.name,
-                detail: '${workout.intensity} · ${workout.durationMinutes} min',
-              ),
-            );
-          }).toList(growable: false),
+          children: summary.workouts
+              .map((workout) {
+                final date = parseEntryDate(workout.id);
+                final time = formatTimeLabel(date);
+                return DayRecordTile(
+                  title: workout.name,
+                  subtitle: time.isEmpty ? 'Sin hora' : time,
+                  value: '${workout.durationMinutes} min',
+                  onTap: () => _showRecordModal(
+                    title: workout.name,
+                    detail:
+                        '${workout.intensity} · ${workout.durationMinutes} min',
+                  ),
+                );
+              })
+              .toList(growable: false),
         );
       case ActivityModuleType.meal:
         if (summary.meals.isEmpty) {
@@ -355,20 +386,24 @@ class _ModuleDayDetailScreenState extends State<_ModuleDayDetailScreen> {
           );
         }
         return Column(
-          children: summary.meals.map((meal) {
-            final date = parseEntryDate(meal.id);
-            final time = formatTimeLabel(date);
-            return DayRecordTile(
-              title: meal.title,
-              subtitle: time.isEmpty ? 'Sin hora' : time,
-              value: '${meal.calories} kcal',
-              onTap: () => _showRecordModal(
-                title: meal.title,
-                detail:
-                    '${meal.calories} kcal · C${meal.macros.carbs} P${meal.macros.protein} G${meal.macros.fat}',
-              ),
-            );
-          }).toList(growable: false),
+          children: summary.meals
+              .map((meal) {
+                final date = meal.recordedAt;
+                final time = formatTimeLabel(date);
+                return DayRecordTile(
+                  title: meal.title,
+                  subtitle: time.isEmpty ? 'Sin hora' : time,
+                  value:
+                      '${meal.unknownNutrients.contains('kcal') ? '—' : meal.energyKcal.round()} kcal',
+                  onTap: () => _showRecordModal(
+                    title: meal.title,
+                    detail: meal.unknownNutrients.isNotEmpty
+                        ? 'Información nutricional incompleta. Consultá el diario para ver los datos disponibles.'
+                        : '${meal.energyKcal.round()} kcal · C${meal.macros.carbs} P${meal.macros.protein} G${meal.macros.fat}',
+                  ),
+                );
+              })
+              .toList(growable: false),
         );
       case ActivityModuleType.sleep:
         if (summary.sleepEntries.isEmpty) {
@@ -379,25 +414,31 @@ class _ModuleDayDetailScreenState extends State<_ModuleDayDetailScreen> {
           );
         }
         return Column(
-          children: summary.sleepEntries.map((sleep) {
-            final subtitle = sleep.wakeTime != null && sleep.bedtime != null
-                ? '${sleep.bedtime} - ${sleep.wakeTime}'
-                : 'Registro de sueño';
-            return DayRecordTile(
-              title: sleep.quality.isEmpty ? 'Sueño' : sleep.quality,
-              subtitle: subtitle,
-              value: '${compactNumber(sleep.hours)} h',
-              onTap: () => _showRecordModal(
-                title: sleep.quality.isEmpty ? 'Sueño' : sleep.quality,
-                detail: '${compactNumber(sleep.hours)} h · Calidad ${sleep.qualityScore ?? '-'} / 5',
-              ),
-            );
-          }).toList(growable: false),
+          children: summary.sleepEntries
+              .map((sleep) {
+                final subtitle = sleep.wakeTime != null && sleep.bedtime != null
+                    ? '${sleep.bedtime} - ${sleep.wakeTime}'
+                    : 'Registro de sueño';
+                return DayRecordTile(
+                  title: sleep.quality.isEmpty ? 'Sueño' : sleep.quality,
+                  subtitle: subtitle,
+                  value: '${compactNumber(sleep.hours)} h',
+                  onTap: () => _showRecordModal(
+                    title: sleep.quality.isEmpty ? 'Sueño' : sleep.quality,
+                    detail:
+                        '${compactNumber(sleep.hours)} h · Calidad ${sleep.qualityScore ?? '-'} / 5',
+                  ),
+                );
+              })
+              .toList(growable: false),
         );
     }
   }
 
-  Future<void> _showRecordModal({required String title, required String detail}) async {
+  Future<void> _showRecordModal({
+    required String title,
+    required String detail,
+  }) async {
     await showModalBottomSheet<void>(
       context: context,
       backgroundColor: const Color(0xFF111926),
@@ -414,16 +455,15 @@ class _ModuleDayDetailScreenState extends State<_ModuleDayDetailScreen> {
               Text(
                 title,
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w800,
-                    ),
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
               const SizedBox(height: 8),
               Text(
                 detail,
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
+                style: Theme.of(context).textTheme.bodyLarge
+                    ?.copyWith(color: AppColors.textSecondary),
               ),
             ],
           ),
@@ -470,25 +510,25 @@ class _NutritionGoals {
   });
 
   const _NutritionGoals.defaults()
-      : kcal = 2000,
-        carbs = 250,
-        protein = 150,
-        fat = 70;
+    : kcal = null,
+      carbs = null,
+      protein = null,
+      fat = null;
 
   factory _NutritionGoals.fromPreferences(UserPreferences? preferences) {
     final resolvedKcal = preferences?.targetCalories;
     return _NutritionGoals(
-      kcal: resolvedKcal != null && resolvedKcal > 0 ? resolvedKcal : 2000,
-      carbs: 250,
-      protein: 150,
-      fat: 70,
+      kcal: resolvedKcal != null && resolvedKcal > 0 ? resolvedKcal : null,
+      carbs: null,
+      protein: null,
+      fat: null,
     );
   }
 
-  final int kcal;
-  final int carbs;
-  final int protein;
-  final int fat;
+  final int? kcal;
+  final int? carbs;
+  final int? protein;
+  final int? fat;
 }
 
 class _MacroProgressRow extends StatelessWidget {
@@ -514,11 +554,11 @@ class _MacroProgressRow extends StatelessWidget {
     final progress = hasValidGoal ? (consumed / goal!).clamp(0.0, 1.0) : 0.0;
     final trailing = hasValidGoal
         ? unit.isEmpty
-            ? '$consumed/$goal'
-            : '$consumed/$goal $unit'
+              ? '$consumed/$goal'
+              : '$consumed/$goal $unit'
         : unit.isEmpty
-            ? '$consumed/—'
-            : '$consumed/— $unit';
+        ? '$consumed/—'
+        : '$consumed/— $unit';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -529,17 +569,17 @@ class _MacroProgressRow extends StatelessWidget {
               child: Text(
                 label,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
             Text(
               trailing,
               style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: AppColors.textMuted,
-                    fontWeight: FontWeight.w700,
-                  ),
+                color: AppColors.textMuted,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ],
         ),
@@ -548,7 +588,7 @@ class _MacroProgressRow extends StatelessWidget {
           borderRadius: BorderRadius.circular(999),
           child: Container(
             height: height,
-            color: Colors.white.withOpacity(0.12),
+            color: Colors.white.withValues(alpha: 0.12),
             child: TweenAnimationBuilder<double>(
               tween: Tween<double>(begin: 0, end: progress),
               duration: const Duration(milliseconds: 320),
@@ -556,10 +596,7 @@ class _MacroProgressRow extends StatelessWidget {
               builder: (context, value, child) {
                 return Align(
                   alignment: Alignment.centerLeft,
-                  child: FractionallySizedBox(
-                    widthFactor: value,
-                    child: child,
-                  ),
+                  child: FractionallySizedBox(widthFactor: value, child: child),
                 );
               },
               child: DecoratedBox(
@@ -567,7 +604,7 @@ class _MacroProgressRow extends StatelessWidget {
                   borderRadius: BorderRadius.circular(999),
                   gradient: LinearGradient(
                     colors: [
-                      color.withOpacity(0.90),
+                      color.withValues(alpha: 0.90),
                       Color.lerp(color, Colors.white, 0.22) ?? color,
                     ],
                   ),

@@ -69,12 +69,12 @@ class EntityMeta {
   }
 
   Map<String, Object?> toJson() => <String, Object?>{
-        'createdAt': createdAt.toIso8601String(),
-        'updatedAt': updatedAt.toIso8601String(),
-        'deleted': deleted,
-        'revision': revision,
-        'deviceId': deviceId,
-      };
+    'createdAt': createdAt.toIso8601String(),
+    'updatedAt': updatedAt.toIso8601String(),
+    'deleted': deleted,
+    'revision': revision,
+    'deviceId': deviceId,
+  };
 
   factory EntityMeta.fromJson(Map<String, Object?> json) {
     final createdAt = _readDate(json['createdAt']) ?? DateTime.now().toUtc();
@@ -193,14 +193,14 @@ class WorkoutEntry with SyncEntityMetaMixin implements SyncEntity {
   }
 
   Map<String, Object?> toJson() => <String, Object?>{
-        'id': id,
-        'name': name,
-        'durationMinutes': durationMinutes,
-        'intensity': intensity,
-        'notes': notes,
-        'template': template,
-        '_meta': meta.toJson(),
-      };
+    'id': id,
+    'name': name,
+    'durationMinutes': durationMinutes,
+    'intensity': intensity,
+    'notes': notes,
+    'template': template,
+    '_meta': meta.toJson(),
+  };
 
   factory WorkoutEntry.fromJson(Map<String, Object?> json) {
     return WorkoutEntry(
@@ -213,6 +213,11 @@ class WorkoutEntry with SyncEntityMetaMixin implements SyncEntity {
       meta: EntityMeta.fromJson(_readMap(json['_meta'])),
     );
   }
+}
+
+DateTime workoutEntryDate(WorkoutEntry entry) {
+  final date = DateTime.tryParse(entry.id) ?? entry.meta.createdAt;
+  return date.isUtc ? date.toLocal() : date;
 }
 
 /// ------------------------------
@@ -228,8 +233,13 @@ class MealEntry with SyncEntityMetaMixin implements SyncEntity {
     required this.macros,
     this.template,
     this.notes,
+    this.consumedAt,
+    Map<String, num?>? nutritionSnapshot,
     EntityMeta? meta,
-  }) : meta = meta ?? EntityMeta.now();
+  }) : nutritionSnapshot = nutritionSnapshot == null
+           ? null
+           : Map<String, num?>.unmodifiable(nutritionSnapshot),
+       meta = meta ?? EntityMeta.now();
 
   factory MealEntry.create({
     required String id,
@@ -255,6 +265,24 @@ class MealEntry with SyncEntityMetaMixin implements SyncEntity {
   final String id;
   final String title;
   final int calories;
+  final DateTime? consumedAt;
+
+  /// Exact consolidated snapshot. Integer fields remain compatible with old clients.
+  final Map<String, num?>? nutritionSnapshot;
+  Set<String> get unknownNutrients => nutritionSnapshot == null
+      ? const {}
+      : {
+          for (final key in ['kcal', 'protein', 'carbs', 'fat'])
+            if (nutritionSnapshot![key] == null) key,
+        };
+  double get energyKcal => (nutritionSnapshot?['kcal'] ?? calories).toDouble();
+  double get proteinGrams =>
+      (nutritionSnapshot?['protein'] ?? macros.protein).toDouble();
+  double get carbohydrateGrams =>
+      (nutritionSnapshot?['carbs'] ?? macros.carbs).toDouble();
+  double get fatGrams => (nutritionSnapshot?['fat'] ?? macros.fat).toDouble();
+  DateTime get recordedAt =>
+      consumedAt ?? DateTime.tryParse(id) ?? meta.createdAt.toLocal();
   final Macros macros;
   final String? template;
   final String? notes;
@@ -268,6 +296,8 @@ class MealEntry with SyncEntityMetaMixin implements SyncEntity {
     Macros? macros,
     String? template,
     String? notes,
+    DateTime? consumedAt,
+    Map<String, num?>? nutritionSnapshot,
     EntityMeta? meta,
     String? deviceIdForTouch,
   }) {
@@ -278,6 +308,12 @@ class MealEntry with SyncEntityMetaMixin implements SyncEntity {
       macros: macros ?? this.macros,
       template: template ?? this.template,
       notes: notes ?? this.notes,
+      consumedAt: consumedAt ?? this.consumedAt,
+      nutritionSnapshot:
+          nutritionSnapshot ??
+          ((calories != null || macros != null)
+              ? null
+              : this.nutritionSnapshot),
       meta: meta ?? this.meta.touched(deviceId: deviceIdForTouch),
     );
   }
@@ -290,25 +326,38 @@ class MealEntry with SyncEntityMetaMixin implements SyncEntity {
       macros: macros,
       template: template,
       notes: notes,
+      consumedAt: consumedAt,
+      nutritionSnapshot: nutritionSnapshot,
       meta: meta.tombstoned(deviceId: deviceId),
     );
   }
 
   Map<String, Object?> toJson() => <String, Object?>{
-        'id': id,
-        'title': title,
-        'calories': calories,
-        'macros': macros.toJson(),
-        'template': template,
-        'notes': notes,
-        '_meta': meta.toJson(),
-      };
+    'id': id,
+    'title': title,
+    'calories': calories,
+    if (consumedAt != null) 'consumedAt': consumedAt!.toIso8601String(),
+    if (nutritionSnapshot != null) 'nutritionSnapshot': nutritionSnapshot,
+    'macros': macros.toJson(),
+    'template': template,
+    'notes': notes,
+    '_meta': meta.toJson(),
+  };
 
   factory MealEntry.fromJson(Map<String, Object?> json) {
     return MealEntry(
       id: (json['id'] as String?) ?? '',
       title: (json['title'] as String?) ?? '',
       calories: _readInt(json['calories']) ?? 0,
+      consumedAt: DateTime.tryParse(json['consumedAt'] as String? ?? ''),
+      nutritionSnapshot: switch (json['nutritionSnapshot']) {
+        Map value
+            when value.values.every(
+              (v) => v == null || (v is num && v.isFinite && v >= 0),
+            ) =>
+          Map<String, num?>.unmodifiable(Map<String, num?>.from(value)),
+        _ => null,
+      },
       macros: Macros.fromJson(_readMap(json['macros'])),
       template: json['template'] as String?,
       notes: json['notes'] as String?,
@@ -319,21 +368,13 @@ class MealEntry with SyncEntityMetaMixin implements SyncEntity {
 
 @immutable
 class Macros {
-  const Macros({
-    required this.carbs,
-    required this.protein,
-    required this.fat,
-  });
+  const Macros({required this.carbs, required this.protein, required this.fat});
 
   final int carbs;
   final int protein;
   final int fat;
 
-  Macros copyWith({
-    int? carbs,
-    int? protein,
-    int? fat,
-  }) {
+  Macros copyWith({int? carbs, int? protein, int? fat}) {
     return Macros(
       carbs: carbs ?? this.carbs,
       protein: protein ?? this.protein,
@@ -342,10 +383,10 @@ class Macros {
   }
 
   Map<String, Object?> toJson() => <String, Object?>{
-        'carbs': carbs,
-        'protein': protein,
-        'fat': fat,
-      };
+    'carbs': carbs,
+    'protein': protein,
+    'fat': fat,
+  };
 
   factory Macros.fromJson(Map<String, Object?> json) {
     return Macros(
@@ -531,42 +572,38 @@ class SleepEntry with SyncEntityMetaMixin implements SyncEntity {
   }
 
   Map<String, Object?> toJson() => <String, Object?>{
-        'id': id,
-        'hours': hours,
-        'quality': quality,
-        'notes': notes,
-        'template': template,
-        'bedtime': bedtime,
-        'wakeTime': wakeTime,
-        'sleepDate': sleepDate,
-        'napMinutes': napMinutes,
-        'sleepLatencyMinutes': sleepLatencyMinutes,
-        'awakenings': awakenings,
-        'source': source,
-        'tags': tags,
-        'qualityScore': qualityScore,
-        'screenUsageBeforeSleep': screenUsageBeforeSleep,
-        'stressLevel': stressLevel,
-        'wakeEnergy': wakeEnergy,
-        '_meta': meta.toJson(),
-      };
+    'id': id,
+    'hours': hours,
+    'quality': quality,
+    'notes': notes,
+    'template': template,
+    'bedtime': bedtime,
+    'wakeTime': wakeTime,
+    'sleepDate': sleepDate,
+    'napMinutes': napMinutes,
+    'sleepLatencyMinutes': sleepLatencyMinutes,
+    'awakenings': awakenings,
+    'source': source,
+    'tags': tags,
+    'qualityScore': qualityScore,
+    'screenUsageBeforeSleep': screenUsageBeforeSleep,
+    'stressLevel': stressLevel,
+    'wakeEnergy': wakeEnergy,
+    '_meta': meta.toJson(),
+  };
 
   factory SleepEntry.fromJson(Map<String, Object?> json) {
     final id = (json['id'] as String?) ?? '';
     final meta = EntityMeta.fromJson(_readMap(json['_meta']));
     final parsedSleepDate = json['sleepDate'] as String?;
-    final derivedDate = parsedSleepDate ??
-        _deriveSleepDate(
-          id: id,
-          meta: meta,
-        );
+    final derivedDate = parsedSleepDate ?? _deriveSleepDate(id: id, meta: meta);
     final tagsJson = json['tags'];
     final tags = tagsJson is List
         ? tagsJson.whereType<String>().toList()
         : <String>[];
     final quality = (json['quality'] as String?) ?? '';
-    final qualityScore = _readInt(json['qualityScore']) ??
-        _mapQualityToScore(quality: quality);
+    final qualityScore =
+        _readInt(json['qualityScore']) ?? _mapQualityToScore(quality: quality);
 
     return SleepEntry(
       id: id,
@@ -599,10 +636,11 @@ String? _deriveSleepDate({required String id, required EntityMeta meta}) {
   }
 
   final updated = meta.updatedAt;
-  return DateTime(updated.year, updated.month, updated.day)
-      .toIso8601String()
-      .split('T')
-      .first;
+  return DateTime(
+    updated.year,
+    updated.month,
+    updated.day,
+  ).toIso8601String().split('T').first;
 }
 
 int _mapQualityToScore({required String quality}) {
@@ -710,16 +748,16 @@ class UserPreferences with SyncEntityMetaMixin implements SyncEntity {
   }
 
   Map<String, Object?> toJson() => <String, Object?>{
-        'id': id,
-        'primaryGoal': primaryGoal,
-        'experienceLevel': experienceLevel,
-        'targetSessionsPerWeek': targetSessionsPerWeek,
-        'modePreference': modePreference,
-        'dailyStepGoal': dailyStepGoal,
-        'targetCalories': targetCalories,
-        'preferredSleep': preferredSleep,
-        '_meta': meta.toJson(),
-      };
+    'id': id,
+    'primaryGoal': primaryGoal,
+    'experienceLevel': experienceLevel,
+    'targetSessionsPerWeek': targetSessionsPerWeek,
+    'modePreference': modePreference,
+    'dailyStepGoal': dailyStepGoal,
+    'targetCalories': targetCalories,
+    'preferredSleep': preferredSleep,
+    '_meta': meta.toJson(),
+  };
 
   factory UserPreferences.fromJson(Map<String, Object?> json) {
     return UserPreferences(

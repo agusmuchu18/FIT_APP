@@ -1,6 +1,13 @@
-import '../data/fdc_client.dart';
+import 'fdc_client.dart';
 
 class FoodCache {
+  FoodCache({this.maxSearchEntries = 50, this.maxDetailsEntries = 200})
+    : assert(maxSearchEntries > 0),
+      assert(maxDetailsEntries > 0);
+
+  final int maxSearchEntries;
+  final int maxDetailsEntries;
+
   // --- Details cache ---
   final _details = <int, _Cached<Map<String, dynamic>>>{};
 
@@ -11,12 +18,21 @@ class FoodCache {
       _details.remove(fdcId);
       return null;
     }
+    _details
+      ..remove(fdcId)
+      ..[fdcId] = c;
     return c.value;
   }
 
-  void putDetails(int fdcId, Map<String, dynamic> json,
-      {Duration ttl = const Duration(days: 180)}) {
-    _details[fdcId] = _Cached(json, ttl);
+  void putDetails(
+    int fdcId,
+    Map<String, dynamic> json, {
+    Duration ttl = const Duration(days: 180),
+  }) {
+    _details
+      ..remove(fdcId)
+      ..[fdcId] = _Cached(Map<String, dynamic>.unmodifiable(json), ttl);
+    _trimToSize(_details, maxDetailsEntries);
   }
 
   // --- Search cache (por query) ---
@@ -30,13 +46,22 @@ class FoodCache {
       _search.remove(key);
       return null;
     }
+    _search
+      ..remove(key)
+      ..[key] = c;
     return c.value;
   }
 
-  void putSearch(String query, List<FdcSearchItem> items,
-      {Duration ttl = const Duration(days: 3)}) {
+  void putSearch(
+    String query,
+    List<FdcSearchItem> items, {
+    Duration ttl = const Duration(days: 3),
+  }) {
     final key = _normalizeQuery(query);
-    _search[key] = _Cached(items, ttl);
+    _search
+      ..remove(key)
+      ..[key] = _Cached(List<FdcSearchItem>.unmodifiable(items), ttl);
+    _trimToSize(_search, maxSearchEntries);
   }
 
   void clear() {
@@ -44,7 +69,14 @@ class FoodCache {
     _search.clear();
   }
 
-  String _normalizeQuery(String q) => q.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
+  String _normalizeQuery(String q) =>
+      q.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
+
+  void _trimToSize<K, V>(Map<K, V> cache, int maxEntries) {
+    while (cache.length > maxEntries) {
+      cache.remove(cache.keys.first);
+    }
+  }
 }
 
 class _Cached<T> {

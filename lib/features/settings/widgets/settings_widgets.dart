@@ -11,12 +11,14 @@ class SectionHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(4, 14, 4, 8),
-      child: Text(title,
-          style: const TextStyle(
-            color: AppColors.textMuted,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.3,
-          )),
+      child: Text(
+        title,
+        style: const TextStyle(
+          color: AppColors.textMuted,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.3,
+        ),
+      ),
     );
   }
 }
@@ -32,7 +34,7 @@ class SettingsCardGroup extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.card,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.06)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
       ),
       child: Column(children: children),
     );
@@ -63,10 +65,26 @@ class SettingsTile extends StatelessWidget {
     return ListTile(
       onTap: onTap,
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
-      leading: Icon(icon, color: danger ? AppColors.danger : AppColors.textMuted),
-      title: Text(title, style: TextStyle(color: color, fontWeight: FontWeight.w600)),
-      subtitle: subtitle == null ? null : Text(subtitle!, style: const TextStyle(color: AppColors.textMuted, fontSize: 12)),
-      trailing: trailing ?? Icon(Icons.chevron_right_rounded, color: Colors.white.withOpacity(0.5)),
+      leading: Icon(
+        icon,
+        color: danger ? AppColors.danger : AppColors.textMuted,
+      ),
+      title: Text(
+        title,
+        style: TextStyle(color: color, fontWeight: FontWeight.w600),
+      ),
+      subtitle: subtitle == null
+          ? null
+          : Text(
+              subtitle!,
+              style: const TextStyle(color: AppColors.textMuted, fontSize: 12),
+            ),
+      trailing:
+          trailing ??
+          Icon(
+            Icons.chevron_right_rounded,
+            color: Colors.white.withValues(alpha: 0.5),
+          ),
     );
   }
 }

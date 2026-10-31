@@ -1,0 +1,12 @@
+{
+  "functions": [{ "source": "backend/social", "codebase": "social", "runtime": "nodejs22",
+    "ignore": ["node_modules", ".git", "*.log", "test", "README.md", "npm-audit.json"] }],
+  "firestore": { "rules": "firestore.rules", "indexes": "backend/social/firestore.indexes.json" },
+  "emulators": {
+    "auth": { "host": "127.0.0.1", "port": 9197 },
+    "firestore": { "host": "127.0.0.1", "port": 8197 },
+    "functions": { "host": "127.0.0.1", "port": 5197 },
+    "ui": { "enabled": false },
+    "singleProjectMode": true
+  }
+}

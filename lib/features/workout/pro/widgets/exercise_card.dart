@@ -63,18 +63,24 @@ class _ExerciseCardState extends State<ExerciseCard> {
 
   @override
   Widget build(BuildContext context) {
-    final summary = '${widget.exercise.sets.length} series · '
+    final summary =
+        '${widget.exercise.sets.length} series · '
         '${widget.exercise.sets.fold<int>(0, (s, e) => s + (e.reps ?? 0))} reps';
-    final weightAvailable = widget.exercise.sets.any((s) => s.externalLoadKg != null);
+    final weightAvailable = widget.exercise.sets.any(
+      (s) => s.externalLoadKg != null,
+    );
     final collapsedSummary = widget._buildCollapsedSummary();
     return AnimatedSize(
       duration: const Duration(milliseconds: 200),
       child: Card(
         margin: const EdgeInsets.symmetric(vertical: 8),
-        color: Colors.black.withOpacity(0.35),
+        color: Colors.black.withValues(alpha: 0.35),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant.withOpacity(0.4)),
+          side: BorderSide(
+            color: Theme.of(context).colorScheme.outlineVariant
+                .withValues(alpha: 0.4),
+          ),
         ),
         child: ExpansionTile(
           maintainState: true,
@@ -157,14 +163,20 @@ class _ExerciseCardState extends State<ExerciseCard> {
                             key: ValueKey(widget.exercise.sets[i].id),
                             background: Container(
                               decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.errorContainer,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .errorContainer,
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               alignment: Alignment.centerRight,
-                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                              ),
                               child: Icon(
                                 Icons.delete_outline,
-                                color: Theme.of(context).colorScheme.onErrorContainer,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onErrorContainer,
                               ),
                             ),
                             direction: DismissDirection.endToStart,
@@ -176,7 +188,8 @@ class _ExerciseCardState extends State<ExerciseCard> {
                                   content: const Text('Serie eliminada'),
                                   action: SnackBarAction(
                                     label: 'Deshacer',
-                                    onPressed: () => widget.onRestoreSet(i, removed),
+                                    onPressed: () =>
+                                        widget.onRestoreSet(i, removed),
                                   ),
                                 ),
                               );
@@ -184,19 +197,41 @@ class _ExerciseCardState extends State<ExerciseCard> {
                             child: _SetRow(
                               set: widget.exercise.sets[i],
                               index: i,
-                              autofocus: (widget.exercise.sets[i].reps ??
-                                          widget.exercise.sets[i].externalLoadKg ??
-                                          widget.exercise.sets[i].assistanceKg ??
-                                          widget.exercise.sets[i].bodyweightKg ??
-                                          widget.exercise.sets[i].bodyweightFactor ??
-                                          widget.exercise.sets[i].durationSeconds ??
+                              autofocus:
+                                  (widget.exercise.sets[i].reps ??
+                                          widget
+                                              .exercise
+                                              .sets[i]
+                                              .externalLoadKg ??
+                                          widget
+                                              .exercise
+                                              .sets[i]
+                                              .assistanceKg ??
+                                          widget
+                                              .exercise
+                                              .sets[i]
+                                              .bodyweightKg ??
+                                          widget
+                                              .exercise
+                                              .sets[i]
+                                              .bodyweightFactor ??
+                                          widget
+                                              .exercise
+                                              .sets[i]
+                                              .durationSeconds ??
                                           widget.exercise.sets[i].rir ??
-                                          widget.exercise.sets[i].restSeconds) ==
+                                          widget
+                                              .exercise
+                                              .sets[i]
+                                              .restSeconds) ==
                                       null &&
                                   i == widget.exercise.sets.length - 1,
                               definition: widget.definition,
-                              onChanged: (updated) => widget.onUpdateSet(updated),
-                              onDelete: () => widget.onDeleteSet(widget.exercise.sets[i].id),
+                              onChanged: (updated) =>
+                                  widget.onUpdateSet(updated),
+                              onDelete: () => widget.onDeleteSet(
+                                widget.exercise.sets[i].id,
+                              ),
                             ),
                           ),
                       ],
@@ -234,16 +269,19 @@ extension on ExerciseCard {
         .fold<SetEntry?>(
           null,
           (best, current) =>
-              best == null || (current.externalLoadKg ?? 0) > (best.externalLoadKg ?? 0)
-                  ? current
-                  : best,
+              best == null ||
+                  (current.externalLoadKg ?? 0) > (best.externalLoadKg ?? 0)
+              ? current
+              : best,
         );
 
     final bestLabel = best == null
         ? 'sin PR'
         : '${best.externalLoadKg?.toStringAsFixed(1)}kg x ${best.reps ?? 0}';
 
-    final volumeLabel = volume == 0 ? 'volumen —' : 'volumen ${volume.toStringAsFixed(1)}kg';
+    final volumeLabel = volume == 0
+        ? 'volumen —'
+        : 'volumen ${volume.toStringAsFixed(1)}kg';
 
     return '$sets series · $volumeLabel · $bestLabel';
   }
@@ -251,7 +289,6 @@ extension on ExerciseCard {
 
 class _SetRow extends StatefulWidget {
   const _SetRow({
-    super.key,
     required this.set,
     required this.index,
     required this.autofocus,
@@ -290,20 +327,30 @@ class _SetRowState extends State<_SetRow> {
   @override
   void initState() {
     super.initState();
-    _repsController = TextEditingController(text: widget.set.reps?.toString() ?? '');
-    _externalLoadController =
-        TextEditingController(text: widget.set.externalLoadKg?.toString() ?? '');
-    _assistanceController =
-        TextEditingController(text: widget.set.assistanceKg?.toString() ?? '');
-    _bodyweightController =
-        TextEditingController(text: widget.set.bodyweightKg?.toString() ?? '');
-    _bodyweightFactorController =
-        TextEditingController(
-            text: (widget.set.bodyweightFactor ?? widget.definition?.bodyweightFactor)
-                    ?.toString() ??
-                '');
-    _durationController = TextEditingController(text: widget.set.durationSeconds?.toString() ?? '');
-    _restController = TextEditingController(text: widget.set.restSeconds?.toString() ?? '');
+    _repsController = TextEditingController(
+      text: widget.set.reps?.toString() ?? '',
+    );
+    _externalLoadController = TextEditingController(
+      text: widget.set.externalLoadKg?.toString() ?? '',
+    );
+    _assistanceController = TextEditingController(
+      text: widget.set.assistanceKg?.toString() ?? '',
+    );
+    _bodyweightController = TextEditingController(
+      text: widget.set.bodyweightKg?.toString() ?? '',
+    );
+    _bodyweightFactorController = TextEditingController(
+      text:
+          (widget.set.bodyweightFactor ?? widget.definition?.bodyweightFactor)
+              ?.toString() ??
+          '',
+    );
+    _durationController = TextEditingController(
+      text: widget.set.durationSeconds?.toString() ?? '',
+    );
+    _restController = TextEditingController(
+      text: widget.set.restSeconds?.toString() ?? '',
+    );
     _repsFocus = FocusNode();
     _externalFocus = FocusNode();
     _assistanceFocus = FocusNode();
@@ -311,7 +358,9 @@ class _SetRowState extends State<_SetRow> {
     _durationFocus = FocusNode();
     _restFocus = FocusNode();
     _showAdvanced =
-        widget.set.restSeconds != null || widget.set.durationSeconds != null || widget.set.rir != null;
+        widget.set.restSeconds != null ||
+        widget.set.durationSeconds != null ||
+        widget.set.rir != null;
   }
 
   @override
@@ -334,7 +383,9 @@ class _SetRowState extends State<_SetRow> {
       _bodyweightController.text = bodyweightText;
     }
     final bodyweightFactorText =
-        (widget.set.bodyweightFactor ?? widget.definition?.bodyweightFactor)?.toString() ?? '';
+        (widget.set.bodyweightFactor ?? widget.definition?.bodyweightFactor)
+            ?.toString() ??
+        '';
     if (_bodyweightFactorController.text != bodyweightFactorText) {
       _bodyweightFactorController.text = bodyweightFactorText;
     }
@@ -346,7 +397,9 @@ class _SetRowState extends State<_SetRow> {
     if (_restController.text != restText) {
       _restController.text = restText;
     }
-    if (widget.set.restSeconds != null || widget.set.durationSeconds != null || widget.set.rir != null) {
+    if (widget.set.restSeconds != null ||
+        widget.set.durationSeconds != null ||
+        widget.set.rir != null) {
       _showAdvanced = true;
     }
   }
@@ -380,7 +433,8 @@ class _SetRowState extends State<_SetRow> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.35),
+            color: Theme.of(context).colorScheme.surfaceContainerHighest
+                .withValues(alpha: 0.35),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Column(
@@ -390,13 +444,17 @@ class _SetRowState extends State<_SetRow> {
                 children: [
                   Padding(
                     padding: const EdgeInsets.only(top: 12),
-                    child: Text('S${widget.index + 1}', style: Theme.of(context).textTheme.labelLarge),
+                    child: Text(
+                      'S${widget.index + 1}',
+                      style: Theme.of(context).textTheme.labelLarge,
+                    ),
                   ),
                   Container(
                     width: 1,
                     height: 48,
                     margin: const EdgeInsets.symmetric(horizontal: 10),
-                    color: Theme.of(context).colorScheme.outlineVariant.withOpacity(0.4),
+                    color: Theme.of(context).colorScheme.outlineVariant
+                        .withValues(alpha: 0.4),
                   ),
                   Expanded(
                     child: Wrap(
@@ -430,8 +488,11 @@ class _SetRowState extends State<_SetRow> {
                     visualDensity: VisualDensity.compact,
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                   ),
-                  onPressed: () => setState(() => _showAdvanced = !_showAdvanced),
-                  icon: Icon(_showAdvanced ? Icons.expand_less : Icons.more_horiz),
+                  onPressed: () =>
+                      setState(() => _showAdvanced = !_showAdvanced),
+                  icon: Icon(
+                    _showAdvanced ? Icons.expand_less : Icons.more_horiz,
+                  ),
                   label: Text(_showAdvanced ? 'Ocultar' : 'Más'),
                 ),
               ),
@@ -452,7 +513,9 @@ class _SetRowState extends State<_SetRow> {
                               focusNode: _durationFocus,
                               nextFocus: _nextFocus(_durationFocus, focusOrder),
                               onChanged: (value) => widget.onChanged(
-                                widget.set.copyWith(durationSeconds: int.tryParse(value)),
+                                widget.set.copyWith(
+                                  durationSeconds: int.tryParse(value),
+                                ),
                               ),
                             ),
                             _numberField(
@@ -462,14 +525,19 @@ class _SetRowState extends State<_SetRow> {
                               focusNode: _restFocus,
                               nextFocus: _nextFocus(_restFocus, focusOrder),
                               onChanged: (value) => widget.onChanged(
-                                widget.set.copyWith(restSeconds: int.tryParse(value)),
+                                widget.set.copyWith(
+                                  restSeconds: int.tryParse(value),
+                                ),
                               ),
                             ),
                             SizedBox(
                               width: 120,
                               child: DropdownButtonFormField<int>(
-                                decoration: const InputDecoration(labelText: 'RIR', isDense: true),
-                                value: widget.set.rir ?? 0,
+                                decoration: const InputDecoration(
+                                  labelText: 'RIR',
+                                  isDense: true,
+                                ),
+                                initialValue: widget.set.rir ?? 0,
                                 items: List.generate(
                                   6,
                                   (index) => DropdownMenuItem(
@@ -477,7 +545,9 @@ class _SetRowState extends State<_SetRow> {
                                     child: Text('RIR $index'),
                                   ),
                                 ),
-                                onChanged: (value) => widget.onChanged(widget.set.copyWith(rir: value)),
+                                onChanged: (value) => widget.onChanged(
+                                  widget.set.copyWith(rir: value),
+                                ),
                               ),
                             ),
                           ],
@@ -507,7 +577,9 @@ class _SetRowState extends State<_SetRow> {
         controller: controller,
         focusNode: focusNode,
         keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        textInputAction: nextFocus == null ? TextInputAction.done : TextInputAction.next,
+        textInputAction: nextFocus == null
+            ? TextInputAction.done
+            : TextInputAction.next,
         decoration: InputDecoration(
           labelText: label,
           suffixText: suffix,
@@ -546,7 +618,7 @@ class _SetRowState extends State<_SetRow> {
             ),
           ),
         ];
-      case LoadType.bodyweight_effective:
+      case LoadType.bodyweightEffective:
         return [
           _readonlyField(
             controller: _bodyweightController,
@@ -564,7 +636,7 @@ class _SetRowState extends State<_SetRow> {
           ),
           _effectiveLoadField(effectiveLoad),
         ];
-      case LoadType.bodyweight_plus_external:
+      case LoadType.bodyweightPlusExternal:
         return [
           _readonlyField(
             controller: _bodyweightController,
@@ -583,7 +655,7 @@ class _SetRowState extends State<_SetRow> {
           ),
           _effectiveLoadField(effectiveLoad),
         ];
-      case LoadType.assisted_bodyweight:
+      case LoadType.assistedBodyweight:
         return [
           _readonlyField(
             controller: _bodyweightController,
@@ -629,7 +701,10 @@ class _SetRowState extends State<_SetRow> {
     return SizedBox(
       width: 120,
       child: InputDecorator(
-        decoration: const InputDecoration(labelText: 'Carga efectiva', isDense: true),
+        decoration: const InputDecoration(
+          labelText: 'Carga efectiva',
+          isDense: true,
+        ),
         child: Text(display),
       ),
     );
@@ -639,18 +714,19 @@ class _SetRowState extends State<_SetRow> {
     final bw = widget.set.bodyweightKg;
     final ext = widget.set.externalLoadKg;
     final assistance = widget.set.assistanceKg;
-    final factor = widget.set.bodyweightFactor ?? widget.definition?.bodyweightFactor;
+    final factor =
+        widget.set.bodyweightFactor ?? widget.definition?.bodyweightFactor;
 
     switch (loadType) {
       case LoadType.external:
         return ext;
-      case LoadType.bodyweight_effective:
+      case LoadType.bodyweightEffective:
         if (bw == null) return null;
         return bw * (factor ?? 1);
-      case LoadType.bodyweight_plus_external:
+      case LoadType.bodyweightPlusExternal:
         if (bw == null && ext == null) return null;
         return (bw ?? 0) + (ext ?? 0);
-      case LoadType.assisted_bodyweight:
+      case LoadType.assistedBodyweight:
         if (bw == null && assistance == null) return null;
         return (bw ?? 0) - (assistance ?? 0);
     }
@@ -663,7 +739,9 @@ class _SetRowState extends State<_SetRow> {
 
   List<FocusNode> _focusOrder(LoadType? type) {
     final order = <FocusNode>[_repsFocus];
-    final loadFocus = _loadFocusForType(type ?? widget.definition?.loadType ?? LoadType.external);
+    final loadFocus = _loadFocusForType(
+      type ?? widget.definition?.loadType ?? LoadType.external,
+    );
     if (loadFocus != null) order.add(loadFocus);
     if (_showAdvanced) {
       order.addAll([_durationFocus, _restFocus]);
@@ -674,11 +752,11 @@ class _SetRowState extends State<_SetRow> {
   FocusNode? _loadFocusForType(LoadType type) {
     switch (type) {
       case LoadType.external:
-      case LoadType.bodyweight_plus_external:
+      case LoadType.bodyweightPlusExternal:
         return _externalFocus;
-      case LoadType.bodyweight_effective:
+      case LoadType.bodyweightEffective:
         return _bodyweightFactorFocus;
-      case LoadType.assisted_bodyweight:
+      case LoadType.assistedBodyweight:
         return _assistanceFocus;
     }
   }

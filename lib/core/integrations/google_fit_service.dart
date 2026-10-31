@@ -7,7 +7,8 @@ import 'platform_integration_service.dart';
 /// Google Fit implementation stub using a [MethodChannel].
 class GoogleFitService implements PlatformIntegrationService {
   GoogleFitService({MethodChannel? channel})
-      : _channel = channel ?? const MethodChannel('fit_app/integrations/google_fit');
+    : _channel =
+          channel ?? const MethodChannel('fit_app/integrations/google_fit');
 
   final MethodChannel _channel;
 
@@ -33,7 +34,9 @@ class GoogleFitService implements PlatformIntegrationService {
 
   @override
   Future<List<ExternalFitnessSample>> fetchLatestSamples() async {
-    final raw = await _channel.invokeListMethod<Map<dynamic, dynamic>>('fetchSamples');
+    final raw = await _channel.invokeListMethod<Map<dynamic, dynamic>>(
+      'fetchSamples',
+    );
     final samples = raw ?? [];
     return samples.map(_mapSample).toList();
   }
