@@ -60,8 +60,8 @@ class _ActivityCalendarSheetState extends State<ActivityCalendarSheet> {
             child: Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(24),
-                color: const Color(0xFF111B2E).withOpacity(0.94),
-                border: Border.all(color: Colors.white.withOpacity(0.12)),
+                color: const Color(0xFF111B2E).withValues(alpha: 0.94),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
               ),
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
@@ -72,7 +72,7 @@ class _ActivityCalendarSheetState extends State<ActivityCalendarSheet> {
                       width: 44,
                       height: 5,
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.24),
+                        color: Colors.white.withValues(alpha: 0.24),
                         borderRadius: BorderRadius.circular(99),
                       ),
                     ),
@@ -89,7 +89,8 @@ class _ActivityCalendarSheetState extends State<ActivityCalendarSheet> {
                       firstDay: DateTime(2020),
                       lastDay: DateTime(2100),
                       focusedDay: _focusedDay,
-                      selectedDayPredicate: (day) => isSameDay(day, _selectedDay),
+                      selectedDayPredicate: (day) =>
+                          isSameDay(day, _selectedDay),
                       availableGestures: AvailableGestures.horizontalSwipe,
                       calendarFormat: CalendarFormat.month,
                       startingDayOfWeek: StartingDayOfWeek.monday,
@@ -107,22 +108,33 @@ class _ActivityCalendarSheetState extends State<ActivityCalendarSheet> {
                       calendarStyle: CalendarStyle(
                         defaultTextStyle: const TextStyle(color: Colors.white),
                         weekendTextStyle: const TextStyle(color: Colors.white),
-                        outsideTextStyle:
-                            TextStyle(color: Colors.white.withOpacity(0.42)),
+                        outsideTextStyle: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.42),
+                        ),
                         selectedDecoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: theme.colorScheme.primary.withOpacity(0.6),
+                          color: theme.colorScheme.primary.withValues(
+                            alpha: 0.6,
+                          ),
                         ),
                         todayDecoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: theme.colorScheme.secondary.withOpacity(0.32),
+                          color: theme.colorScheme.secondary.withValues(
+                            alpha: 0.32,
+                          ),
                         ),
                       ),
                       headerStyle: const HeaderStyle(
                         titleCentered: true,
                         formatButtonVisible: false,
-                        leftChevronIcon: Icon(Icons.chevron_left, color: Colors.white),
-                        rightChevronIcon: Icon(Icons.chevron_right, color: Colors.white),
+                        leftChevronIcon: Icon(
+                          Icons.chevron_left,
+                          color: Colors.white,
+                        ),
+                        rightChevronIcon: Icon(
+                          Icons.chevron_right,
+                          color: Colors.white,
+                        ),
                         titleTextStyle: TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.w700,
@@ -130,14 +142,21 @@ class _ActivityCalendarSheetState extends State<ActivityCalendarSheet> {
                         ),
                       ),
                       daysOfWeekStyle: DaysOfWeekStyle(
-                        weekdayStyle: TextStyle(color: Colors.white.withOpacity(0.75)),
-                        weekendStyle: TextStyle(color: Colors.white.withOpacity(0.75)),
+                        weekdayStyle: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.75),
+                        ),
+                        weekendStyle: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.75),
+                        ),
                       ),
                       calendarBuilders: CalendarBuilders(
                         defaultBuilder: (context, day, focusedDay) {
                           return _CalendarDayCell(
                             day: day,
-                            hasActivity: hasActivity(day: day, activeDays: widget.activeDays),
+                            hasActivity: hasActivity(
+                              day: day,
+                              activeDays: widget.activeDays,
+                            ),
                             isSelected: isSameDay(day, _selectedDay),
                             isToday: isSameDay(day, DateTime.now()),
                           );
@@ -145,7 +164,10 @@ class _ActivityCalendarSheetState extends State<ActivityCalendarSheet> {
                         todayBuilder: (context, day, focusedDay) {
                           return _CalendarDayCell(
                             day: day,
-                            hasActivity: hasActivity(day: day, activeDays: widget.activeDays),
+                            hasActivity: hasActivity(
+                              day: day,
+                              activeDays: widget.activeDays,
+                            ),
                             isSelected: isSameDay(day, _selectedDay),
                             isToday: true,
                           );
@@ -153,7 +175,10 @@ class _ActivityCalendarSheetState extends State<ActivityCalendarSheet> {
                         selectedBuilder: (context, day, focusedDay) {
                           return _CalendarDayCell(
                             day: day,
-                            hasActivity: hasActivity(day: day, activeDays: widget.activeDays),
+                            hasActivity: hasActivity(
+                              day: day,
+                              activeDays: widget.activeDays,
+                            ),
                             isSelected: true,
                             isToday: isSameDay(day, DateTime.now()),
                           );
@@ -190,7 +215,7 @@ class _CalendarDayCell extends StatelessWidget {
 
     Color borderColor = Colors.transparent;
     if (hasActivity) {
-      borderColor = Colors.white.withOpacity(0.65);
+      borderColor = Colors.white.withValues(alpha: 0.65);
     }
     if (isSelected) {
       borderColor = theme.colorScheme.secondary;
@@ -201,19 +226,24 @@ class _CalendarDayCell extends StatelessWidget {
       margin: const EdgeInsets.all(6),
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        border: Border.all(color: borderColor, width: hasActivity || isSelected ? 1.4 : 0),
+        border: Border.all(
+          color: borderColor,
+          width: hasActivity || isSelected ? 1.4 : 0,
+        ),
         color: isSelected
-            ? theme.colorScheme.primary.withOpacity(0.46)
+            ? theme.colorScheme.primary.withValues(alpha: 0.46)
             : isToday
-                ? theme.colorScheme.secondary.withOpacity(0.16)
-                : Colors.transparent,
+            ? theme.colorScheme.secondary.withValues(alpha: 0.16)
+            : Colors.transparent,
       ),
       child: Center(
         child: Text(
           '${day.day}',
           style: TextStyle(
             color: Colors.white,
-            fontWeight: isSelected || isToday ? FontWeight.w700 : FontWeight.w500,
+            fontWeight: isSelected || isToday
+                ? FontWeight.w700
+                : FontWeight.w500,
           ),
         ),
       ),

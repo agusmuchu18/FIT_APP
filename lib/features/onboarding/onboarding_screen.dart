@@ -47,17 +47,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     'En X semanas / meses',
     'Fecha específica (calendario)',
   ];
-  final List<String> _trainingLogOptions = const [
-    'Completo',
-  ];
+  final List<String> _trainingLogOptions = const ['Completo'];
   final List<String> _trainingSupervisionOptions = const [
     'Solo',
     'Con entrenador',
     'Entrenador + equipo',
   ];
-  final List<String> _nutritionLogOptions = const [
-    'Completo',
-  ];
+  final List<String> _nutritionLogOptions = const ['Completo'];
   final List<String> _dietStructureOptions = const [
     'No',
     'Sí, creada por mí',
@@ -177,8 +173,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     final showProfessionalDetails = _professionalUse != 'Solo para mí';
-    final showDataMergeQuestion = _devices.isNotEmpty &&
-        !_devices.contains('Ninguno por ahora');
+    final showDataMergeQuestion =
+        _devices.isNotEmpty && !_devices.contains('Ninguno por ahora');
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -199,8 +195,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             TextButton(
               onPressed: () =>
                   Navigator.of(context).pushReplacementNamed('/home'),
-              style:
-                  TextButton.styleFrom(foregroundColor: AppColors.textPrimary),
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.textPrimary,
+              ),
               child: const Text('Ir a inicio'),
             ),
         ],
@@ -221,7 +218,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   const SizedBox(height: 10),
                   const _PrinciplesCard(),
                   const SizedBox(height: 20),
-                  const _SectionTitle(title: '1️⃣ Contexto general del usuario'),
+                  const _SectionTitle(
+                    title: '1️⃣ Contexto general del usuario',
+                  ),
                   const SizedBox(height: 10),
                   _QuestionCard(
                     title: '¿Cómo describirías tu situación actual?',
@@ -251,8 +250,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       options: _focusOptions,
                       selected: _focusAreas,
                       maxSelection: 2,
-                      onChanged: (item) =>
-                          setState(() => _toggleSelection(_focusAreas, item, 2)),
+                      onChanged: (item) => setState(
+                        () => _toggleSelection(_focusAreas, item, 2),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -260,7 +260,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   const SizedBox(height: 10),
                   _QuestionCard(
                     title: '¿Qué querés mejorar principalmente?',
-                    description: 'Define KPIs principales y gráficos iniciales.',
+                    description:
+                        'Define KPIs principales y gráficos iniciales.',
                     child: _MultiSelectWrap(
                       options: _improvementOptions,
                       selected: _improvements,
@@ -352,7 +353,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   const SizedBox(height: 16),
                   _QuestionCard(
                     title: '¿Seguís actualmente una dieta estructurada?',
-                    description: 'Sugiere importación o crea una estructura base.',
+                    description:
+                        'Sugiere importación o crea una estructura base.',
                     child: Wrap(
                       spacing: 10,
                       runSpacing: 10,
@@ -390,10 +392,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   ),
                   const SizedBox(height: 20),
                   const _SectionTitle(
-                      title: '4️⃣ Disponibilidad y realidad del usuario'),
+                    title: '4️⃣ Disponibilidad y realidad del usuario',
+                  ),
                   const SizedBox(height: 10),
                   _QuestionCard(
-                    title: '¿Cuánto tiempo real podés dedicar por día al registro?',
+                    title:
+                        '¿Cuánto tiempo real podés dedicar por día al registro?',
                     description:
                         'Define el modo por defecto y ajusta la fricción del registro.',
                     child: Wrap(
@@ -465,26 +469,24 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   ),
                   const SizedBox(height: 16),
                   _QuestionCard(
-                    title: '¿Querés registrar estos datos a lo largo del tiempo?',
+                    title:
+                        '¿Querés registrar estos datos a lo largo del tiempo?',
                     description:
                         'Activa gráficos de composición corporal y tendencias.',
                     child: _MultiSelectWrap(
                       options: _bodyTrackingOptions,
                       selected: _bodyTracking,
-                      onChanged: (item) =>
-                          setState(() => _toggleSelection(
-                                _bodyTracking,
-                                item,
-                                null,
-                                true,
-                              )),
+                      onChanged: (item) => setState(
+                        () => _toggleSelection(_bodyTracking, item, null, true),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 20),
                   const _SectionTitle(title: '6️⃣ Uso profesional / grupos'),
                   const SizedBox(height: 10),
                   _QuestionCard(
-                    title: '¿Usarás la app solo para vos o también para otras personas?',
+                    title:
+                        '¿Usarás la app solo para vos o también para otras personas?',
                     description:
                         'Activa roles y dashboards comparativos cuando aplique.',
                     child: Wrap(
@@ -562,7 +564,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   ],
                   const SizedBox(height: 20),
                   const _SectionTitle(
-                      title: '🧩 Resultado inmediato del onboarding'),
+                    title: '🧩 Resultado inmediato del onboarding',
+                  ),
                   const SizedBox(height: 10),
                   _SummaryCard(
                     focusAreas: _focusAreas,
@@ -765,10 +768,7 @@ class _PrincipleRow extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             subtitle,
-            style: const TextStyle(
-              color: AppColors.textMuted,
-              height: 1.4,
-            ),
+            style: const TextStyle(color: AppColors.textMuted, height: 1.4),
           ),
         ],
       ),
@@ -825,10 +825,7 @@ class _QuestionCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             description,
-            style: const TextStyle(
-              color: AppColors.textMuted,
-              height: 1.5,
-            ),
+            style: const TextStyle(color: AppColors.textMuted, height: 1.5),
           ),
           const SizedBox(height: 12),
           child,
@@ -934,8 +931,8 @@ class _SummaryCard extends StatelessWidget {
     final deviceText = devices.isEmpty
         ? 'Manual'
         : devices.contains('Ninguno por ahora')
-            ? 'Manual'
-            : 'Manual + ${devices.join(', ')}';
+        ? 'Manual'
+        : 'Manual + ${devices.join(', ')}';
 
     return SummaryCard(
       padding: const EdgeInsets.all(18),
@@ -960,21 +957,12 @@ class _SummaryCard extends StatelessWidget {
             label: 'Nivel de registro',
             value: 'Entrenamiento $trainingLog • Nutrición $nutritionLog',
           ),
-          _SummaryLine(
-            label: 'Registro diario estimado',
-            value: dailyTime,
-          ),
-          _SummaryLine(
-            label: 'Fuentes de datos',
-            value: deviceText,
-          ),
+          _SummaryLine(label: 'Registro diario estimado', value: dailyTime),
+          _SummaryLine(label: 'Fuentes de datos', value: deviceText),
           const SizedBox(height: 10),
           const Text(
             'Los reportes se ajustarán automáticamente a este perfil.',
-            style: TextStyle(
-              color: AppColors.textMuted,
-              height: 1.4,
-            ),
+            style: TextStyle(color: AppColors.textMuted, height: 1.4),
           ),
         ],
       ),
@@ -994,10 +982,7 @@ class _SummaryLine extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 6),
       child: Text(
         '• $label: $value',
-        style: const TextStyle(
-          color: AppColors.textSecondary,
-          height: 1.4,
-        ),
+        style: const TextStyle(color: AppColors.textSecondary, height: 1.4),
       ),
     );
   }
@@ -1029,7 +1014,9 @@ class _SummaryDialogContent extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('• Enfoque principal: ${focusAreas.join(' + ')}'),
-        Text('• Nivel de registro: Entrenamiento $trainingLog y nutrición $nutritionLog'),
+        Text(
+          '• Nivel de registro: Entrenamiento $trainingLog y nutrición $nutritionLog',
+        ),
         Text('• Registro diario estimado: $dailyTime'),
         Text('• Fuentes de datos: $deviceText'),
         const SizedBox(height: 8),

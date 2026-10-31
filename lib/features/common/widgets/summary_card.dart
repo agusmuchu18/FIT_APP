@@ -27,13 +27,13 @@ class SummaryCard extends StatelessWidget {
     final decoration = glass
         ? BoxDecoration(
             borderRadius: radius,
-            border: Border.all(color: Colors.white.withOpacity(0.10)),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                Colors.white.withOpacity(0.10),
-                Colors.white.withOpacity(0.04),
+                Colors.white.withValues(alpha: 0.10),
+                Colors.white.withValues(alpha: 0.04),
               ],
             ),
             boxShadow: const [

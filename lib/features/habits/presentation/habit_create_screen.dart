@@ -15,10 +15,12 @@ class HabitCreateScreen extends StatefulWidget {
 
 class _HabitCreateScreenState extends State<HabitCreateScreen> {
   final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _customGoalController = TextEditingController(text: '30');
+  final TextEditingController _customGoalController = TextEditingController(
+    text: '30',
+  );
 
   String _selectedIconKey = 'spark';
-  int _selectedColor = _premiumColors.first.value;
+  int _selectedColor = _premiumColors.first.toARGB32();
   bool _isCustomColorSelected = false;
   HabitFrequency _frequency = HabitFrequency.daily;
   DateTime _startDate = normalizeHabitDay(DateTime.now());
@@ -40,7 +42,9 @@ class _HabitCreateScreenState extends State<HabitCreateScreen> {
     _nameController.text = initial.name;
     _selectedIconKey = initial.iconKey;
     _selectedColor = initial.colorArgb;
-    _isCustomColorSelected = !_premiumColors.any((color) => color.value == _selectedColor);
+    _isCustomColorSelected = !_premiumColors.any(
+      (color) => color.toARGB32() == _selectedColor,
+    );
     _frequency = initial.frequency;
     _startDate = normalizeHabitDay(initial.startDate);
     _activeWeekdays = {...initial.activeWeekdays};
@@ -92,13 +96,20 @@ class _HabitCreateScreenState extends State<HabitCreateScreen> {
           decoration: BoxDecoration(
             color: AppColors.card,
             borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: Colors.white.withOpacity(0.06)),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Días personalizados', style: TextStyle(color: AppColors.textPrimary, fontSize: 18, fontWeight: FontWeight.w700)),
+              const Text(
+                'Días personalizados',
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
               const SizedBox(height: 12),
               TextField(
                 controller: _customGoalController,
@@ -108,15 +119,23 @@ class _HabitCreateScreenState extends State<HabitCreateScreen> {
                   hintText: 'Ej: 50',
                   hintStyle: const TextStyle(color: AppColors.textMuted),
                   filled: true,
-                  fillColor: Colors.white.withOpacity(0.04),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: Colors.white.withOpacity(0.08))),
+                  fillColor: Colors.white.withValues(alpha: 0.04),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide(
+                      color: Colors.white.withValues(alpha: 0.08),
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
               PrimaryButton(
                 label: 'Guardar',
                 onPressed: () {
-                  Navigator.pop(context, int.tryParse(_customGoalController.text.trim()));
+                  Navigator.pop(
+                    context,
+                    int.tryParse(_customGoalController.text.trim()),
+                  );
                 },
               ),
             ],
@@ -136,7 +155,8 @@ class _HabitCreateScreenState extends State<HabitCreateScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => _CustomColorSheet(initialColor: Color(_selectedColor)),
+      builder: (context) =>
+          _CustomColorSheet(initialColor: Color(_selectedColor)),
     );
     if (result == null) return;
     setState(() {
@@ -146,7 +166,20 @@ class _HabitCreateScreenState extends State<HabitCreateScreen> {
   }
 
   String _formatDate(DateTime date) {
-    const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    const months = [
+      'Ene',
+      'Feb',
+      'Mar',
+      'Abr',
+      'May',
+      'Jun',
+      'Jul',
+      'Ago',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dic',
+    ];
     return '${date.day.toString().padLeft(2, '0')} ${months[date.month - 1]} ${date.year}';
   }
 
@@ -177,10 +210,12 @@ class _HabitCreateScreenState extends State<HabitCreateScreen> {
                         hintText: 'Ej: Caminar 30 minutos',
                         hintStyle: const TextStyle(color: AppColors.textMuted),
                         filled: true,
-                        fillColor: Colors.white.withOpacity(0.04),
+                        fillColor: Colors.white.withValues(alpha: 0.04),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
-                          borderSide: BorderSide(color: Colors.white.withOpacity(0.08)),
+                          borderSide: BorderSide(
+                            color: Colors.white.withValues(alpha: 0.08),
+                          ),
                         ),
                       ),
                     ),
@@ -192,31 +227,54 @@ class _HabitCreateScreenState extends State<HabitCreateScreen> {
                       height: 240,
                       child: GridView.builder(
                         itemCount: kHabitIconOptions.length,
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 6,
-                          mainAxisSpacing: 10,
-                          crossAxisSpacing: 10,
-                          childAspectRatio: 1,
-                        ),
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 6,
+                              mainAxisSpacing: 10,
+                              crossAxisSpacing: 10,
+                              childAspectRatio: 1,
+                            ),
                         itemBuilder: (context, index) {
                           final option = kHabitIconOptions[index];
                           final selected = option.iconKey == _selectedIconKey;
                           return GestureDetector(
-                            onTap: () => setState(() => _selectedIconKey = option.iconKey),
+                            onTap: () => setState(
+                              () => _selectedIconKey = option.iconKey,
+                            ),
                             child: Container(
                               decoration: BoxDecoration(
-                                color: selected ? Color(_selectedColor).withOpacity(0.2) : Colors.white.withOpacity(0.04),
+                                color: selected
+                                    ? Color(
+                                        _selectedColor,
+                                      ).withValues(alpha: 0.2)
+                                    : Colors.white.withValues(alpha: 0.04),
                                 borderRadius: BorderRadius.circular(14),
-                                border: Border.all(color: selected ? Color(_selectedColor) : Colors.white.withOpacity(0.08), width: selected ? 1.6 : 1),
+                                border: Border.all(
+                                  color: selected
+                                      ? Color(_selectedColor)
+                                      : Colors.white.withValues(alpha: 0.08),
+                                  width: selected ? 1.6 : 1,
+                                ),
                               ),
                               child: Stack(
                                 children: [
-                                  Center(child: Icon(option.iconData, color: selected ? Color(_selectedColor) : AppColors.textSecondary)),
+                                  Center(
+                                    child: Icon(
+                                      option.iconData,
+                                      color: selected
+                                          ? Color(_selectedColor)
+                                          : AppColors.textSecondary,
+                                    ),
+                                  ),
                                   if (selected)
                                     const Positioned(
                                       right: 4,
                                       top: 4,
-                                      child: Icon(Icons.check_circle, size: 15, color: AppColors.accent),
+                                      child: Icon(
+                                        Icons.check_circle,
+                                        size: 15,
+                                        color: AppColors.accent,
+                                      ),
                                     ),
                                 ],
                               ),
@@ -234,17 +292,31 @@ class _HabitCreateScreenState extends State<HabitCreateScreen> {
                       runSpacing: 10,
                       children: [
                         ..._premiumColors.map((color) {
-                          final selected = !_isCustomColorSelected && _selectedColor == color.value;
+                          final selected =
+                              !_isCustomColorSelected &&
+                              _selectedColor == color.toARGB32();
                           return GestureDetector(
                             onTap: () => setState(() {
-                              _selectedColor = color.value;
+                              _selectedColor = color.toARGB32();
                               _isCustomColorSelected = false;
                             }),
                             child: Container(
                               width: 34,
                               height: 34,
-                              decoration: BoxDecoration(shape: BoxShape.circle, color: color, border: Border.all(color: Colors.white.withOpacity(0.18))),
-                              child: selected ? const Icon(Icons.check, size: 16, color: Colors.white) : null,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: color,
+                                border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.18),
+                                ),
+                              ),
+                              child: selected
+                                  ? const Icon(
+                                      Icons.check,
+                                      size: 16,
+                                      color: Colors.white,
+                                    )
+                                  : null,
                             ),
                           );
                         }),
@@ -255,13 +327,23 @@ class _HabitCreateScreenState extends State<HabitCreateScreen> {
                             height: 38,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color: _isCustomColorSelected ? Color(_selectedColor) : Colors.white.withOpacity(0.06),
+                              color: _isCustomColorSelected
+                                  ? Color(_selectedColor)
+                                  : Colors.white.withValues(alpha: 0.06),
                               border: Border.all(
-                                color: _isCustomColorSelected ? Colors.white.withOpacity(0.7) : Colors.white.withOpacity(0.2),
+                                color: _isCustomColorSelected
+                                    ? Colors.white.withValues(alpha: 0.7)
+                                    : Colors.white.withValues(alpha: 0.2),
                                 width: _isCustomColorSelected ? 1.5 : 1,
                               ),
                             ),
-                            child: Icon(_isCustomColorSelected ? Icons.check : Icons.palette_rounded, size: 18, color: Colors.white),
+                            child: Icon(
+                              _isCustomColorSelected
+                                  ? Icons.check
+                                  : Icons.palette_rounded,
+                              size: 18,
+                              color: Colors.white,
+                            ),
                           ),
                         ),
                       ],
@@ -275,17 +357,36 @@ class _HabitCreateScreenState extends State<HabitCreateScreen> {
                         ListTile(
                           contentPadding: EdgeInsets.zero,
                           onTap: _pickStartDate,
-                          leading: const Icon(Icons.calendar_today_rounded, color: AppColors.textSecondary, size: 20),
-                          title: Text('Comienza: ${_formatDate(_startDate)}', style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
-                          trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textMuted),
+                          leading: const Icon(
+                            Icons.calendar_today_rounded,
+                            color: AppColors.textSecondary,
+                            size: 20,
+                          ),
+                          title: Text(
+                            'Comienza: ${_formatDate(_startDate)}',
+                            style: const TextStyle(
+                              color: AppColors.textPrimary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          trailing: const Icon(
+                            Icons.chevron_right_rounded,
+                            color: AppColors.textMuted,
+                          ),
                         ),
                         const SizedBox(height: 10),
                         SegmentedButton<HabitFrequency>(
                           segments: HabitFrequency.values
-                              .map((f) => ButtonSegment<HabitFrequency>(value: f, label: Text(f.label)))
+                              .map(
+                                (f) => ButtonSegment<HabitFrequency>(
+                                  value: f,
+                                  label: Text(f.label),
+                                ),
+                              )
                               .toList(),
                           selected: {_frequency},
-                          onSelectionChanged: (value) => setState(() => _frequency = value.first),
+                          onSelectionChanged: (value) =>
+                              setState(() => _frequency = value.first),
                         ),
                         const SizedBox(height: 12),
                         if (_frequency == HabitFrequency.daily)
@@ -293,9 +394,19 @@ class _HabitCreateScreenState extends State<HabitCreateScreen> {
                             spacing: 8,
                             runSpacing: 8,
                             children: List.generate(7, (index) {
-                              const labels = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+                              const labels = [
+                                'L',
+                                'M',
+                                'M',
+                                'J',
+                                'V',
+                                'S',
+                                'D',
+                              ];
                               final weekday = index + 1;
-                              final selected = _activeWeekdays.contains(weekday);
+                              final selected = _activeWeekdays.contains(
+                                weekday,
+                              );
                               return FilterChip(
                                 label: Text(labels[index]),
                                 selected: selected,
@@ -314,7 +425,14 @@ class _HabitCreateScreenState extends State<HabitCreateScreen> {
                         if (_frequency == HabitFrequency.weekly)
                           Row(
                             children: [
-                              const Expanded(child: Text('Repetir cada', style: TextStyle(color: AppColors.textSecondary))),
+                              const Expanded(
+                                child: Text(
+                                  'Repetir cada',
+                                  style: TextStyle(
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ),
+                              ),
                               DropdownButton<int>(
                                 value: _intervalWeeks,
                                 dropdownColor: AppColors.card,
@@ -324,7 +442,12 @@ class _HabitCreateScreenState extends State<HabitCreateScreen> {
                                 },
                                 items: List.generate(8, (index) {
                                   final week = index + 1;
-                                  return DropdownMenuItem(value: week, child: Text('$week semana${week > 1 ? 's' : ''}'));
+                                  return DropdownMenuItem(
+                                    value: week,
+                                    child: Text(
+                                      '$week semana${week > 1 ? 's' : ''}',
+                                    ),
+                                  );
                                 }),
                               ),
                             ],
@@ -334,23 +457,51 @@ class _HabitCreateScreenState extends State<HabitCreateScreen> {
                             children: [
                               Row(
                                 children: [
-                                  const Expanded(child: Text('Día del mes', style: TextStyle(color: AppColors.textSecondary))),
-                                  IconButton(
-                                    onPressed: _dayOfMonth > 1 ? () => setState(() => _dayOfMonth--) : null,
-                                    icon: const Icon(Icons.remove_circle_outline_rounded),
+                                  const Expanded(
+                                    child: Text(
+                                      'Día del mes',
+                                      style: TextStyle(
+                                        color: AppColors.textSecondary,
+                                      ),
+                                    ),
                                   ),
-                                  Text('$_dayOfMonth', style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
                                   IconButton(
-                                    onPressed: _dayOfMonth < 31 ? () => setState(() => _dayOfMonth++) : null,
-                                    icon: const Icon(Icons.add_circle_outline_rounded),
+                                    onPressed: _dayOfMonth > 1
+                                        ? () => setState(() => _dayOfMonth--)
+                                        : null,
+                                    icon: const Icon(
+                                      Icons.remove_circle_outline_rounded,
+                                    ),
+                                  ),
+                                  Text(
+                                    '$_dayOfMonth',
+                                    style: const TextStyle(
+                                      color: AppColors.textPrimary,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  IconButton(
+                                    onPressed: _dayOfMonth < 31
+                                        ? () => setState(() => _dayOfMonth++)
+                                        : null,
+                                    icon: const Icon(
+                                      Icons.add_circle_outline_rounded,
+                                    ),
                                   ),
                                 ],
                               ),
                               SwitchListTile.adaptive(
                                 contentPadding: EdgeInsets.zero,
-                                title: const Text('Si no existe ese día, usar último día', style: TextStyle(color: AppColors.textSecondary)),
+                                title: const Text(
+                                  'Si no existe ese día, usar último día',
+                                  style: TextStyle(
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ),
                                 value: _adjustToLastDayIfMissing,
-                                onChanged: (value) => setState(() => _adjustToLastDayIfMissing = value),
+                                onChanged: (value) => setState(
+                                  () => _adjustToLastDayIfMissing = value,
+                                ),
                               ),
                             ],
                           ),
@@ -363,21 +514,30 @@ class _HabitCreateScreenState extends State<HabitCreateScreen> {
                       children: [
                         SwitchListTile.adaptive(
                           contentPadding: EdgeInsets.zero,
-                          title: const Text('Usar contador', style: TextStyle(color: AppColors.textSecondary)),
+                          title: const Text(
+                            'Usar contador',
+                            style: TextStyle(color: AppColors.textSecondary),
+                          ),
                           value: _isCountable,
-                          onChanged: (value) => setState(() => _isCountable = value),
+                          onChanged: (value) =>
+                              setState(() => _isCountable = value),
                         ),
                         if (_isCountable)
                           TextField(
                             keyboardType: TextInputType.number,
-                            onChanged: (value) => _targetCount = int.tryParse(value) ?? 1,
+                            onChanged: (value) =>
+                                _targetCount = int.tryParse(value) ?? 1,
                             decoration: InputDecoration(
                               labelText: 'Meta diaria',
-                              labelStyle: const TextStyle(color: AppColors.textMuted),
+                              labelStyle: const TextStyle(
+                                color: AppColors.textMuted,
+                              ),
                               filled: true,
-                              fillColor: Colors.white.withOpacity(0.04),
+                              fillColor: Colors.white.withValues(alpha: 0.04),
                             ),
-                            style: const TextStyle(color: AppColors.textPrimary),
+                            style: const TextStyle(
+                              color: AppColors.textPrimary,
+                            ),
                           ),
                       ],
                     ),
@@ -387,35 +547,52 @@ class _HabitCreateScreenState extends State<HabitCreateScreen> {
                     child: Wrap(
                       spacing: 8,
                       runSpacing: 8,
-                      children: [7, 21, 30, 45, 100, 365]
-                          .map((days) => _GoalChip(
-                                label: '$days',
-                                selected: !_isForever && _goalDays == days,
+                      children:
+                          [7, 21, 30, 45, 100, 365]
+                              .map(
+                                (days) => _GoalChip(
+                                  label: '$days',
+                                  selected: !_isForever && _goalDays == days,
+                                  onTap: () => setState(() {
+                                    _goalDays = days;
+                                    _isForever = false;
+                                  }),
+                                ),
+                              )
+                              .toList()
+                            ..addAll([
+                              _GoalChip(
+                                label: 'Personalizado',
+                                selected: false,
+                                onTap: _askCustomGoal,
+                              ),
+                              _GoalChip(
+                                label: 'Para siempre',
+                                selected: _isForever,
                                 onTap: () => setState(() {
-                                  _goalDays = days;
-                                  _isForever = false;
+                                  _isForever = true;
+                                  _goalDays = null;
                                 }),
-                              ))
-                          .toList()
-                        ..addAll([
-                          _GoalChip(label: 'Personalizado', selected: false, onTap: _askCustomGoal),
-                          _GoalChip(
-                            label: 'Para siempre',
-                            selected: _isForever,
-                            onTap: () => setState(() {
-                              _isForever = true;
-                              _goalDays = null;
-                            }),
-                          ),
-                        ]),
+                              ),
+                            ]),
                     ),
                   ),
                 ],
               ),
             ),
             Container(
-              padding: EdgeInsets.fromLTRB(20, 10, 20, MediaQuery.of(context).padding.bottom + 12),
-              decoration: BoxDecoration(color: AppColors.background.withOpacity(0.9), border: Border(top: BorderSide(color: Colors.white.withOpacity(0.04)))),
+              padding: EdgeInsets.fromLTRB(
+                20,
+                10,
+                20,
+                MediaQuery.of(context).padding.bottom + 12,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.background.withValues(alpha: 0.9),
+                border: Border(
+                  top: BorderSide(color: Colors.white.withValues(alpha: 0.04)),
+                ),
+              ),
               child: PrimaryButton(
                 label: 'Guardar',
                 icon: Icons.check_rounded,
@@ -457,7 +634,8 @@ class _HabitCreateScreenState extends State<HabitCreateScreen> {
                                   activeWeekdays: built.activeWeekdays,
                                   intervalWeeks: built.intervalWeeks,
                                   dayOfMonth: built.dayOfMonth,
-                                  adjustToLastDayIfMissing: built.adjustToLastDayIfMissing,
+                                  adjustToLastDayIfMissing:
+                                      built.adjustToLastDayIfMissing,
                                   targetCount: built.targetCount,
                                   subtitle: initial.subtitle,
                                 ),
@@ -490,36 +668,73 @@ class _CustomColorSheetState extends State<_CustomColorSheet> {
   @override
   void initState() {
     super.initState();
-    _red = widget.initialColor.red;
-    _green = widget.initialColor.green;
-    _blue = widget.initialColor.blue;
+    _red = (widget.initialColor.r * 255).round();
+    _green = (widget.initialColor.g * 255).round();
+    _blue = (widget.initialColor.b * 255).round();
   }
 
   @override
   Widget build(BuildContext context) {
     final color = Color.fromARGB(255, _red, _green, _blue);
     return Padding(
-      padding: EdgeInsets.only(left: 20, right: 20, top: 20, bottom: MediaQuery.of(context).padding.bottom + 20),
+      padding: EdgeInsets.only(
+        left: 20,
+        right: 20,
+        top: 20,
+        bottom: MediaQuery.of(context).padding.bottom + 20,
+      ),
       child: Container(
         padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(color: AppColors.card, borderRadius: BorderRadius.circular(22), border: Border.all(color: Colors.white.withOpacity(0.08))),
+        decoration: BoxDecoration(
+          color: AppColors.card,
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Color personalizado', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700, fontSize: 18)),
+            const Text(
+              'Color personalizado',
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w700,
+                fontSize: 18,
+              ),
+            ),
             const SizedBox(height: 14),
             Center(
               child: Container(
                 width: 68,
                 height: 68,
-                decoration: BoxDecoration(shape: BoxShape.circle, color: color, border: Border.all(color: Colors.white.withOpacity(0.24))),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: color,
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.24),
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 14),
-            _RgbSlider(label: 'R', value: _red, onChanged: (v) => setState(() => _red = v), activeColor: Colors.redAccent),
-            _RgbSlider(label: 'G', value: _green, onChanged: (v) => setState(() => _green = v), activeColor: Colors.greenAccent),
-            _RgbSlider(label: 'B', value: _blue, onChanged: (v) => setState(() => _blue = v), activeColor: Colors.blueAccent),
+            _RgbSlider(
+              label: 'R',
+              value: _red,
+              onChanged: (v) => setState(() => _red = v),
+              activeColor: Colors.redAccent,
+            ),
+            _RgbSlider(
+              label: 'G',
+              value: _green,
+              onChanged: (v) => setState(() => _green = v),
+              activeColor: Colors.greenAccent,
+            ),
+            _RgbSlider(
+              label: 'B',
+              value: _blue,
+              onChanged: (v) => setState(() => _blue = v),
+              activeColor: Colors.blueAccent,
+            ),
             const SizedBox(height: 10),
             Row(
               children: [
@@ -532,7 +747,7 @@ class _CustomColorSheetState extends State<_CustomColorSheet> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: FilledButton(
-                    onPressed: () => Navigator.pop(context, color.value),
+                    onPressed: () => Navigator.pop(context, color.toARGB32()),
                     child: const Text('Aplicar'),
                   ),
                 ),
@@ -546,7 +761,12 @@ class _CustomColorSheetState extends State<_CustomColorSheet> {
 }
 
 class _RgbSlider extends StatelessWidget {
-  const _RgbSlider({required this.label, required this.value, required this.onChanged, required this.activeColor});
+  const _RgbSlider({
+    required this.label,
+    required this.value,
+    required this.onChanged,
+    required this.activeColor,
+  });
 
   final String label;
   final int value;
@@ -557,11 +777,25 @@ class _RgbSlider extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        SizedBox(width: 44, child: Text('$label $value', style: const TextStyle(color: AppColors.textSecondary))),
+        SizedBox(
+          width: 44,
+          child: Text(
+            '$label $value',
+            style: const TextStyle(color: AppColors.textSecondary),
+          ),
+        ),
         Expanded(
           child: SliderTheme(
-            data: SliderTheme.of(context).copyWith(activeTrackColor: activeColor),
-            child: Slider(value: value.toDouble(), min: 0, max: 255, divisions: 255, onChanged: (v) => onChanged(v.round())),
+            data: SliderTheme.of(
+              context,
+            ).copyWith(activeTrackColor: activeColor),
+            child: Slider(
+              value: value.toDouble(),
+              min: 0,
+              max: 255,
+              divisions: 255,
+              onChanged: (v) => onChanged(v.round()),
+            ),
           ),
         ),
       ],
@@ -584,24 +818,43 @@ class _Section extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.card,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: Colors.white.withOpacity(0.05)),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
         ),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(title, style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700)),
-          if (subtitle != null) ...[
-            const SizedBox(height: 4),
-            Text(subtitle!, style: const TextStyle(color: AppColors.textMuted, fontSize: 12)),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            if (subtitle != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                subtitle!,
+                style: const TextStyle(
+                  color: AppColors.textMuted,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+            const SizedBox(height: 12),
+            child,
           ],
-          const SizedBox(height: 12),
-          child,
-        ]),
+        ),
       ),
     );
   }
 }
 
 class _GoalChip extends StatelessWidget {
-  const _GoalChip({required this.label, required this.selected, required this.onTap});
+  const _GoalChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
 
   final String label;
   final bool selected;
@@ -613,8 +866,11 @@ class _GoalChip extends StatelessWidget {
       selected: selected,
       onSelected: (_) => onTap(),
       label: Text(label),
-      labelStyle: TextStyle(color: selected ? Colors.black : AppColors.textSecondary, fontWeight: FontWeight.w600),
-      backgroundColor: Colors.white.withOpacity(0.05),
+      labelStyle: TextStyle(
+        color: selected ? Colors.black : AppColors.textSecondary,
+        fontWeight: FontWeight.w600,
+      ),
+      backgroundColor: Colors.white.withValues(alpha: 0.05),
       selectedColor: AppColors.accentSecondary,
     );
   }

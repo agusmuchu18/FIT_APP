@@ -4,6 +4,7 @@ import '../pro/data/exercise_library.dart';
 import '../pro/data/exercise_definition.dart';
 import '../pro/models/workout_models.dart';
 import 'session_models.dart';
+import 'exercise_load_policy.dart';
 
 part 'exercise_performance.dart';
 part 'training_statistics.dart';
@@ -24,16 +25,21 @@ enum WorkoutArtCategory {
 class ExerciseReport {
   ExerciseReport(this.exercise) {
     performed = exercise.sets
-        .where((set) => WorkoutAnalytics.isRecordedSet(exercise, set))
+        .where((set) => WorkoutAnalytics.countsForMetrics(exercise, set))
         .toList(growable: false);
+    warmups = exercise.sets.where((s) => s.kind == SetKind.warmup).length;
     reps = performed.fold(0, (sum, set) => sum + (set.reps ?? 0));
     externalVolume = performed.fold(
       0,
-      (sum, set) => sum + WorkoutAnalytics.externalVolume(set),
+      (sum, set) =>
+          sum + WorkoutAnalytics.externalVolume(set, exercise: exercise),
     );
   }
   final WorkoutExercise exercise;
+
+  /// Recorded working sets: warm-ups are excluded from every metric.
   late final List<SetEntry> performed;
+  late final int warmups;
   late final int reps;
   late final double externalVolume;
 }
@@ -68,12 +74,7 @@ class WorkoutReport {
   bool get legacyCompletionUnknown =>
       session.exercises.any((e) => e.sets.any((s) => s.done == null));
   bool get ambiguousLoad => session.exercises.any(
-    (e) => e.sets.any(
-      (s) =>
-          s.loadIsAmbiguous ||
-          (s.externalLoadKg != null &&
-              WorkoutAnalytics.externalLoadForVolume(s) == null),
-    ),
+    (e) => e.sets.any((s) => WorkoutAnalytics.loadIsUnknown(e, s)),
   );
   Duration? get duration {
     final seconds =
@@ -271,17 +272,68 @@ class WorkoutAnalytics {
           : isTimed(exercise)
           ? (set.durationSeconds ?? 0) > 0
           : (set.reps ?? 0) > 0);
+
+  /// A recorded set that is not a warm-up: the only sets used for volume,
+  /// records, comparisons and muscle counts.
+  static bool countsForMetrics(WorkoutExercise exercise, SetEntry set) =>
+      set.kind != SetKind.warmup && isRecordedSet(exercise, set);
+
   static double totalExternalVolume(List<WorkoutExercise> exercises) =>
       exercises.fold(
         0.0,
         (sum, exercise) =>
             sum +
             exercise.sets
-                .where((s) => isRecordedSet(exercise, s))
-                .fold(0.0, (partial, set) => partial + externalVolume(set)),
+                .where((s) => countsForMetrics(exercise, s))
+                .fold(
+                  0.0,
+                  (partial, set) =>
+                      partial + externalVolume(set, exercise: exercise),
+                ),
       );
-  static double externalVolume(SetEntry set) {
-    final kg = externalLoadForVolume(set);
+  static bool isBodyweight(WorkoutExercise exercise) =>
+      ExerciseLoadPolicy.isBodyweight(
+        definition(exercise),
+        equipment: exercise.equipment,
+      );
+
+  /// A legacy bodyweight kg value has no proven meaning unless a load mode was
+  /// explicitly recorded. Catalogue capability never proves that it was lastre.
+  static RoutineExerciseLoadType? setLoadType(
+    WorkoutExercise exercise,
+    SetEntry set,
+  ) {
+    if (set.loadIsAmbiguous) return null;
+    if (set.loadType != null) return set.loadType;
+    if (exercise.targetLoadType == RoutineExerciseLoadType.assistedKg ||
+        exercise.targetLoadType == RoutineExerciseLoadType.addedWeightKg) {
+      return exercise.targetLoadType;
+    }
+    if (isBodyweight(exercise)) {
+      if (set.assistanceKg != null) return RoutineExerciseLoadType.assistedKg;
+      return (set.externalLoadKg ?? 0) > 0
+          ? null
+          : RoutineExerciseLoadType.bodyweight;
+    }
+    if (exercise.targetLoadType == RoutineExerciseLoadType.bodyweight &&
+        set.externalLoadKg != null) {
+      return RoutineExerciseLoadType.weightedKg;
+    }
+    return exercise.targetLoadType;
+  }
+
+  static bool loadIsUnknown(WorkoutExercise e, SetEntry s) {
+    final mode = setLoadType(e, s);
+    return s.loadIsAmbiguous ||
+        mode == null ||
+        (s.externalLoadKg != null &&
+            mode != RoutineExerciseLoadType.bodyweight &&
+            mode != RoutineExerciseLoadType.assistedKg &&
+            externalLoadForVolume(s, exercise: e) == null);
+  }
+
+  static double externalVolume(SetEntry set, {WorkoutExercise? exercise}) {
+    final kg = externalLoadForVolume(set, exercise: exercise);
     final reps = set.reps;
     if (set.loadIsAmbiguous ||
         kg == null ||
@@ -296,7 +348,17 @@ class WorkoutAnalytics {
 
   /// Historical recorded loads retain their original convention. Multiplication
   /// is allowed only with an explicit per-implement convention and count.
-  static double? externalLoadForVolume(SetEntry set) {
+  static double? externalLoadForVolume(
+    SetEntry set, {
+    WorkoutExercise? exercise,
+  }) {
+    final mode = exercise == null ? set.loadType : setLoadType(exercise, set);
+    if (mode == RoutineExerciseLoadType.bodyweight ||
+        mode == RoutineExerciseLoadType.assistedKg ||
+        (exercise != null && mode == null) ||
+        (set.loadType == null && set.assistanceKg != null)) {
+      return null;
+    }
     final kg = set.externalLoadKg;
     if (set.loadIsAmbiguous || kg == null || !kg.isFinite || kg < 0) {
       return null;
@@ -314,34 +376,33 @@ class WorkoutAnalytics {
               name: e.name,
               notes: e.notes,
               targetSets: e.sets.length,
+              loadSchemaVersion: 1,
               instanceId: e.plan?.instanceId ?? e.id,
               setTargets: e.plan?.setTargets ?? const [],
               sportPlan: e.sportPlan,
               sportPurpose: e.plan?.sportPurpose,
               sportResult: e.sportResult,
+              supersetId: e.supersetId,
               restEnabled: e.restEnabled,
               measurement: e.isDistance
                   ? 'distance'
                   : e.isTimed
                   ? 'seconds'
                   : 'reps',
-              targetLoadType:
-                  e.plan?.targetLoadType ??
-                  (e.isAssisted
-                      ? RoutineExerciseLoadType.assistedKg
-                      : (_definitions[e.exerciseId]?.loadType ==
-                                LoadType.bodyweightEffective
-                            ? RoutineExerciseLoadType.bodyweight
-                            : RoutineExerciseLoadType.weightedKg)),
+              targetLoadType: e.defaultMode,
               restSeconds: e.restSeconds,
               sets: e.sets
                   .map(
                     (s) => SetEntry(
+                      loadType: s.loadType,
+                      loadIsAmbiguous: s.loadIsAmbiguous,
                       id: s.id,
                       done: s.done,
                       reps: s.reps,
                       durationSeconds: s.durationSeconds,
                       externalLoadKg: s.kg,
+                      bodyweightKg: s.bodyweightKg,
+                      bodyweightFactor: s.bodyweightFactor,
                       assistanceKg: s.assistanceKg,
                       distanceMeters: s.distanceMeters,
                       loadConvention: s.loadConvention,
@@ -349,6 +410,7 @@ class WorkoutAnalytics {
                       rir: s.rir,
                       note: s.note,
                       performedAt: s.performedAt,
+                      kind: s.kind,
                     ),
                   )
                   .toList(),
@@ -371,7 +433,7 @@ class WorkoutAnalytics {
               .toSet();
       if (groups.isEmpty) continue;
       final count = exercise.sets
-          .where((set) => isRecordedSet(exercise, set))
+          .where((set) => countsForMetrics(exercise, set))
           .length;
       for (final group in groups) {
         buckets[group] = buckets[group]! + count / groups.length;
@@ -481,15 +543,7 @@ class WorkoutAnalytics {
     ) {
       final kinds =
           e.performed
-              .map(
-                (s) => s.assistanceKg != null
-                    ? 'assisted'
-                    : s.externalLoadKg != null
-                    ? 'external'
-                    : s.bodyweightKg != null
-                    ? 'bodyweight'
-                    : 'unloaded',
-              )
+              .map((s) => setLoadType(e.exercise, s)?.name ?? 'unknown')
               .toSet()
               .toList()
             ..sort();
@@ -512,7 +566,7 @@ class WorkoutAnalytics {
     var volume = 0.0;
     for (final exercise in report.exercises) {
       for (final set in exercise.performed) {
-        final current = externalVolume(set);
+        final current = externalVolume(set, exercise: exercise.exercise);
         if (current > volume) {
           volume = current;
           best = (exercise.exercise.name, set);

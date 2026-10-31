@@ -58,13 +58,15 @@ enum RecordKind {
 /// A comparison boundary, never a conversion between body mass, added load,
 /// assistance, machines, or an unknown dumbbell convention.
 String exerciseLoadKey(WorkoutExercise e, SetEntry s) =>
-    '${e.targetLoadType.name}|${e.equipment ?? WorkoutAnalytics.definition(e)?.equipment ?? 'unknown'}|${s.loadConvention.name}|${s.loadConvention == LoadConvention.perImplement ? s.implementCount ?? '?' : 1}';
+    '${WorkoutAnalytics.setLoadType(e, s)?.name ?? 'unknown'}|${e.equipment ?? WorkoutAnalytics.definition(e)?.equipment ?? 'unknown'}|${s.loadConvention.name}|${s.loadConvention == LoadConvention.perImplement ? s.implementCount ?? '?' : 1}${WorkoutAnalytics.setLoadType(e, s) == RoutineExerciseLoadType.assistedKg ? '|assistance:${s.assistanceKg ?? '?'}' : ''}';
 
 String exerciseLoadLabel(WorkoutExercise e, SetEntry s) {
-  final kind = switch (e.targetLoadType) {
+  final kind = switch (WorkoutAnalytics.setLoadType(e, s)) {
+    null => 'Carga antigua sin clasificar',
     RoutineExerciseLoadType.bodyweight => 'Peso corporal',
     RoutineExerciseLoadType.addedWeightKg => 'Lastre',
-    RoutineExerciseLoadType.assistedKg => 'Asistencia',
+    RoutineExerciseLoadType.assistedKg =>
+      'Asistencia ${s.assistanceKg == null ? "sin registrar" : "${s.assistanceKg} kg"}',
     RoutineExerciseLoadType.machineKg => 'Máquina',
     RoutineExerciseLoadType.weightedKg => 'Carga externa',
   };
@@ -89,21 +91,17 @@ class ExerciseObservation {
   String get exerciseId =>
       WorkoutAnalytics.definition(exercise)?.id ?? exercise.id;
   String get label => exerciseLoadLabel(exercise, sets.first);
-  double get volume =>
-      sets.fold(0.0, (sum, s) => sum + WorkoutAnalytics.externalVolume(s));
+  double get volume => sets.fold(
+    0.0,
+    (sum, s) => sum + WorkoutAnalytics.externalVolume(s, exercise: exercise),
+  );
   int get reps => sets.fold(0, (sum, s) => sum + (s.reps ?? 0));
   double? value(ExerciseMetric metric) {
     final loaded = sets.where(
       (s) =>
-          !s.loadIsAmbiguous &&
-          s.externalLoadKg != null &&
-          s.assistanceKg == null &&
-          exercise.targetLoadType != RoutineExerciseLoadType.bodyweight &&
-          exercise.targetLoadType != RoutineExerciseLoadType.assistedKg,
+          WorkoutAnalytics.externalLoadForVolume(s, exercise: exercise) != null,
     );
-    final volumetric = loaded.where(
-      (s) => WorkoutAnalytics.externalLoadForVolume(s) != null,
-    );
+    final volumetric = loaded;
     double? maximum(Iterable<double?> values) {
       final known = values
           .whereType<double>()
@@ -118,7 +116,9 @@ class ExerciseObservation {
         loaded.map((s) => TrainingPerformanceIndex.estimatedMax(exercise, s)),
       ),
       ExerciseMetric.setVolume => maximum(
-        volumetric.map(WorkoutAnalytics.externalVolume),
+        volumetric.map(
+          (s) => WorkoutAnalytics.externalVolume(s, exercise: exercise),
+        ),
       ),
       ExerciseMetric.sessionVolume =>
         loaded.isEmpty || volumetric.length != loaded.length ? null : volume,
@@ -193,7 +193,9 @@ class TrainingPerformanceIndex {
         unknown += e.sets.where((s) => s.done == null).length;
         final groups = <String, List<SetEntry>>{};
         for (final s in e.sets) {
-          if (s.done != true || !WorkoutAnalytics.isRecordedSet(e, s)) continue;
+          if (s.done != true || !WorkoutAnalytics.countsForMetrics(e, s)) {
+            continue;
+          }
           groups.putIfAbsent(exerciseLoadKey(e, s), () => []).add(s);
         }
         for (final entry in groups.entries) {
@@ -240,6 +242,8 @@ class TrainingPerformanceIndex {
         }
 
         for (final s in entry.value) {
+          final mode = WorkoutAnalytics.setLoadType(e, s);
+          if (mode == null) continue;
           if (!WorkoutAnalytics.isTimed(e) && e.measurement != 'distance') {
             record(RecordKind.repetitions, s.reps?.toDouble(), [s.id]);
           }
@@ -247,25 +251,23 @@ class TrainingPerformanceIndex {
               WorkoutAnalytics.definition(e)?.isTimed == true) {
             record(RecordKind.duration, s.durationSeconds?.toDouble(), [s.id]);
           }
-          if (s.loadIsAmbiguous ||
-              (s.loadConvention == LoadConvention.perImplement &&
-                  WorkoutAnalytics.externalLoadForVolume(s) == null) ||
-              s.assistanceKg != null ||
-              e.targetLoadType == RoutineExerciseLoadType.bodyweight ||
-              e.targetLoadType == RoutineExerciseLoadType.assistedKg) {
+          if (mode == RoutineExerciseLoadType.bodyweight ||
+              mode == RoutineExerciseLoadType.assistedKg ||
+              WorkoutAnalytics.externalLoadForVolume(s, exercise: e) == null) {
             continue;
           }
           record(RecordKind.load, s.externalLoadKg, [s.id]);
           if (s.reps != null) {
             record(RecordKind.repLoad, s.externalLoadKg, [s.id], reps: s.reps);
           }
-          record(RecordKind.setVolume, WorkoutAnalytics.externalVolume(s), [
-            s.id,
-          ]);
+          record(
+            RecordKind.setVolume,
+            WorkoutAnalytics.externalVolume(s, exercise: e),
+            [s.id],
+          );
           record(RecordKind.estimatedMax, estimatedMax(e, s), [s.id]);
         }
-        if (e.targetLoadType != RoutineExerciseLoadType.bodyweight &&
-            e.targetLoadType != RoutineExerciseLoadType.assistedKg) {
+        if (observation.value(ExerciseMetric.sessionVolume) != null) {
           record(
             RecordKind.sessionVolume,
             observation.value(ExerciseMetric.sessionVolume),
@@ -299,7 +301,7 @@ class TrainingPerformanceIndex {
     if (s.done != true ||
         s.loadIsAmbiguous ||
         (s.loadConvention == LoadConvention.perImplement &&
-            WorkoutAnalytics.externalLoadForVolume(s) == null) ||
+            WorkoutAnalytics.externalLoadForVolume(s, exercise: e) == null) ||
         kg == null ||
         !kg.isFinite ||
         kg <= 0 ||
@@ -311,8 +313,10 @@ class TrainingPerformanceIndex {
         e.sportPlan != null ||
         WorkoutAnalytics.isTimed(e) ||
         e.measurement == 'distance' ||
-        (e.targetLoadType != RoutineExerciseLoadType.weightedKg &&
-            e.targetLoadType != RoutineExerciseLoadType.machineKg) ||
+        (WorkoutAnalytics.setLoadType(e, s) !=
+                RoutineExerciseLoadType.weightedKg &&
+            WorkoutAnalytics.setLoadType(e, s) !=
+                RoutineExerciseLoadType.machineKg) ||
         d?.defaultMeasurement != 'reps' ||
         d?.loadType != LoadType.external) {
       return null;

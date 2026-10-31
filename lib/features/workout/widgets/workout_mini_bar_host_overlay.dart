@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../application/rest_notifications.dart';
 import '../workout_in_progress_controller.dart';
 import 'workout_mini_bar.dart';
 import '../presentation/widgets/workout_units_host.dart';
@@ -67,9 +70,19 @@ class WorkoutMiniBarOverlayController {
 
   String? _lastOverlayStateLog;
 
+  /// Screens where the floating bar is shown. Those besides Home reserve
+  /// space for it with [WorkoutMiniBarInset].
+  static const visibleRoutes = {
+    '/',
+    '/home',
+    '/workout',
+    '/workout/history',
+    '/workout/insights',
+    '/workout/programs',
+  };
+
   bool get shouldHideMiniBar =>
-      modalVisible.value ||
-      !const {'/', '/home', '/workout'}.contains(currentRouteName.value);
+      modalVisible.value || !visibleRoutes.contains(currentRouteName.value);
 
   void updateFromRoute(Route<dynamic>? route) {
     updateFromRouteName(route?.settings.name);
@@ -151,11 +164,51 @@ class WorkoutMiniBarHostOverlay extends StatefulWidget {
       _WorkoutMiniBarHostOverlayState();
 }
 
-class _WorkoutMiniBarHostOverlayState extends State<WorkoutMiniBarHostOverlay> {
+class _WorkoutMiniBarHostOverlayState extends State<WorkoutMiniBarHostOverlay>
+    with WidgetsBindingObserver {
   static const _animationDuration = Duration(milliseconds: 180);
 
   bool _didSyncInitialRoute = false;
   String? _lastLayoutLog;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  /// Leaving the app during a rest schedules a system notification for its
+  /// end; coming back cancels it, because the app alerts by itself.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final notifier = RestNotifications.instance;
+    if (state == AppLifecycleState.resumed) {
+      unawaited(notifier.cancelRestEnd());
+      return;
+    }
+    if (state != AppLifecycleState.paused &&
+        state != AppLifecycleState.hidden) {
+      return;
+    }
+    final draft = WorkoutInProgressController.instance.currentDraft;
+    final remaining = draft?.restRemainingAt(DateTime.now());
+    if (draft == null ||
+        draft.isPaused ||
+        remaining == null ||
+        remaining <= Duration.zero) {
+      return;
+    }
+    final name = draft.routineName == 'Entrenamiento activo'
+        ? null
+        : draft.routineName;
+    unawaited(notifier.scheduleRestEnd(remaining, workoutName: name));
+  }
 
   @override
   void didChangeDependencies() {
@@ -249,6 +302,7 @@ class _WorkoutMiniBarHostOverlayState extends State<WorkoutMiniBarHostOverlay> {
                                           : WorkoutInProgressController.instance
                                                 .pause(),
                                       onDiscard: _confirmDiscardDraft,
+                                      alertOnRestEnd: !hidden,
                                     ),
                             ),
                           ),
@@ -292,4 +346,38 @@ class _WorkoutMiniBarHostOverlayState extends State<WorkoutMiniBarHostOverlay> {
       await WorkoutInProgressController.instance.discard();
     }
   }
+}
+
+/// Keeps a screen's content above the floating workout bar while a session
+/// is running. The tree shape never changes, so screen state is preserved.
+class WorkoutMiniBarInset extends StatelessWidget {
+  const WorkoutMiniBarInset({super.key, required this.child});
+
+  final Widget child;
+
+  /// Bar height plus its margins.
+  static const reservedHeight = 88.0;
+
+  @override
+  Widget build(BuildContext context) =>
+      ValueListenableBuilder<WorkoutInProgressDraft?>(
+        valueListenable: WorkoutInProgressController.instance.watchDraft(),
+        builder: (context, draft, child) {
+          final safeBottom = MediaQuery.paddingOf(context).bottom;
+          return ColoredBox(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            child: Padding(
+              padding: EdgeInsets.only(
+                bottom: safeBottom + (draft == null ? 0 : reservedHeight),
+              ),
+              child: MediaQuery.removePadding(
+                context: context,
+                removeBottom: true,
+                child: child!,
+              ),
+            ),
+          );
+        },
+        child: child,
+      );
 }

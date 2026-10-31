@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+
+import 'features/nutrition/data/nutrition_day_repository.dart';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -41,6 +44,7 @@ import 'features/settings/screens/modules_settings_screen.dart';
 import 'features/workout/presentation/workout_in_progress_screen.dart';
 import 'features/workout/pro/workout_pro_screen.dart';
 import 'features/workout/data/workout_repository.dart';
+import 'features/workout/application/legacy_draft_migration.dart';
 import 'features/workout/application/workout_completion_recovery.dart';
 import 'features/workout/training_home/template_exercise_picker_screen.dart';
 import 'features/workout/training_home/routine_search_screen.dart';
@@ -151,9 +155,28 @@ Future<FitnessRepository> _createAccountRepository(
   );
 
   // Capture this scope before any awaits; a previous account can finish a write safely.
+  try {
+    await NutritionDayRepository(scope: scope, fitness: repository).recover();
+  } catch (_, stack) {
+    // Nutrition offers retry without preventing access to other modules.
+    FlutterError.reportError(
+      FlutterErrorDetails(
+        exception: StateError(
+          'Recuperación nutricional pendiente; los originales se conservan.',
+        ),
+        stack: stack,
+        library: 'nutrition recovery',
+      ),
+    );
+  }
   if (AccountStorageScope.current == scope) {
     final sessions = WorkoutRepository();
     await recoverCompletedWorkouts(sessions, repository);
+    // Drafts left by the old screen open in the live session screen. This
+    // runs only at sign-in, never while the old screen may be editing one.
+    await LegacyDraftMigration.run(
+      await ScopedPreferences.getInstance(scope: scope),
+    ).catchError((Object _) => false);
     if (AccountStorageScope.current == scope) {
       await WorkoutInProgressController.instance.refresh();
     }

@@ -145,6 +145,7 @@ void main() {
     await tester.pump();
     expect(tester.takeException(), isNull);
     expect(find.text('Saltar'), findsOneWidget);
-    expect(find.text('+30 s'), findsOneWidget);
+    expect(find.text('+15 s'), findsOneWidget);
+    expect(find.text('−15 s'), findsOneWidget);
   });
 }

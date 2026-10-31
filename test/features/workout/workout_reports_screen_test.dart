@@ -1,3 +1,4 @@
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:fit_app/features/workout/domain/workout_analytics.dart';
@@ -11,6 +12,7 @@ import 'package:fit_app/features/workout/presentation/widgets/workout_report_wid
 import '../../support/workout_report_fixture.dart';
 
 void main() {
+  setUpAll(() => initializeDateFormatting('es'));
   testWidgets('radar uses absolute 0–100 scale and zero stays at the center', (
     tester,
   ) async {

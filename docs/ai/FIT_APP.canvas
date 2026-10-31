@@ -1,0 +1,538 @@
+{
+  "nodes": [
+    {
+      "id": "start",
+      "type": "text",
+      "text": "## Comenzar aquí\n**Para agentes:** `AGENTS.md` → `docs/CODEBASE_MAP.md` → búsqueda acotada.\n**Para humanos:** seguir las flechas y abrir el área de interés.\nNo cargar todo `lib/` ni este JSON en el prompt.",
+      "x": -1100,
+      "y": -500,
+      "width": 355,
+      "height": 180,
+      "color": "5"
+    },
+    {
+      "id": "map",
+      "type": "file",
+      "file": "docs/CODEBASE_MAP.md",
+      "x": -1100,
+      "y": -240,
+      "width": 315,
+      "height": 150,
+      "color": "3"
+    },
+    {
+      "id": "arch",
+      "type": "file",
+      "file": "docs/ARCHITECTURE.md",
+      "x": -1100,
+      "y": -40,
+      "width": 315,
+      "height": 150,
+      "color": "3"
+    },
+    {
+      "id": "model",
+      "type": "file",
+      "file": "docs/DATA_MODEL.md",
+      "x": -1100,
+      "y": 160,
+      "width": 315,
+      "height": 150,
+      "color": "3"
+    },
+    {
+      "id": "status",
+      "type": "file",
+      "file": "docs/CURRENT_STATUS.md",
+      "x": -1100,
+      "y": 360,
+      "width": 315,
+      "height": 150,
+      "color": "3"
+    },
+    {
+      "id": "integrationsDoc",
+      "type": "file",
+      "file": "docs/INTEGRATIONS.md",
+      "x": -1100,
+      "y": 560,
+      "width": 315,
+      "height": 150,
+      "color": "3"
+    },
+    {
+      "id": "designDoc",
+      "type": "file",
+      "file": "docs/design/DESIGN_SYSTEM.md",
+      "x": -1100,
+      "y": 760,
+      "width": 315,
+      "height": 150,
+      "color": "3"
+    },
+    {
+      "id": "auth",
+      "type": "text",
+      "text": "## Autenticación\n`lib/features/auth/data/auth_service.dart`\nFirebase Auth; invitado separado de cuentas.",
+      "x": -690,
+      "y": -460,
+      "width": 290,
+      "height": 135,
+      "color": "6"
+    },
+    {
+      "id": "main",
+      "type": "text",
+      "text": "## Arranque\n`lib/main.dart`\n`AccountSessionGate`: restaura por cuenta antes de montar rutas. Recupera cierres pendientes.",
+      "x": -690,
+      "y": -210,
+      "width": 290,
+      "height": 150,
+      "color": "5"
+    },
+    {
+      "id": "repository",
+      "type": "text",
+      "text": "## Fachada de datos\n`lib/core/data/repositories.dart`\nFitnessRepository combina almacenamiento, sincronización y estadísticas.",
+      "x": -690,
+      "y": 120,
+      "width": 290,
+      "height": 160,
+      "color": "6"
+    },
+    {
+      "id": "local",
+      "type": "text",
+      "text": "## Persistencia local\n`lib/core/data/account_storage_scope.dart`\nHive y preferencias de entrenamiento por cuenta; invitado conserva nombres anteriores.",
+      "x": -690,
+      "y": 450,
+      "width": 290,
+      "height": 130,
+      "color": "6"
+    },
+    {
+      "id": "entities",
+      "type": "text",
+      "text": "## Entidades compartidas\n`lib/core/domain/entities.dart`\nEntrenamiento, comida, sueño, preferencias.",
+      "x": -690,
+      "y": 660,
+      "width": 290,
+      "height": 130,
+      "color": "6"
+    },
+    {
+      "id": "remote",
+      "type": "text",
+      "text": "## Sincronización\n`lib/core/data/remote_sync_service.dart`\nCola/políticas/pull/push Firestore.",
+      "x": -345,
+      "y": 450,
+      "width": 290,
+      "height": 135,
+      "color": "6"
+    },
+    {
+      "id": "stats",
+      "type": "text",
+      "text": "## Estadísticas\n`lib/core/data/statistics_service.dart`\nAgregaciones reutilizadas por Home y Analytics.",
+      "x": -345,
+      "y": 660,
+      "width": 290,
+      "height": 135,
+      "color": "6"
+    },
+    {
+      "id": "health",
+      "type": "text",
+      "text": "## Integraciones de salud\n`lib/core/integrations/fitness_integration_manager.dart`\nHealthKit, Google Fit, Fitbit → repositorio.",
+      "x": -345,
+      "y": 870,
+      "width": 290,
+      "height": 140,
+      "color": "6"
+    },
+    {
+      "id": "shell",
+      "type": "text",
+      "text": "## Navegación principal\n`lib/features/navigation/main_shell.dart`\nInicio, Hábitos, acción central, Grupos y Perfil.",
+      "x": -320,
+      "y": -210,
+      "width": 315,
+      "height": 150,
+      "color": "5"
+    },
+    {
+      "id": "home",
+      "type": "text",
+      "text": "## Home\n`lib/features/home/presentation/home_summary_screen.dart`\nResumen; utilidades en `home/domain/`.",
+      "x": 80,
+      "y": -450,
+      "width": 300,
+      "height": 155,
+      "color": "4"
+    },
+    {
+      "id": "habits",
+      "type": "text",
+      "text": "## Hábitos\n`lib/features/habits/presentation/habits_tracker_screen.dart`\nModelos/galería en `habits/domain/`.",
+      "x": 80,
+      "y": -230,
+      "width": 300,
+      "height": 140,
+      "color": "4"
+    },
+    {
+      "id": "groups",
+      "type": "text",
+      "text": "## Grupos\n`lib/features/groups/presentation/pages/groups_list_screen.dart`\nServicio/modelo en `groups/domain/`.",
+      "x": 80,
+      "y": -20,
+      "width": 300,
+      "height": 140,
+      "color": "4"
+    },
+    {
+      "id": "profile",
+      "type": "text",
+      "text": "## Perfil\n`lib/features/profile/profile_social_screen.dart`\nAjustes relacionados en `features/settings/`.",
+      "x": 80,
+      "y": 190,
+      "width": 300,
+      "height": 140,
+      "color": "4"
+    },
+    {
+      "id": "workout",
+      "type": "text",
+      "text": "## Entrenamiento\n`lib/features/workout/`\nRutinas: borrador único → planes → resultados.\nÍndice: CODEBASE_MAP.md\nPlan: docs/plans/ROUTINE_SYSTEM_2026_10_12.md",
+      "x": 500,
+      "y": -450,
+      "width": 325,
+      "height": 160,
+      "color": "4"
+    },
+    {
+      "id": "nutrition",
+      "type": "text",
+      "text": "## Nutrición\n`lib/features/nutrition/presentation/nutrition_home_screen.dart`\nRepositorio, FDC y catálogo en `nutrition/data/`.",
+      "x": 500,
+      "y": -220,
+      "width": 325,
+      "height": 160,
+      "color": "4"
+    },
+    {
+      "id": "sleep",
+      "type": "text",
+      "text": "## Sueño\n`lib/features/sleep/presentation/sleep_overview_screen.dart`\nInsights y tiempo en `sleep/domain/`.",
+      "x": 500,
+      "y": 20,
+      "width": 325,
+      "height": 140,
+      "color": "4"
+    },
+    {
+      "id": "analytics",
+      "type": "text",
+      "text": "## Analytics\n`lib/features/analytics/analytics_overview_screen.dart`\nConsume métricas agregadas.",
+      "x": 500,
+      "y": 230,
+      "width": 325,
+      "height": 130,
+      "color": "4"
+    },
+    {
+      "id": "settings",
+      "type": "text",
+      "text": "## Ajustes\n`lib/features/settings/settings_screen.dart`\nPreferencias persistidas en `core/data/app_preferences.dart`.",
+      "x": 500,
+      "y": 430,
+      "width": 325,
+      "height": 135,
+      "color": "4"
+    },
+    {
+      "id": "exercise",
+      "type": "text",
+      "text": "## Biblioteca de ejercicios\n`lib/features/workout/pro/data/exercise_library.dart`\n297 IDs; 6 imágenes específicas, 291 genéricas.\nCobertura: docs/design/EXERCISE_ART_MANIFEST.json",
+      "x": 920,
+      "y": -450,
+      "width": 325,
+      "height": 160,
+      "color": "2"
+    },
+    {
+      "id": "catalog",
+      "type": "text",
+      "text": "## Catálogo nutricional\n`lib/features/nutrition/data/offline_food_catalog.dart`\nAsset USDA: `assets/data/usda_foundation_2026_04.json`.",
+      "x": 920,
+      "y": -220,
+      "width": 325,
+      "height": 160,
+      "color": "2"
+    },
+    {
+      "id": "fdc",
+      "type": "text",
+      "text": "## Fuente FDC\n`lib/features/nutrition/data/fdc_client.dart`\nProxy/clave según plataforma. Ver INTEGRATIONS.",
+      "x": 920,
+      "y": 20,
+      "width": 325,
+      "height": 130,
+      "color": "2"
+    },
+    {
+      "id": "ui",
+      "type": "text",
+      "text": "## Tema y diseño\n`lib/app/theme/app_theme.dart`\n`lib/features/common/theme/app_colors.dart`\nNorma visual: `docs/design/DESIGN_SYSTEM.md`.",
+      "x": 920,
+      "y": 220,
+      "width": 325,
+      "height": 150,
+      "color": "5"
+    },
+    {
+      "id": "tests",
+      "type": "text",
+      "text": "## Pruebas y CI\n`test/features/` por área; `test/training_home_screen_test.dart`; `.github/workflows/ci.yml`. Ejecutar primero la prueba focal.",
+      "x": 920,
+      "y": 460,
+      "width": 325,
+      "height": 150,
+      "color": "1"
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-1",
+      "fromNode": "start",
+      "toNode": "map",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "rutas"
+    },
+    {
+      "id": "e-2",
+      "fromNode": "map",
+      "toNode": "arch",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "límites"
+    },
+    {
+      "id": "e-3",
+      "fromNode": "map",
+      "toNode": "model",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "entidades"
+    },
+    {
+      "id": "e-4",
+      "fromNode": "map",
+      "toNode": "status",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "pendientes"
+    },
+    {
+      "id": "e-5",
+      "fromNode": "main",
+      "toNode": "shell",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "compone"
+    },
+    {
+      "id": "e-6",
+      "fromNode": "main",
+      "toNode": "repository",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "inyecta"
+    },
+    {
+      "id": "e-7",
+      "fromNode": "auth",
+      "toNode": "repository",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "uid"
+    },
+    {
+      "id": "e-8",
+      "fromNode": "shell",
+      "toNode": "home",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "destino"
+    },
+    {
+      "id": "e-9",
+      "fromNode": "shell",
+      "toNode": "habits",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "destino"
+    },
+    {
+      "id": "e-10",
+      "fromNode": "shell",
+      "toNode": "groups",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "destino"
+    },
+    {
+      "id": "e-11",
+      "fromNode": "shell",
+      "toNode": "profile",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "destino"
+    },
+    {
+      "id": "e-12",
+      "fromNode": "repository",
+      "toNode": "local",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "usa"
+    },
+    {
+      "id": "e-13",
+      "fromNode": "repository",
+      "toNode": "remote",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "usa"
+    },
+    {
+      "id": "e-14",
+      "fromNode": "repository",
+      "toNode": "stats",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "usa"
+    },
+    {
+      "id": "e-15",
+      "fromNode": "repository",
+      "toNode": "entities",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "modelos"
+    },
+    {
+      "id": "e-16",
+      "fromNode": "health",
+      "toNode": "repository",
+      "fromSide": "top",
+      "toSide": "bottom",
+      "label": "importa"
+    },
+    {
+      "id": "e-17",
+      "fromNode": "home",
+      "toNode": "nutrition",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "datos"
+    },
+    {
+      "id": "e-18",
+      "fromNode": "home",
+      "toNode": "sleep",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "datos"
+    },
+    {
+      "id": "e-19",
+      "fromNode": "home",
+      "toNode": "workout",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "sesión"
+    },
+    {
+      "id": "e-20",
+      "fromNode": "workout",
+      "toNode": "exercise",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "catálogo"
+    },
+    {
+      "id": "e-21",
+      "fromNode": "nutrition",
+      "toNode": "catalog",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "offline"
+    },
+    {
+      "id": "e-22",
+      "fromNode": "nutrition",
+      "toNode": "fdc",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "remoto"
+    },
+    {
+      "id": "e-23",
+      "fromNode": "analytics",
+      "toNode": "stats",
+      "fromSide": "left",
+      "toSide": "right",
+      "label": "agrega"
+    },
+    {
+      "id": "e-24",
+      "fromNode": "profile",
+      "toNode": "settings",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "ajustes"
+    },
+    {
+      "id": "e-25",
+      "fromNode": "settings",
+      "toNode": "repository",
+      "fromSide": "left",
+      "toSide": "right",
+      "label": "preferencias"
+    },
+    {
+      "id": "e-26",
+      "fromNode": "designDoc",
+      "toNode": "ui",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "reglas"
+    },
+    {
+      "id": "e-27",
+      "fromNode": "integrationsDoc",
+      "toNode": "health",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "contrato"
+    },
+    {
+      "id": "e-28",
+      "fromNode": "model",
+      "toNode": "entities",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "esquema"
+    },
+    {
+      "id": "e-29",
+      "fromNode": "status",
+      "toNode": "tests",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "validación"
+    }
+  ]
+}

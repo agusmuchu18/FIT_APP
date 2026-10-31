@@ -2,6 +2,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
 import '../presentation/widgets/workout_units_host.dart';
+import '../presentation/widgets/workout_report_widgets.dart';
 
 import 'package:intl/intl.dart';
 
@@ -432,20 +433,7 @@ class _ExerciseProgressPanelState extends State<ExerciseProgressPanel>
             child: Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                [
-                  if (s.externalLoadKg != null)
-                    WorkoutUnits.of(context)
-                        .valueWithUnit('kg', s.externalLoadKg!),
-                  if (s.assistanceKg != null)
-                    '${WorkoutUnits.of(context).valueWithUnit('kg', s.assistanceKg!)} de asistencia',
-                  if (s.reps != null) '${s.reps} rep',
-                  if (s.durationSeconds != null) '${s.durationSeconds} s',
-                  if (s.distanceMeters != null)
-                    WorkoutUnits.of(context)
-                        .valueWithUnit('m', s.distanceMeters!),
-                  if (s.rir != null) 'RIR ${s.rir}',
-                  if (s.note?.isNotEmpty == true) s.note!,
-                ].join(' · '),
+                '${workoutSetLabel(o.sets.indexOf(s) + 1, o.exercise, s, WorkoutUnits.of(context))}${s.note?.isNotEmpty == true ? ' · ${s.note}' : ''}',
               ),
             ),
           ),

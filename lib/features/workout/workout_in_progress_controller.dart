@@ -13,6 +13,8 @@ class WorkoutInProgressDraft {
     required this.pausedAt,
     required this.accumulatedPaused,
     required this.lastUpdated,
+    this.restStartedAtElapsedSeconds,
+    this.restDurationSeconds,
   });
 
   final String workoutId;
@@ -22,6 +24,24 @@ class WorkoutInProgressDraft {
   final DateTime? pausedAt;
   final Duration accumulatedPaused;
   final DateTime lastUpdated;
+  final int? restStartedAtElapsedSeconds;
+  final int? restDurationSeconds;
+
+  /// Active (unpaused) time, the clock the rest timer is measured against.
+  Duration elapsedAt(DateTime now) {
+    final end = isPaused ? (pausedAt ?? now) : now;
+    final value = end.difference(startTime) - accumulatedPaused;
+    return value.isNegative ? Duration.zero : value;
+  }
+
+  /// Remaining rest, or null when no rest is running.
+  Duration? restRemainingAt(DateTime now) {
+    final started = restStartedAtElapsedSeconds;
+    final duration = restDurationSeconds;
+    if (started == null || duration == null) return null;
+    final remaining = duration - (elapsedAt(now).inSeconds - started);
+    return Duration(seconds: remaining > 0 ? remaining : 0);
+  }
 
   WorkoutInProgressDraft copyWith({
     String? workoutId,
@@ -41,6 +61,8 @@ class WorkoutInProgressDraft {
       pausedAt: clearPausedAt ? null : (pausedAt ?? this.pausedAt),
       accumulatedPaused: accumulatedPaused ?? this.accumulatedPaused,
       lastUpdated: lastUpdated ?? this.lastUpdated,
+      restStartedAtElapsedSeconds: restStartedAtElapsedSeconds,
+      restDurationSeconds: restDurationSeconds,
     );
   }
 
@@ -66,6 +88,12 @@ class WorkoutInProgressDraft {
       ),
       lastUpdated:
           DateTime.tryParse(json['lastUpdated'] as String? ?? '') ?? startTime,
+      restStartedAtElapsedSeconds: json['restStartedAtElapsedSeconds'] is int
+          ? json['restStartedAtElapsedSeconds'] as int
+          : null,
+      restDurationSeconds: json['restDurationSeconds'] is int
+          ? json['restDurationSeconds'] as int
+          : null,
     );
   }
 }

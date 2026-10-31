@@ -51,7 +51,9 @@ void main() {
     expect(draft.sets.every((s) => !s.done), isTrue);
     expect(draft.sets.first.id, isNot('old-set'));
     expect(draft.sets.first.kg, 50);
-    expect(draft.sets.last.kg, isNull);
+    expect(draft.sets.last.kg, 80);
+    expect(draft.sets.last.loadIsAmbiguous, true);
+    expect(draft.sets.last.loadType, isNull);
     expect(draft.restEnabled, isFalse);
     expect(draft.restSeconds, 90);
     expect(

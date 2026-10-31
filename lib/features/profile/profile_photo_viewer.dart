@@ -40,9 +40,9 @@ class _ProfilePhotoViewerState extends State<ProfilePhotoViewer> {
   }
 
   Future<void> _handleAction(String label) async {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$label (próximamente)')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('$label (próximamente)')));
   }
 
   Future<void> _selectImageSource() async {
@@ -87,13 +87,14 @@ class _ProfilePhotoViewerState extends State<ProfilePhotoViewer> {
     if (file == null) return;
 
     final bytes = await file.readAsBytes();
+    if (!mounted) return;
     final cropped = await showGeneralDialog<Uint8List?>(
       context: context,
       barrierDismissible: true,
       barrierLabel: 'Recortar',
-      barrierColor: Colors.black.withOpacity(0.65),
+      barrierColor: Colors.black.withValues(alpha: 0.65),
       transitionDuration: const Duration(milliseconds: 200),
-      pageBuilder: (context, _, __) {
+      pageBuilder: (context, _, _) {
         return _AvatarCropperDialog(bytes: bytes);
       },
     );
@@ -112,9 +113,9 @@ class _ProfilePhotoViewerState extends State<ProfilePhotoViewer> {
       _currentBytes = bytes;
       _saving = false;
     });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Foto de perfil actualizada')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Foto de perfil actualizada')));
   }
 
   @override
@@ -129,9 +130,7 @@ class _ProfilePhotoViewerState extends State<ProfilePhotoViewer> {
               onTap: _close,
               child: BackdropFilter(
                 filter: ui.ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-                child: Container(
-                  color: Colors.black.withOpacity(0.65),
-                ),
+                child: Container(color: Colors.black.withValues(alpha: 0.65)),
               ),
             ),
           ),
@@ -163,10 +162,7 @@ class _ProfilePhotoViewerState extends State<ProfilePhotoViewer> {
                                   color: AppColors.textMuted,
                                 )
                               : ClipOval(
-                                  child: Image.memory(
-                                    image,
-                                    fit: BoxFit.cover,
-                                  ),
+                                  child: Image.memory(image, fit: BoxFit.cover),
                                 ),
                         ),
                         Positioned(
@@ -185,8 +181,7 @@ class _ProfilePhotoViewerState extends State<ProfilePhotoViewer> {
                                     height: 18,
                                     child: CircularProgressIndicator(
                                       strokeWidth: 2,
-                                      valueColor:
-                                          AlwaysStoppedAnimation<Color>(
+                                      valueColor: AlwaysStoppedAnimation<Color>(
                                         AppColors.accentSecondary,
                                       ),
                                     ),
@@ -263,7 +258,7 @@ class _ActionButton extends StatelessWidget {
             decoration: BoxDecoration(
               color: AppColors.surface,
               shape: BoxShape.circle,
-              border: Border.all(color: Colors.white.withOpacity(0.1)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
             ),
             child: Icon(icon, color: AppColors.textPrimary),
           ),
@@ -300,7 +295,8 @@ class _AvatarCropperDialogState extends State<_AvatarCropperDialog> {
     if (_exporting) return;
     setState(() => _exporting = true);
     final boundary =
-        _repaintKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+        _repaintKey.currentContext?.findRenderObject()
+            as RenderRepaintBoundary?;
     if (boundary == null) {
       setState(() => _exporting = false);
       return;
@@ -362,10 +358,7 @@ class _AvatarCropperDialogState extends State<_AvatarCropperDialog> {
                         minScale: 1,
                         maxScale: 4,
                         boundaryMargin: const EdgeInsets.all(80),
-                        child: Image.memory(
-                          widget.bytes,
-                          fit: BoxFit.cover,
-                        ),
+                        child: Image.memory(widget.bytes, fit: BoxFit.cover),
                       ),
                     ),
                   ),

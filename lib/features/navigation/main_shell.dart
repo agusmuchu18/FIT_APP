@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../common/theme/app_colors.dart';
+import '../common/widgets/fit_glyph.dart';
 import '../groups/presentation/pages/groups_list_screen.dart';
 import '../habits/presentation/habits_tracker_screen.dart';
 import '../home/presentation/home_summary_screen.dart';
@@ -36,12 +37,12 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
       _menuOpen = false;
     });
   }
+
   void _toggleMenu() {
     setState(() {
       _menuOpen = !_menuOpen;
     });
   }
-
 
   Future<void> _navigateTo(String route) async {
     if (_menuOpen) {
@@ -88,9 +89,7 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
       body: Stack(
         children: [
           const Positioned.fill(
-            child: IgnorePointer(
-              child: _ShellBackground(),
-            ),
+            child: IgnorePointer(child: _ShellBackground()),
           ),
           IndexedStack(
             index: _currentIndex,
@@ -161,37 +160,38 @@ class _BottomBar extends StatelessWidget {
         borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.35),
+            color: Colors.black.withValues(alpha: 0.35),
             blurRadius: 18,
             offset: const Offset(0, 8),
           ),
         ],
-        border: Border.all(color: Colors.white.withOpacity(0.06)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           _NavItem(
-            icon: Icons.home_rounded,
+            icon: FitGlyphKind.home,
+            label: 'Inicio',
             isActive: currentIndex == 0,
             onTap: () => onSelect(0),
           ),
           _NavItem(
-            icon: Icons.check_circle_outline_rounded,
+            icon: FitGlyphKind.habits,
+            label: 'Hábitos',
             isActive: currentIndex == 1,
             onTap: () => onSelect(1),
           ),
-          _CenterActionButton(
-            onTap: onCenterTap,
-            isMenuOpen: isMenuOpen,
-          ),
+          _CenterActionButton(onTap: onCenterTap, isMenuOpen: isMenuOpen),
           _NavItem(
-            icon: Icons.groups_rounded,
+            icon: FitGlyphKind.community,
+            label: 'Grupos',
             isActive: currentIndex == 2,
             onTap: () => onSelect(2),
           ),
           _NavItem(
-            icon: Icons.person_rounded,
+            icon: FitGlyphKind.profile,
+            label: 'Perfil',
             isActive: currentIndex == 3,
             onTap: () => onSelect(3),
           ),
@@ -204,24 +204,31 @@ class _BottomBar extends StatelessWidget {
 class _NavItem extends StatelessWidget {
   const _NavItem({
     required this.icon,
+    required this.label,
     required this.isActive,
     required this.onTap,
   });
 
-  final IconData icon;
+  final FitGlyphKind icon;
+  final String label;
   final bool isActive;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final color = isActive ? AppColors.accent : AppColors.textMuted;
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: SizedBox(
-        width: 48,
-        child: Center(
-          child: Icon(icon, color: color, size: 24),
+    return Semantics(
+      button: true,
+      selected: isActive,
+      label: label,
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: SizedBox(
+          width: 48,
+          child: Center(
+            child: FitGlyph(kind: icon, color: color),
+          ),
         ),
       ),
     );
@@ -258,11 +265,7 @@ class _ShellBackground extends StatelessWidget {
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [
-                Color(0xFF0B1220),
-                Color(0xFF0E1624),
-                Color(0xFF070B12),
-              ],
+              colors: [Color(0xFF0B1220), Color(0xFF0E1624), Color(0xFF070B12)],
             ),
           ),
           child: SizedBox.expand(),
@@ -270,18 +273,12 @@ class _ShellBackground extends StatelessWidget {
         Positioned(
           top: -80,
           left: -60,
-          child: _GlowBlob(
-            color: Color(0x662AF5D2),
-            size: 260,
-          ),
+          child: _GlowBlob(color: Color(0x662AF5D2), size: 260),
         ),
         Positioned(
           bottom: -110,
           right: -80,
-          child: _GlowBlob(
-            color: Color(0x668AA6FF),
-            size: 300,
-          ),
+          child: _GlowBlob(color: Color(0x668AA6FF), size: 300),
         ),
       ],
     );
@@ -299,10 +296,7 @@ class _GlowBlob extends StatelessWidget {
     return Container(
       width: size,
       height: size,
-      decoration: BoxDecoration(
-        color: color,
-        shape: BoxShape.circle,
-      ),
+      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
     );
   }
 }

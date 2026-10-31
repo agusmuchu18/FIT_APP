@@ -211,7 +211,7 @@ class _GroupsListScreenState extends State<GroupsListScreen> {
                         return ListView.separated(
                           padding: const EdgeInsets.all(16),
                           itemCount: groups.length,
-                          separatorBuilder: (_, __) =>
+                          separatorBuilder: (_, _) =>
                               const SizedBox(height: 12),
                           itemBuilder: (context, index) {
                             final group = groups[index];

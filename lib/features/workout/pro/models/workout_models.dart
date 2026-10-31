@@ -18,12 +18,44 @@ LoadConvention decodeLoadConvention(Object? raw) {
 
 enum WorkoutType { strength, cardio, functional, sport, custom }
 
+/// What a set is for. Warm-up sets are recorded but excluded from volume,
+/// records and muscle counts; drop and failure sets count normally.
+enum SetKind {
+  normal('Normal', ''),
+  warmup('Calentamiento', 'C'),
+  drop('Drop set', 'D'),
+  failure('Al fallo', 'F');
+
+  const SetKind(this.label, this.badge);
+  final String label;
+
+  /// Short letter shown instead of the set number; empty for normal sets.
+  final String badge;
+
+  static SetKind decode(Object? raw) {
+    for (final value in SetKind.values) {
+      if (value.name == raw) return value;
+    }
+    return SetKind.normal;
+  }
+}
+
 enum RoutineExerciseLoadType {
   bodyweight,
   weightedKg,
   assistedKg,
   machineKg,
   addedWeightKg,
+}
+
+RoutineExerciseLoadType? decodeSetLoadType(Object? raw) {
+  if (raw == null) return null; // Unknown historical semantics stay unknown.
+  for (final type in RoutineExerciseLoadType.values) {
+    if (type.name == raw) return type;
+  }
+  throw const FormatException(
+    'Modalidad desconocida; se conserva el original.',
+  );
 }
 
 class RoutineSetTarget {
@@ -33,15 +65,48 @@ class RoutineSetTarget {
     this.repsMax,
     this.weightKg,
     this.durationSeconds,
+    this.loadType,
+    this.assistanceKg,
   });
   final int? reps, repsMin, repsMax, durationSeconds;
   final double? weightKg;
+  final double? assistanceKg;
+  final RoutineExerciseLoadType? loadType;
+  double? loadFor(RoutineExerciseLoadType fallback) {
+    final mode = loadType ?? fallback;
+    if (mode == RoutineExerciseLoadType.bodyweight) return null;
+    return mode == RoutineExerciseLoadType.assistedKg
+        ? assistanceKg ?? (loadType == null ? weightKg : null)
+        : weightKg;
+  }
+
+  RoutineSetTarget copyWith({
+    int? reps,
+    int? repsMin,
+    int? repsMax,
+    int? durationSeconds,
+    double? weightKg,
+    double? assistanceKg,
+    RoutineExerciseLoadType? loadType,
+    bool clearWeight = false,
+    bool clearAssistance = false,
+  }) => RoutineSetTarget(
+    reps: reps ?? this.reps,
+    repsMin: repsMin ?? this.repsMin,
+    repsMax: repsMax ?? this.repsMax,
+    durationSeconds: durationSeconds ?? this.durationSeconds,
+    weightKg: clearWeight ? null : weightKg ?? this.weightKg,
+    assistanceKg: clearAssistance ? null : assistanceKg ?? this.assistanceKg,
+    loadType: loadType ?? this.loadType,
+  );
   Map<String, dynamic> toJson() => {
     'reps': reps,
     'repsMin': repsMin,
     'repsMax': repsMax,
     'weightKg': weightKg,
     'durationSeconds': durationSeconds,
+    if (loadType != null) 'loadType': loadType!.name,
+    if (assistanceKg != null) 'assistanceKg': assistanceKg,
   };
   factory RoutineSetTarget.fromJson(Map<String, dynamic> json) =>
       RoutineSetTarget(
@@ -50,6 +115,8 @@ class RoutineSetTarget {
         repsMax: json['repsMax'] as int?,
         weightKg: (json['weightKg'] as num?)?.toDouble(),
         durationSeconds: json['durationSeconds'] as int?,
+        loadType: decodeSetLoadType(json['loadType']),
+        assistanceKg: (json['assistanceKg'] as num?)?.toDouble(),
       );
 }
 
@@ -73,6 +140,8 @@ class SetEntry {
     this.distanceMeters,
     this.note,
     this.performedAt,
+    this.kind = SetKind.normal,
+    this.loadType,
   });
 
   final String id;
@@ -81,6 +150,8 @@ class SetEntry {
   final double? distanceMeters;
   final String? note;
   final DateTime? performedAt;
+  final SetKind kind;
+  final RoutineExerciseLoadType? loadType;
 
   final int? reps;
   final int? durationSeconds;
@@ -113,9 +184,13 @@ class SetEntry {
     double? distanceMeters,
     String? note,
     DateTime? performedAt,
+    SetKind? kind,
+    RoutineExerciseLoadType? loadType,
   }) {
     return SetEntry(
       id: id ?? this.id,
+      kind: kind ?? this.kind,
+      loadType: loadType ?? this.loadType,
       loadConvention: loadConvention ?? this.loadConvention,
       implementCount: implementCount ?? this.implementCount,
       distanceMeters: distanceMeters ?? this.distanceMeters,
@@ -137,6 +212,7 @@ class SetEntry {
   Map<String, dynamic> toJson() => {
     'id': id,
     'loadConvention': loadConvention.name,
+    if (loadType != null) 'loadType': loadType!.name,
     'implementCount': implementCount,
     'distanceMeters': distanceMeters,
     'note': note,
@@ -151,6 +227,7 @@ class SetEntry {
     'bodyweightKg': bodyweightKg,
     'bodyweightFactor': bodyweightFactor,
     'loadIsAmbiguous': loadIsAmbiguous,
+    if (kind != SetKind.normal) 'kind': kind.name,
   };
 
   factory SetEntry.fromJson(Map<String, dynamic> json) {
@@ -158,7 +235,9 @@ class SetEntry {
 
     return SetEntry(
       id: json['id'] as String,
+      kind: SetKind.decode(json['kind']),
       loadConvention: decodeLoadConvention(json['loadConvention']),
+      loadType: decodeSetLoadType(json['loadType']),
       implementCount: json['implementCount'] as int?,
       distanceMeters: (json['distanceMeters'] as num?)?.toDouble(),
       note: json['note'] as String?,
@@ -195,6 +274,8 @@ class WorkoutExercise {
     this.targetRepsMax = 12,
     this.targetLoadType = RoutineExerciseLoadType.bodyweight,
     this.targetWeightKg,
+    this.targetAssistanceKg,
+    this.loadSchemaVersion = 0,
     this.restSeconds,
     this.rir,
     List<SetEntry>? sets,
@@ -204,10 +285,15 @@ class WorkoutExercise {
     this.sportPlan,
     this.sportResult,
     this.sportPurpose,
+    this.supersetId,
   }) : sets = sets ?? [];
 
   final String id;
   final String name;
+
+  /// Exercises sharing this id are done back to back; rest comes after the
+  /// last one of the group.
+  final String? supersetId;
   final String? muscleGroup;
   final String? equipment;
   final String? measurement;
@@ -223,6 +309,14 @@ class WorkoutExercise {
   final int? targetRepsMax;
   final RoutineExerciseLoadType targetLoadType;
   final double? targetWeightKg;
+  final double? targetAssistanceKg;
+  final int loadSchemaVersion;
+  double? get plannedLoad => switch (targetLoadType) {
+    RoutineExerciseLoadType.bodyweight => null,
+    RoutineExerciseLoadType.assistedKg =>
+      targetAssistanceKg ?? (loadSchemaVersion == 0 ? targetWeightKg : null),
+    _ => targetWeightKg,
+  };
   final int? restSeconds;
   final int? rir;
   final List<SetEntry> sets;
@@ -256,13 +350,19 @@ class WorkoutExercise {
     int? targetRepsMax,
     RoutineExerciseLoadType? targetLoadType,
     double? targetWeightKg,
+    double? targetAssistanceKg,
+    int? loadSchemaVersion,
+    bool clearTargetAssistanceKg = false,
     bool clearTargetWeightKg = false,
     int? restSeconds,
     bool clearRestSeconds = false,
     int? rir,
     List<SetEntry>? sets,
+    String? supersetId,
+    bool clearSuperset = false,
   }) {
     return WorkoutExercise(
+      supersetId: clearSuperset ? null : supersetId ?? this.supersetId,
       restEnabled: restEnabled ?? this.restEnabled,
       instanceId: instanceId ?? this.instanceId,
       setTargets: setTargets ?? this.setTargets,
@@ -283,6 +383,10 @@ class WorkoutExercise {
       targetRepsMin: targetRepsMin ?? this.targetRepsMin,
       targetRepsMax: targetRepsMax ?? this.targetRepsMax,
       targetLoadType: targetLoadType ?? this.targetLoadType,
+      loadSchemaVersion: loadSchemaVersion ?? this.loadSchemaVersion,
+      targetAssistanceKg: clearTargetAssistanceKg
+          ? null
+          : targetAssistanceKg ?? this.targetAssistanceKg,
       targetWeightKg: clearTargetWeightKg
           ? null
           : (targetWeightKg ?? this.targetWeightKg),
@@ -312,9 +416,12 @@ class WorkoutExercise {
     'targetRepsMax': targetRepsMax,
     'targetLoadType': targetLoadType.name,
     'targetWeightKg': targetWeightKg,
+    if (targetAssistanceKg != null) 'targetAssistanceKg': targetAssistanceKg,
+    if (loadSchemaVersion != 0) 'loadSchemaVersion': loadSchemaVersion,
     'restSeconds': restSeconds,
     'rir': rir,
     'sets': sets.map((e) => e.toJson()).toList(),
+    if (supersetId != null) 'supersetId': supersetId,
   };
 
   factory WorkoutExercise.fromJson(Map<String, dynamic> json) {
@@ -338,6 +445,7 @@ class WorkoutExercise {
       id: json['id'] as String,
       name: json['name'] as String,
       instanceId: json['instanceId'] as String?,
+      supersetId: json['supersetId'] as String?,
       sportPurpose: json['sportPurpose'] == null
           ? null
           : FootballGymPurpose.values.byName(json['sportPurpose'] as String),
@@ -368,6 +476,8 @@ class WorkoutExercise {
       targetRepsMax: (json['targetRepsMax'] as int?) ?? 12,
       targetLoadType: targetLoadType,
       targetWeightKg: targetWeightKg,
+      targetAssistanceKg: (json['targetAssistanceKg'] as num?)?.toDouble(),
+      loadSchemaVersion: json['loadSchemaVersion'] as int? ?? 0,
       restSeconds: json['restSeconds'] as int?,
       rir: json['rir'] as int?,
       sets: serializedSets,

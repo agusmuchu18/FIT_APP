@@ -330,7 +330,7 @@ void main() {
       await tester.tap(find.text('Aplicar'));
       await tester.pumpAndSettle();
       expect(c.equipmentFilters, isEmpty);
-      expect(c.totalCount, 297);
+      expect(c.totalCount, 298);
     },
   );
 

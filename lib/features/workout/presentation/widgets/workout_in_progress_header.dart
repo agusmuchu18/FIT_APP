@@ -142,41 +142,62 @@ class _WorkoutInProgressHeaderState extends State<WorkoutInProgressHeader>
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
     if (MediaQuery.sizeOf(context).width < 400 ||
         MediaQuery.textScalerOf(context).scale(16) > 20) {
+      // Fixed height on phones: nothing appears or disappears while
+      // scrolling, so the sets never jump under the user's finger.
       return Card(
-        margin: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+        margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              ValueListenableBuilder<Duration>(
-                valueListenable: _elapsedNotifier,
-                builder: (_, elapsed, _) => Text(
-                  '${widget.isPaused ? 'En pausa' : 'Tiempo activo'} · ${_formatElapsed(elapsed)}',
-                  style: theme.textTheme.titleLarge,
+              Row(
+                children: [
+                  Expanded(
+                    child: ValueListenableBuilder<Duration>(
+                      valueListenable: _elapsedNotifier,
+                      builder: (_, elapsed, _) => Text(
+                        '${widget.isPaused ? 'En pausa' : 'Tiempo activo'} · ${_formatElapsed(elapsed)}',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Distribución muscular',
+                    icon: const Icon(Icons.radar),
+                    onPressed: () => _showRadarSheet(
+                      context,
+                      currentValues,
+                      previousValues,
+                      accent,
+                    ),
+                  ),
+                ],
+              ),
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Wrap(
+                  spacing: 12,
+                  runSpacing: 4,
+                  children: [
+                    Text('Volumen · $formattedVolume'),
+                    Text(
+                      '${widget.completedSets} de ${widget.totalSets} series',
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 12),
-              Text('Volumen externo · $formattedVolume'),
-              const SizedBox(height: 12),
-              Text(
-                '${widget.completedSets} de ${widget.totalSets} series completadas',
-              ),
-              const SizedBox(height: 12),
-              LinearProgressIndicator(
-                value: progress,
-                semanticsLabel: 'Progreso de series',
-              ),
-              if (collapse < .55) ...[
-                const SizedBox(height: 12),
-                Center(
-                  child: _radar(context, currentValues, previousValues, accent),
+              const SizedBox(height: 8),
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: LinearProgressIndicator(
+                  value: progress,
+                  semanticsLabel: 'Progreso de series',
                 ),
-                const Text(
-                  'Distribución estimada; no mide activación muscular.',
-                  style: TextStyle(fontSize: 12),
-                ),
-              ],
+              ),
             ],
           ),
         ),
@@ -375,6 +396,50 @@ class _WorkoutInProgressHeaderState extends State<WorkoutInProgressHeader>
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  void _showRadarSheet(
+    BuildContext context,
+    List<double> current,
+    List<double>? previous,
+    Color accent,
+  ) {
+    final theme = Theme.of(context);
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      useSafeArea: true,
+      builder: (sheet) => Theme(
+        data: theme,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Distribución muscular',
+                style: theme.textTheme.titleMedium,
+              ),
+              const SizedBox(height: 12),
+              _radar(context, current, previous, accent),
+              const SizedBox(height: 8),
+              Text(
+                previous == null
+                    ? 'Estimado según el catálogo · sesión actual'
+                    : 'Estimado según el catálogo · actual / sesión anterior',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodySmall,
+              ),
+              const Text(
+                'No mide activación muscular.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 12),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

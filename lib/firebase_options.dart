@@ -64,7 +64,8 @@ class DefaultFirebaseOptions {
     messagingSenderId: '1084888108318',
     projectId: 'fit-app-63796',
     storageBucket: 'fit-app-63796.firebasestorage.app',
-    iosClientId: '1084888108318-2da4rsol0aht0nb4neuk8b3mt5hjv6cu.apps.googleusercontent.com',
+    iosClientId:
+        '1084888108318-2da4rsol0aht0nb4neuk8b3mt5hjv6cu.apps.googleusercontent.com',
     iosBundleId: 'com.example.fitApp',
   );
 
@@ -74,7 +75,8 @@ class DefaultFirebaseOptions {
     messagingSenderId: '1084888108318',
     projectId: 'fit-app-63796',
     storageBucket: 'fit-app-63796.firebasestorage.app',
-    iosClientId: '1084888108318-2da4rsol0aht0nb4neuk8b3mt5hjv6cu.apps.googleusercontent.com',
+    iosClientId:
+        '1084888108318-2da4rsol0aht0nb4neuk8b3mt5hjv6cu.apps.googleusercontent.com',
     iosBundleId: 'com.example.fitApp',
   );
 

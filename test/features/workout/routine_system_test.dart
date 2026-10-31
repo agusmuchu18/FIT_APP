@@ -21,15 +21,15 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     AccountStorageScope.current = '';
   });
-  test('real catalogue has 297 unique IDs, pagination reaches all and Spanish equipment search works', () async {
-    expect(exerciseLibrary, hasLength(297));
-    expect(exerciseLibrary.map((e) => e.id).toSet(), hasLength(297));
+  test('real catalogue has 298 unique IDs, pagination reaches all and Spanish equipment search works', () async {
+    expect(exerciseLibrary, hasLength(298));
+    expect(exerciseLibrary.map((e) => e.id).toSet(), hasLength(298));
     final c = ExercisePickerController(exercises: exerciseLibrary);
     addTearDown(c.dispose);
     while (c.canShowMore) {
       c.showMore();
     }
-    expect(c.itemsVisible, hasLength(297));
+    expect(c.itemsVisible, hasLength(298));
     c.setQueryDebounced('mancuerna');
     await Future<void>.delayed(const Duration(milliseconds: 250));
     expect(c.totalCount, greaterThan(0));

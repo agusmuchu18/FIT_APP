@@ -35,7 +35,9 @@ GoalType _goalFromString(String? raw) {
   if (normalized.contains('masa') || normalized.contains('muscle')) {
     return GoalType.muscleGain;
   }
-  if (normalized.contains('grasa') || normalized.contains('fat') || normalized.contains('peso')) {
+  if (normalized.contains('grasa') ||
+      normalized.contains('fat') ||
+      normalized.contains('peso')) {
     return GoalType.fatLoss;
   }
   if (normalized.contains('mantenimiento') || normalized.contains('mantener')) {
@@ -114,7 +116,9 @@ List<HabitTemplate> buildGalleryTemplates({
 
   if (currentCategory == 'Sugerido') {
     result = result
-        .where((template) => !alreadyAddedTemplateIds.contains(template.templateId))
+        .where(
+          (template) => !alreadyAddedTemplateIds.contains(template.templateId),
+        )
         .toList(growable: false);
   }
 
@@ -124,12 +128,14 @@ List<HabitTemplate> buildGalleryTemplates({
         final sb = habitTemplateScore(
           template: b,
           user: user,
-          popularityScore: popularityByTemplate[b.templateId] ?? b.popularityScore,
+          popularityScore:
+              popularityByTemplate[b.templateId] ?? b.popularityScore,
         );
         final sa = habitTemplateScore(
           template: a,
           user: user,
-          popularityScore: popularityByTemplate[a.templateId] ?? a.popularityScore,
+          popularityScore:
+              popularityByTemplate[a.templateId] ?? a.popularityScore,
         );
         return sb.compareTo(sa);
       });
@@ -142,7 +148,9 @@ List<HabitTemplate> buildGalleryTemplates({
       });
       break;
     case HabitSortMode.alphabetical:
-      result.sort((a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
+      result.sort(
+        (a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()),
+      );
       break;
   }
 
@@ -153,4 +161,5 @@ List<HabitTemplate> buildGalleryTemplates({
   return result;
 }
 
-bool _hasAny(Set<String> tags, Set<String> expected) => tags.any(expected.contains);
+bool _hasAny(Set<String> tags, Set<String> expected) =>
+    tags.any(expected.contains);

@@ -141,7 +141,7 @@ class RoutinePreviewScreen extends StatelessWidget {
                           ],
                           for (var i = 0; i < e.setTargets.length; i++)
                             Text(
-                              'Serie ${i + 1}: ${e.setTargets[i].durationSeconds == null ? '${e.setTargets[i].reps ?? '${e.setTargets[i].repsMin}–${e.setTargets[i].repsMax}'} repeticiones' : '${e.setTargets[i].durationSeconds}s'}${e.setTargets[i].weightKg == null ? '' : ' · ${WorkoutUnits.of(context).valueWithUnit('kg', e.setTargets[i].weightKg!)} (${RoutineLabels.load(e.targetLoadType)})'}',
+                              'Serie ${i + 1}: ${e.setTargets[i].durationSeconds == null ? '${e.setTargets[i].reps ?? '${e.setTargets[i].repsMin}–${e.setTargets[i].repsMax}'} repeticiones' : '${e.setTargets[i].durationSeconds}s'} · ${RoutineLabels.setTargetSummary(e, e.setTargets[i], WorkoutUnits.of(context))}',
                             ),
                           if (e.notes?.isNotEmpty == true) Text(e.notes!),
                         ],

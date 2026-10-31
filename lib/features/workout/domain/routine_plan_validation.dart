@@ -45,7 +45,9 @@ class RoutinePlanValidation {
     bool weight(double? n) => n == null || (n.isFinite && n >= 0);
     bool reps(int? n, int? min, int? max) =>
         n != null ? n > 0 : min != null && max != null && min > 0 && max >= min;
-    if (!weight(e.targetWeightKg)) return '${e.name}: la carga es inválida.';
+    if (!weight(e.targetWeightKg) || !weight(e.targetAssistanceKg)) {
+      return '${e.name}: la carga es inválida.';
+    }
     if (e.isTimed
         ? (e.targetDurationSeconds ?? 0) < 1
         : !reps(e.targetReps, e.targetRepsMin, e.targetRepsMax)) {
@@ -56,6 +58,7 @@ class RoutinePlanValidation {
     }
     for (final target in e.setTargets) {
       if (!weight(target.weightKg) ||
+          !weight(target.assistanceKg) ||
           (e.isTimed
               ? (target.durationSeconds ?? 0) < 1
               : !reps(target.reps, target.repsMin, target.repsMax))) {

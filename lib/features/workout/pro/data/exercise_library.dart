@@ -512,6 +512,18 @@ final List<ExerciseDefinition> _baseExerciseLibrary = [
     isTimed: false,
   ),
   ExerciseDefinition(
+    id: 'bodyweight_squat',
+    name: 'Sentadilla corporal',
+    aliases: ['sentadilla sin peso', 'sentadilla corporal', 'air squat'],
+    primaryMuscles: ['cuádriceps'],
+    secondaryMuscles: ['glúteos'],
+    equipment: 'bodyweight',
+    movementPattern: 'squat',
+    defaultMeasurement: 'reps',
+    loadType: LoadType.bodyweightEffective,
+    allowExternalLoad: true,
+  ),
+  ExerciseDefinition(
     id: 'back_squat',
     name: 'Sentadilla trasera',
     aliases: ["sentadilla", "back squat"],

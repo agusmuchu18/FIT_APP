@@ -69,11 +69,17 @@ Future<void> runWorkoutDeviceJourney(
   await tester.tap(find.text('Rutina de verificación'));
   await _ready(tester, find.text('Iniciar entrenamiento'));
   await tester.tap(find.text('Iniciar entrenamiento'));
-  await _ready(tester, find.text('Tu sesión'));
-  await _ready(tester, find.text('Press banca').first);
-  await tester.tap(find.text('Press banca').first);
-  await tester.pumpAndSettle();
-  final reps = find.widgetWithText(TextField, 'Reps').first;
+  await _ready(tester, find.byTooltip('Pausar sesión'));
+  // The routine's first exercise opens by itself.
+  final reps = find
+      .byWidgetPredicate(
+        (widget) =>
+            widget is TextField &&
+            widget.key is ValueKey<String> &&
+            (widget.key! as ValueKey<String>).value.startsWith('set-result-'),
+      )
+      .first;
+  await _ready(tester, reps);
   await tester.ensureVisible(reps);
   await tester.pumpAndSettle();
   await tester.enterText(reps, '9');
@@ -86,21 +92,19 @@ Future<void> runWorkoutDeviceJourney(
   final draft = await tester.runAsync(rich.loadDraftExercises);
   expect(draft!.single.sets.first.reps, 9);
   await tester.tap(find.text('Iniciar entrenamiento'));
-  await _ready(tester, find.text('Tu sesión'));
-  await tester.tap(find.text('Pausar sesión'));
-  await _ready(tester, find.text('Reanudar sesión'));
+  await _ready(tester, find.byTooltip('Pausar sesión'));
+  await tester.tap(find.byTooltip('Pausar sesión'));
+  await _ready(tester, find.byTooltip('Reanudar sesión'));
   expect((await tester.runAsync(rich.loadDraftIdentity))!.isPaused, isTrue);
-  await tester.tap(find.text('Reanudar sesión'));
-  await tester.tap(find.text('Press banca').first);
-  await tester.pumpAndSettle();
+  await tester.tap(find.byTooltip('Reanudar sesión'));
+  await _ready(tester, find.byTooltip('Pausar sesión'));
   final check = find.byType(Checkbox).first;
   await tester.ensureVisible(check);
   await tester.pumpAndSettle();
   await tester.tap(check);
   await tester.pumpAndSettle();
-  await tester.tap(find.text('Más opciones'));
-  await _ready(tester, find.text('Finalizar anticipadamente'));
-  await tester.tap(find.text('Finalizar anticipadamente'));
+  // Finishing early is always available in the app bar.
+  await tester.tap(find.text('Finalizar'));
   await _ready(tester, find.text('Guardar entrenamiento'));
   await tester.tap(find.text('Guardar entrenamiento'));
   await _ready(tester, find.text('Entrenamiento completado'));

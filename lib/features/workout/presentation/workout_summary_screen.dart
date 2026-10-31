@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 
 import '../../../app/theme/app_theme.dart';
 import '../../common/theme/app_layout.dart';
+import '../application/routine_update_from_session.dart';
 import '../data/workout_repository.dart';
 import '../domain/workout_analytics.dart';
 import '../training_home/workout_history_screen.dart';
@@ -18,9 +19,13 @@ class WorkoutSummaryScreen extends StatefulWidget {
     super.key,
     required this.sessionId,
     this.repository,
+    this.routineUpdate,
   });
   final String sessionId;
   final WorkoutRepository? repository;
+
+  /// Offered once after finishing a routine whose values changed today.
+  final RoutineUpdateProposal? routineUpdate;
   @override
   State<WorkoutSummaryScreen> createState() => _WorkoutSummaryScreenState();
 }
@@ -32,6 +37,107 @@ class _WorkoutSummaryScreenState extends State<WorkoutSummaryScreen> {
     (WorkoutReport?, WorkoutComparison?, List<ExercisePersonalRecord>)
   >
   _data;
+  _RoutineUpdateState _routineUpdate = _RoutineUpdateState.offered;
+  bool _showAllRecords = false;
+  static const _recordsPreview = 3;
+
+  Future<void> _applyRoutineUpdate() async {
+    final proposal = widget.routineUpdate;
+    if (proposal == null || _routineUpdate == _RoutineUpdateState.saving) {
+      return;
+    }
+    setState(() => _routineUpdate = _RoutineUpdateState.saving);
+    try {
+      await proposal.apply();
+      if (!mounted) return;
+      setState(() => _routineUpdate = _RoutineUpdateState.saved);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _routineUpdate = _RoutineUpdateState.offered);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No se pudo actualizar la rutina. Reintentá.'),
+        ),
+      );
+    }
+  }
+
+  Widget _routineUpdatePanel(BuildContext context) {
+    final proposal = widget.routineUpdate!;
+    final theme = Theme.of(context);
+    if (_routineUpdate == _RoutineUpdateState.saved) {
+      return ReportPanel(
+        child: Row(
+          children: [
+            Icon(Icons.check_circle, color: theme.colorScheme.primary),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Text(
+                '«${proposal.routine.name}» quedó actualizada para la próxima vez.',
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    return ReportPanel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '¿Actualizar «${proposal.routine.name}»?',
+            style: theme.textTheme.titleMedium,
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          const Text(
+            'Guardamos las series, pesos y repeticiones que hiciste hoy como objetivos de la rutina. Los ejercicios que no hiciste no cambian.',
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
+            children: [
+              FilledButton(
+                onPressed: _routineUpdate == _RoutineUpdateState.saving
+                    ? null
+                    : _applyRoutineUpdate,
+                child: const Text('Actualizar rutina'),
+              ),
+              TextButton(
+                onPressed: _routineUpdate == _RoutineUpdateState.saving
+                    ? null
+                    : () => setState(
+                        () => _routineUpdate = _RoutineUpdateState.dismissed,
+                      ),
+                child: const Text('Mantener como está'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Marks that beat an earlier one. A first session sets every mark, which
+  /// would make the celebration meaningless.
+  static List<ExercisePersonalRecord> _improvedRecords(
+    TrainingPerformanceIndex index,
+    WorkoutReport report,
+  ) {
+    final sessionId = report.session.id;
+    String key(ExercisePersonalRecord r) =>
+        '${r.exerciseId}|${r.loadKey}|${r.kind.name}|${r.reps ?? ''}';
+    final earlier = {
+      for (final r in index.recordHistory)
+        if (r.sessionId != sessionId && !r.date.isAfter(report.session.date))
+          key(r),
+    };
+    return index
+        .sessionRecords(sessionId)
+        .where((r) => earlier.contains(key(r)))
+        .toList(growable: false);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -59,7 +165,7 @@ class _WorkoutSummaryScreenState extends State<WorkoutSummaryScreen> {
       return (
         report,
         WorkoutAnalytics.compare(report, index.reports),
-        index.sessionRecords(widget.sessionId),
+        _improvedRecords(index, report),
       );
     });
   }
@@ -101,6 +207,58 @@ class _WorkoutSummaryScreenState extends State<WorkoutSummaryScreen> {
                 padding: const EdgeInsets.all(AppSpacing.lg),
                 children: [
                   WorkoutReportHero(report: report, saved: true),
+                  if (snapshot.data!.$3.isNotEmpty) ...[
+                    const SizedBox(height: AppSpacing.lg),
+                    ReportPanel(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.emoji_events,
+                                color: Theme.of(context).colorScheme.tertiary,
+                              ),
+                              const SizedBox(width: AppSpacing.sm),
+                              Expanded(
+                                child: Text(
+                                  snapshot.data!.$3.length == 1
+                                      ? '¡1 récord nuevo!'
+                                      : '¡${snapshot.data!.$3.length} récords nuevos!',
+                                  style: Theme.of(context).textTheme.titleLarge,
+                                ),
+                              ),
+                            ],
+                          ),
+                          for (final mark in snapshot.data!.$3.take(
+                            _showAllRecords
+                                ? snapshot.data!.$3.length
+                                : _recordsPreview,
+                          ))
+                            TrainingRecordTile(
+                              record: mark,
+                              repository: _repository,
+                            ),
+                          if (snapshot.data!.$3.length > _recordsPreview)
+                            TextButton(
+                              onPressed: () => setState(
+                                () => _showAllRecords = !_showAllRecords,
+                              ),
+                              child: Text(
+                                _showAllRecords
+                                    ? 'Ver menos'
+                                    : 'Ver los ${snapshot.data!.$3.length} récords',
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                  if (widget.routineUpdate != null &&
+                      _routineUpdate != _RoutineUpdateState.dismissed) ...[
+                    const SizedBox(height: AppSpacing.lg),
+                    _routineUpdatePanel(context),
+                  ],
                   const SizedBox(height: AppSpacing.xl),
                   WorkoutReportStatistics(report: report),
                   TextButton.icon(
@@ -118,19 +276,6 @@ class _WorkoutSummaryScreenState extends State<WorkoutSummaryScreen> {
                     icon: const Icon(Icons.ios_share_outlined),
                     label: const Text('Crear tarjeta de la sesión'),
                   ),
-                  if (snapshot.data!.$3.isNotEmpty)
-                    ExpansionTile(
-                      title: Text(
-                        '${snapshot.data!.$3.length} marcas logradas en esta sesión',
-                      ),
-                      children: [
-                        for (final mark in snapshot.data!.$3)
-                          TrainingRecordTile(
-                            record: mark,
-                            repository: _repository,
-                          ),
-                      ],
-                    ),
                   const SizedBox(height: AppSpacing.xl),
                   WorkoutMuscleReport(report: report),
                   const SizedBox(height: AppSpacing.xl),
@@ -196,3 +341,5 @@ class _WorkoutSummaryScreenState extends State<WorkoutSummaryScreen> {
     ),
   );
 }
+
+enum _RoutineUpdateState { offered, saving, saved, dismissed }

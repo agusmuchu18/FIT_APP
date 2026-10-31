@@ -32,7 +32,7 @@ class IntegrationDetailScreen extends StatelessWidget {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(20),
                   color: Theme.of(context).colorScheme.surfaceContainerHighest
-                      .withOpacity(0.25),
+                      .withValues(alpha: 0.25),
                 ),
                 child: Row(
                   children: [

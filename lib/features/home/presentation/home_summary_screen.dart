@@ -1,17 +1,17 @@
+import '../../nutrition/data/nutrition_day_repository.dart';
+
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../../core/domain/entities.dart';
+import '../../../core/data/repositories.dart';
 import '../../../core/data/home_modules_controller.dart';
 import '../../../main.dart';
 import '../../common/theme/app_colors.dart';
 import '../../common/widgets/summary_card.dart';
 import '../../home/domain/home_activity_utils.dart';
 import '../../home/domain/goal_insight_service.dart';
-import '../../nutrition/data/fdc_client.dart';
-import '../../nutrition/data/food_repository.dart';
-import '../../nutrition/data/nutrition_api_config.dart';
-import '../../nutrition/domain/models.dart' as nutrition_models;
 import '../../sleep/domain/sleep_time_utils.dart';
 import 'activity_day_screen.dart';
 import 'widgets/activity_calendar_sheet.dart';
@@ -26,11 +26,11 @@ class HomeSummaryScreen extends StatefulWidget {
 }
 
 class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
-  final HomeModulesController _homeModulesController = HomeModulesController.instance;
-  final FoodRepository _foodRepository = FoodRepository(
-    fdc: FdcClient(apiKey: NutritionApiConfig.usdaApiKey),
-  );
+  final HomeModulesController _homeModulesController =
+      HomeModulesController.instance;
   late Future<_HomeSummaryData> _summaryFuture;
+
+  FitnessRepository? _repository;
 
   @override
   void initState() {
@@ -39,19 +39,36 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
     if (!_homeModulesController.initialized) {
       _homeModulesController.load();
     }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final repository = RepositoryScope.of(context);
+    if (identical(repository, _repository)) return;
+    _repository?.workoutsRevision.removeListener(_onWorkoutsChanged);
+    _repository?.mealsRevision.removeListener(_onWorkoutsChanged);
+    _repository = repository;
+    repository.workoutsRevision.addListener(_onWorkoutsChanged);
+    repository.mealsRevision.addListener(_onWorkoutsChanged);
     _summaryFuture = _loadSummaryData();
   }
 
   @override
   void dispose() {
     _homeModulesController.removeListener(_onModulesChanged);
-    _foodRepository.dispose();
+    _repository?.workoutsRevision.removeListener(_onWorkoutsChanged);
+    _repository?.mealsRevision.removeListener(_onWorkoutsChanged);
     super.dispose();
   }
 
   void _onModulesChanged() {
     if (!mounted) return;
     setState(() {});
+  }
+
+  void _onWorkoutsChanged() {
+    if (mounted) _refreshSummary();
   }
 
   Future<_HomeSummaryData> _loadSummaryData() async {
@@ -73,6 +90,16 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
     final workouts = await workoutsFuture;
     final sleepEntries = await sleepFuture;
     final preferences = await preferencesFuture;
+    NutritionGoal nutritionGoal;
+    try {
+      nutritionGoal = await NutritionDayRepository(fitness: repository)
+          .configuredGoal(selectedDay);
+    } catch (_) {
+      nutritionGoal = NutritionGoal(
+        kcal: preferences?.targetCalories?.toDouble(),
+      );
+    }
+
     final nutritionToday = await nutritionTodayFuture;
     final weeklyNutrition = await weeklyNutritionFuture;
     final macroDistribution = await macroDistributionFuture;
@@ -95,7 +122,7 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
       final isActive = activityDays.contains(day);
       streakDots.add(isActive);
     }
-    for (var i = 0;; i++) {
+    for (var i = 0; ; i++) {
       final day = selectedDay.subtract(Duration(days: i));
       if (activityDays.contains(day)) {
         streak++;
@@ -107,7 +134,7 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
     // Training stats.
     final workoutDurations = <DateTime, int>{};
     for (final workout in workouts) {
-      final workoutDay = normalizeDay(_safeParseDate(workout.id));
+      final workoutDay = normalizeDay(workoutEntryDate(workout));
       workoutDurations[workoutDay] =
           (workoutDurations[workoutDay] ?? 0) + workout.durationMinutes;
     }
@@ -118,52 +145,45 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
       final day = selectedDay.subtract(Duration(days: 6 - i));
       recentTrainingMinutes.add(workoutDurations[day] ?? 0);
     }
-    final trainingWeekTotal =
-        recentTrainingMinutes.fold<int>(0, (sum, value) => sum + value);
+    final trainingWeekTotal = recentTrainingMinutes.fold<int>(
+      0,
+      (sum, value) => sum + value,
+    );
     final trainingWeeklyAvg = (trainingWeekTotal / 7).round();
     final trainingDays = recentTrainingMinutes.where((m) => m > 0).length;
     final targetSessions = preferences?.targetSessionsPerWeek ?? 3;
 
-    // Nutrition stats with FoodRepository support.
-    final catalog = await _foodRepository.loadLocalCatalog();
-    var caloriesToday = 0;
-    var macrosToday = Macros(carbs: 0, protein: 0, fat: 0);
+    // Saved nutrient snapshots are authoritative, including genuine zeros.
+    var kcal = 0.0, protein = 0.0, carbs = 0.0, fat = 0.0;
     for (final meal in meals) {
-      final entryDate = _dateOnly(_safeParseDate(meal.id));
-      if (entryDate != selectedDay) continue;
-
-      final matchingFood = catalog
-          .cast<nutrition_models.FoodItem?>()
-          .firstWhere(
-            (item) =>
-                item != null &&
-                (item.name.toLowerCase() == meal.title.toLowerCase() ||
-                    meal.title.toLowerCase().contains(item.name.toLowerCase())),
-            orElse: () => null,
-          );
-
-      final calories =
-          meal.calories > 0 ? meal.calories : (matchingFood?.caloriesPer100g ?? 0);
-      final macros = meal.macros.carbs + meal.macros.protein + meal.macros.fat >
-              0
-          ? meal.macros
-          : (matchingFood?.macros ?? const Macros(carbs: 0, protein: 0, fat: 0));
-
-      caloriesToday += calories;
-      macrosToday = Macros(
-        carbs: macrosToday.carbs + macros.carbs,
-        protein: macrosToday.protein + macros.protein,
-        fat: macrosToday.fat + macros.fat,
-      );
+      if (_dateOnly(meal.recordedAt) != selectedDay) continue;
+      kcal += meal.energyKcal;
+      protein += meal.proteinGrams;
+      carbs += meal.carbohydrateGrams;
+      fat += meal.fatGrams;
     }
+    final unknownNutrition = {
+      for (final m in meals.where(
+        (m) => _dateOnly(m.recordedAt) == selectedDay,
+      ))
+        ...m.unknownNutrients,
+    };
+    var caloriesToday = kcal.round();
+    var macrosToday = Macros(
+      carbs: carbs.round(),
+      protein: protein.round(),
+      fat: fat.round(),
+    );
 
-    if (caloriesToday == 0 && selectedDay == normalizeDay(DateTime.now()) && nutritionToday != null) {
+    if (caloriesToday == 0 &&
+        selectedDay == normalizeDay(DateTime.now()) &&
+        nutritionToday != null) {
       caloriesToday = nutritionToday.totalCalories;
       macrosToday = nutritionToday.macros;
     }
 
     // Sleep metrics for current and previous week.
-    double _averageHoursForRange(
+    double averageHoursForRange(
       DateTime start,
       DateTime end,
       List<SleepEntry> entries,
@@ -177,7 +197,7 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
       return total / filtered.length;
     }
 
-    double _circularStdDev(
+    double circularStdDev(
       DateTime start,
       DateTime end,
       List<SleepEntry> entries,
@@ -194,31 +214,37 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
       return circularStdDevMinutes(minutes);
     }
 
-    final avgSleepDuration =
-        _averageHoursForRange(lastWeekStart, selectedDay, sleepEntries);
-    final previousSleepAvg =
-        _averageHoursForRange(previousWeekStart, previousWeekEnd, sleepEntries);
+    final avgSleepDuration = averageHoursForRange(
+      lastWeekStart,
+      selectedDay,
+      sleepEntries,
+    );
+    final previousSleepAvg = averageHoursForRange(
+      previousWeekStart,
+      previousWeekEnd,
+      sleepEntries,
+    );
     final avgSleepDelta = avgSleepDuration - previousSleepAvg;
 
-    final bedStd = _circularStdDev(
+    final bedStd = circularStdDev(
       lastWeekStart,
       selectedDay,
       sleepEntries,
       (e) => parseHHmmToMinutes(e.bedtime),
     );
-    final wakeStd = _circularStdDev(
+    final wakeStd = circularStdDev(
       lastWeekStart,
       selectedDay,
       sleepEntries,
       (e) => parseHHmmToMinutes(e.wakeTime),
     );
-    final previousBedStd = _circularStdDev(
+    final previousBedStd = circularStdDev(
       previousWeekStart,
       previousWeekEnd,
       sleepEntries,
       (e) => parseHHmmToMinutes(e.bedtime),
     );
-    final previousWakeStd = _circularStdDev(
+    final previousWakeStd = circularStdDev(
       previousWeekStart,
       previousWeekEnd,
       sleepEntries,
@@ -234,8 +260,10 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
 
     var averageCalories = 0.0;
     if (weeklyNutrition.isNotEmpty) {
-      final totalCalories =
-          weeklyNutrition.fold<int>(0, (sum, entry) => sum + entry.totalCalories);
+      final totalCalories = weeklyNutrition.fold<int>(
+        0,
+        (sum, entry) => sum + entry.totalCalories,
+      );
       averageCalories = totalCalories / weeklyNutrition.length;
     } else if (nutritionToday != null) {
       averageCalories = nutritionToday.totalCalories.toDouble();
@@ -247,7 +275,8 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
       fat: (macroDistribution.fat / 7).round(),
     );
 
-    final hasUserGoal = (preferences?.primaryGoal?.isNotEmpty ?? false) ||
+    final hasUserGoal =
+        (preferences?.primaryGoal.isNotEmpty ?? false) ||
         (preferences?.targetCalories != null &&
             (preferences?.targetCalories ?? 0) > 0);
 
@@ -269,7 +298,9 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
       trainingWeeklyAvg: trainingWeeklyAvg,
       trainingWeeklyDistribution: recentTrainingMinutes,
       caloriesToday: caloriesToday,
+      unknownNutrition: unknownNutrition,
       macrosToday: macrosToday,
+      targetCalories: nutritionGoal.kcal?.round(),
       avgSleepDuration: avgSleepDuration,
       avgSleepDelta: avgSleepDelta,
       regularityScore: regularityScore,
@@ -304,16 +335,14 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
     });
   }
 
-  DateTime _dateOnly(DateTime date) => DateTime(date.year, date.month, date.day);
-
-  DateTime _safeParseDate(String raw) {
-    return DateTime.tryParse(raw) ?? DateTime.now();
-  }
+  DateTime _dateOnly(DateTime date) =>
+      DateTime(date.year, date.month, date.day);
 
   @override
   Widget build(BuildContext context) {
     const horizontalPadding = 20.0;
     const verticalSectionSpacing = 20.0;
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
 
     return Scaffold(
       body: Stack(
@@ -340,7 +369,9 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
                       20,
                     ),
                     child: TweenAnimationBuilder<double>(
-                      duration: const Duration(milliseconds: 420),
+                      duration: reduceMotion
+                          ? Duration.zero
+                          : const Duration(milliseconds: 420),
                       tween: Tween<double>(begin: 0, end: 1),
                       curve: Curves.easeInOut,
                       builder: (context, value, child) {
@@ -396,6 +427,8 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
                                   child: _MetricCard.nutrition(
                                     calories: data.caloriesToday,
                                     macros: data.macrosToday,
+                                    targetCalories: data.targetCalories,
+                                    unknown: data.unknownNutrition,
                                     onTap: () async {
                                       await Navigator.pushNamed(
                                         context,
@@ -424,21 +457,29 @@ class _HomeSummaryScreenState extends State<HomeSummaryScreen> {
                             regularityScore: data.regularityScore,
                             regularityDelta: data.regularityWeekDelta,
                             onTap: () async {
-                              await Navigator.pushNamed(context, '/sleep/overview');
+                              await Navigator.pushNamed(
+                                context,
+                                '/sleep/overview',
+                              );
                               _refreshSummary();
                             },
                           ),
                           const SizedBox(height: verticalSectionSpacing),
                           HomeOptionalModulesSection(
-                            enabledModules: _homeModulesController.enabledModules,
+                            enabledModules:
+                                _homeModulesController.enabledModules,
                             optionalOrder: _homeModulesController.optionalOrder,
                             onNavigate: (route) async {
                               await Navigator.pushNamed(context, route);
                               _refreshSummary();
                             },
-                            onRemove: (moduleId) => _homeModulesController.removeFromHome(moduleId),
+                            onRemove: (moduleId) =>
+                                _homeModulesController.removeFromHome(moduleId),
                             onOpenSettings: () async {
-                              await Navigator.pushNamed(context, '/settings/modules');
+                              await Navigator.pushNamed(
+                                context,
+                                '/settings/modules',
+                              );
                               _refreshSummary();
                             },
                           ),
@@ -466,6 +507,8 @@ class _HomeSummaryData {
     required this.trainingWeeklyDistribution,
     required this.caloriesToday,
     required this.macrosToday,
+    this.targetCalories,
+    this.unknownNutrition = const {},
     required this.avgSleepDuration,
     required this.avgSleepDelta,
     required this.regularityScore,
@@ -485,7 +528,7 @@ class _HomeSummaryData {
       trainingWeeklyAvg: 0,
       trainingWeeklyDistribution: List.filled(7, 0),
       caloriesToday: 0,
-      macrosToday: Macros(carbs: 1, protein: 1, fat: 1),
+      macrosToday: Macros(carbs: 0, protein: 0, fat: 0),
       avgSleepDuration: 0,
       avgSleepDelta: 0,
       regularityScore: 0,
@@ -517,7 +560,9 @@ class _HomeSummaryData {
   final int trainingWeeklyAvg;
   final List<int> trainingWeeklyDistribution;
   final int caloriesToday;
+  final Set<String> unknownNutrition;
   final Macros macrosToday;
+  final int? targetCalories;
   final double avgSleepDuration;
   final double avgSleepDelta;
   final double regularityScore;
@@ -539,11 +584,7 @@ class _HomeBackground extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF0B1220),
-            Color(0xFF0E1624),
-            Color(0xFF070B12),
-          ],
+          colors: [Color(0xFF0B1220), Color(0xFF0E1624), Color(0xFF070B12)],
         ),
       ),
       child: Stack(
@@ -578,9 +619,7 @@ class _GlowBlob extends StatelessWidget {
         height: size,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          gradient: RadialGradient(
-            colors: [color, const Color(0x00000000)],
-          ),
+          gradient: RadialGradient(colors: [color, const Color(0x00000000)]),
         ),
       ),
     );
@@ -588,9 +627,7 @@ class _GlowBlob extends StatelessWidget {
 }
 
 class _HeaderSection extends StatelessWidget {
-  const _HeaderSection({
-    required this.onSelectDate,
-  });
+  const _HeaderSection({required this.onSelectDate});
 
   final VoidCallback onSelectDate;
 
@@ -666,108 +703,6 @@ class _HeaderSection extends StatelessWidget {
   }
 }
 
-class _SelectedDayActivityCard extends StatelessWidget {
-  const _SelectedDayActivityCard({required this.activity});
-
-  final HomeDayActivitySummary activity;
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    if (!activity.hasActivity) {
-      return SummaryCard(
-        minHeight: 96,
-        glass: true,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          child: Row(
-            children: [
-              const Icon(Icons.event_busy_rounded, color: AppColors.textMuted),
-              const SizedBox(width: 10),
-              Text(
-                'Sin registros para este día.',
-                style: textTheme.bodyMedium?.copyWith(
-                  color: AppColors.textMuted,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return SummaryCard(
-      minHeight: 96,
-      glass: true,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        child: Wrap(
-          spacing: 12,
-          runSpacing: 10,
-          children: [
-            _ActivityPill(
-              icon: Icons.fitness_center_rounded,
-              label: '${activity.workouts.length} entrenamiento(s)',
-              value: '${activity.totalTrainingMinutes} min',
-            ),
-            _ActivityPill(
-              icon: Icons.restaurant_menu_rounded,
-              label: '${activity.meals.length} comida(s)',
-              value: '${activity.totalCalories} kcal',
-            ),
-            _ActivityPill(
-              icon: Icons.nightlight_round,
-              label: '${activity.sleepEntries.length} sueño',
-              value: activity.sleepEntries.isEmpty
-                  ? '-'
-                  : '${activity.sleepEntries.first.hours.toStringAsFixed(1)} h',
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ActivityPill extends StatelessWidget {
-  const _ActivityPill({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
-
-  final IconData icon;
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.06),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 15, color: const Color(0xFF8AE9D2)),
-          const SizedBox(width: 6),
-          Text(
-            '$label · $value',
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _GoalInsightCard extends StatelessWidget {
   const _GoalInsightCard({required this.data});
 
@@ -809,10 +744,7 @@ class _GoalInsightCard extends StatelessWidget {
                   ],
                 ),
               ),
-              const Icon(
-                Icons.auto_awesome_rounded,
-                color: Color(0xFF7CF4FF),
-              ),
+              const Icon(Icons.auto_awesome_rounded, color: Color(0xFF7CF4FF)),
             ],
           ),
           const SizedBox(height: 14),
@@ -877,10 +809,7 @@ class _PendingGoalCard extends StatelessWidget {
                   color: Colors.white,
                 ),
               ),
-              Icon(
-                Icons.auto_awesome_rounded,
-                color: Color(0xFF7CF4FF),
-              ),
+              Icon(Icons.auto_awesome_rounded, color: Color(0xFF7CF4FF)),
             ],
           ),
           const SizedBox(height: 4),
@@ -979,7 +908,7 @@ class _StreakCard extends StatelessWidget {
                 right: -30,
                 child: Icon(
                   Icons.local_fire_department_rounded,
-                  color: Colors.white.withOpacity(0.07),
+                  color: Colors.white.withValues(alpha: 0.07),
                   size: 140,
                 ),
               ),
@@ -991,7 +920,7 @@ class _StreakCard extends StatelessWidget {
                   height: 120,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.white.withOpacity(0.05),
+                    color: Colors.white.withValues(alpha: 0.05),
                   ),
                 ),
               ),
@@ -1005,7 +934,7 @@ class _StreakCard extends StatelessWidget {
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: Colors.white.withOpacity(0.16),
+                          color: Colors.white.withValues(alpha: 0.16),
                         ),
                         child: const Icon(
                           Icons.local_fire_department_rounded,
@@ -1016,10 +945,7 @@ class _StreakCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 18),
                     Expanded(
-                      child: _StreakDetails(
-                        activeDays: activeDays,
-                        dots: dots,
-                      ),
+                      child: _StreakDetails(activeDays: activeDays, dots: dots),
                     ),
                   ],
                 ),
@@ -1033,10 +959,7 @@ class _StreakCard extends StatelessWidget {
 }
 
 class _StreakDetails extends StatelessWidget {
-  const _StreakDetails({
-    required this.activeDays,
-    required this.dots,
-  });
+  const _StreakDetails({required this.activeDays, required this.dots});
 
   final int activeDays;
   final List<bool> dots;
@@ -1058,7 +981,8 @@ class _StreakDetails extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           '$activeDays días',
-          style: textTheme.displaySmall?.copyWith(
+          style:
+              textTheme.displaySmall?.copyWith(
                 fontSize: 30,
                 fontWeight: FontWeight.w800,
                 color: Colors.white,
@@ -1101,8 +1025,9 @@ class _StreakDots extends StatelessWidget {
       children: [
         Text(
           '$activeCount/12 días recientes activos',
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Colors.white.withOpacity(0.9),
+          style:
+              Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Colors.white.withValues(alpha: 0.9),
                 fontWeight: FontWeight.w600,
               ) ??
               const TextStyle(fontSize: 12, color: Colors.white),
@@ -1118,7 +1043,7 @@ class _StreakDots extends StatelessWidget {
               decoration: BoxDecoration(
                 color: isActive
                     ? gradientColors[index]
-                    : Colors.white.withOpacity(0.15),
+                    : Colors.white.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(6),
               ),
             );
@@ -1165,10 +1090,7 @@ class _BreathingIconState extends State<_BreathingIcon>
       animation: _controller,
       builder: (context, child) {
         final scale = 0.98 + (_controller.value * 0.04);
-        return Transform.scale(
-          scale: scale,
-          child: child,
-        );
+        return Transform.scale(scale: scale, child: child);
       },
       child: widget.child,
     );
@@ -1218,8 +1140,9 @@ class _MetricCard extends StatelessWidget {
     final weeklyAvg = distribution.isNotEmpty
         ? (weeklyTotal / distribution.length).clamp(0, double.infinity)
         : 0;
-    final difference =
-        weeklyAvg == 0 ? 0 : ((trainingToday - weeklyAvg) / weeklyAvg) * 100;
+    final difference = weeklyAvg == 0
+        ? 0
+        : ((trainingToday - weeklyAvg) / weeklyAvg) * 100;
     return _MetricCard._(
       title: 'Entrenamiento',
       value: primaryValue,
@@ -1228,7 +1151,9 @@ class _MetricCard extends StatelessWidget {
         secondaryValue: secondaryValue,
         distribution: distribution,
       ),
-      trend: TrendChipData.fromDelta(difference.round()),
+      trend: weeklyTotal == 0
+          ? const TrendChipData(label: 'Sin registros', tone: TrendTone.neutral)
+          : TrendChipData.fromDelta(difference.round()),
       onTap: onTap,
     );
   }
@@ -1237,26 +1162,28 @@ class _MetricCard extends StatelessWidget {
     required int calories,
     required Macros macros,
     required VoidCallback onTap,
+    int? targetCalories,
+    Set<String> unknown = const {},
   }) {
-    final delta = calories > 0 ? (calories - 2000) / 2000 * 100 : 0;
+    final delta = targetCalories != null && targetCalories > 0
+        ? (calories - targetCalories) / targetCalories * 100
+        : null;
     return _MetricCard._(
       title: 'Alimentación',
-      value: '${calories.toString()} kcal',
+      value: unknown.contains('kcal') ? '— kcal' : '$calories kcal',
       valueColor: Colors.white,
-      content: _NutritionCharts(macros: macros),
+      content: unknown.any((n) => n != 'kcal')
+          ? const Text('Macros incompletos')
+          : _NutritionCharts(macros: macros),
       trend: TrendChipData(
-        label: calories == 0
+        label: unknown.contains('kcal')
+            ? 'Dato ausente'
+            : calories == 0
             ? 'Sin registros hoy'
-            : delta.abs() <= 10
-                ? 'En rango'
-                : delta > 0
-                    ? '+${delta.round()}% vs objetivo'
-                    : '${delta.round()}% vs objetivo',
-        tone: delta.abs() <= 10
-            ? TrendTone.neutral
-            : delta > 0
-                ? TrendTone.positive
-                : TrendTone.negative,
+            : delta == null
+            ? 'Sin meta'
+            : '${delta > 0 ? '+' : ''}${delta.round()}% vs objetivo',
+        tone: TrendTone.neutral,
       ),
       onTap: onTap,
     );
@@ -1328,8 +1255,9 @@ class _TrainingChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final effectiveDistribution =
-        distribution.isEmpty ? List.filled(7, 0) : distribution;
+    final effectiveDistribution = distribution.isEmpty
+        ? List.filled(7, 0)
+        : distribution;
     final maxMinutes = effectiveDistribution.fold<int>(
       0,
       (max, value) => value > max ? value : max,
@@ -1346,10 +1274,13 @@ class _TrainingChart extends StatelessWidget {
                 alignment: Alignment.bottomLeft,
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
-                  children: List.generate(effectiveDistribution.length, (index) {
+                  children: List.generate(effectiveDistribution.length, (
+                    index,
+                  ) {
                     final value = effectiveDistribution[index];
-                    final normalized =
-                        maxMinutes == 0 ? 0.2 : (value / maxMinutes).clamp(0.2, 1.0);
+                    final normalized = maxMinutes == 0
+                        ? 0.2
+                        : (value / maxMinutes).clamp(0.2, 1.0);
                     final safeChartHeight = math.max(
                       0.0,
                       constraints.maxHeight - spacing - 14.0,
@@ -1398,7 +1329,10 @@ class TrendChipData {
         tone: TrendTone.positive,
       );
     }
-    return TrendChipData(label: '$delta% esta semana', tone: TrendTone.negative);
+    return TrendChipData(
+      label: '$delta% esta semana',
+      tone: TrendTone.negative,
+    );
   }
 
   final String label;
@@ -1415,7 +1349,7 @@ class _TrendChip extends StatelessWidget {
       case TrendTone.positive:
         return const Color(0x332AD27A);
       case TrendTone.neutral:
-        return Colors.amber.withOpacity(0.18);
+        return Colors.amber.withValues(alpha: 0.18);
       case TrendTone.negative:
         return const Color(0x33FF6A6A);
     }
@@ -1434,10 +1368,8 @@ class _TrendChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textStyle = Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: _foreground(context),
-          fontWeight: FontWeight.w600,
-        );
+    final textStyle = Theme.of(context).textTheme.labelSmall
+        ?.copyWith(color: _foreground(context), fontWeight: FontWeight.w600);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
@@ -1481,13 +1413,14 @@ class _NutritionCharts extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final total = math.max(macros.carbs + macros.protein + macros.fat, 1);
+    final total = macros.carbs + macros.protein + macros.fat;
+    if (total <= 0) return const Text('Sin macronutrientes registrados');
     final carbsRatio = macros.carbs / total;
     final proteinRatio = macros.protein / total;
     final fatRatio = macros.fat / total;
-    final carbsFlex = math.max((carbsRatio * 1000).round(), 1);
-    final proteinFlex = math.max((proteinRatio * 1000).round(), 1);
-    final fatFlex = math.max((fatRatio * 1000).round(), 1);
+    final carbsFlex = (carbsRatio * 1000).round();
+    final proteinFlex = (proteinRatio * 1000).round();
+    final fatFlex = (fatRatio * 1000).round();
     final carbsPct = (carbsRatio * 100).round();
     final proteinPct = (proteinRatio * 100).round();
     final fatPct = (fatRatio * 100).round();
@@ -1496,8 +1429,10 @@ class _NutritionCharts extends StatelessWidget {
       builder: (context, constraints) {
         const barHeight = 11.0;
         const spacing = 8.0;
-        final legendHeight =
-            math.max(0.0, constraints.maxHeight - barHeight - spacing);
+        final legendHeight = math.max(
+          0.0,
+          constraints.maxHeight - barHeight - spacing,
+        );
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1506,34 +1441,39 @@ class _NutritionCharts extends StatelessWidget {
               child: Container(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(999),
-                  color: Colors.white.withOpacity(0.04),
+                  color: Colors.white.withValues(alpha: 0.04),
                 ),
                 child: Row(
                   children: [
-                    Expanded(
-                      flex: carbsFlex,
-                      child: Container(
-                        decoration: const BoxDecoration(
-                          color: Color(0xFFFFD438),
-                          borderRadius:
-                              BorderRadius.horizontal(left: Radius.circular(999)),
+                    if (carbsFlex > 0)
+                      Expanded(
+                        flex: carbsFlex,
+                        child: Container(
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFFFD438),
+                            borderRadius: BorderRadius.horizontal(
+                              left: Radius.circular(999),
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                    Expanded(
-                      flex: proteinFlex,
-                      child: Container(color: const Color(0xFF6D7B44)),
-                    ),
-                    Expanded(
-                      flex: fatFlex,
-                      child: Container(
-                        decoration: const BoxDecoration(
-                          color: Color(0xFF3FA7FF),
-                          borderRadius:
-                              BorderRadius.horizontal(right: Radius.circular(999)),
+                    if (proteinFlex > 0)
+                      Expanded(
+                        flex: proteinFlex,
+                        child: Container(color: const Color(0xFF6D7B44)),
+                      ),
+                    if (fatFlex > 0)
+                      Expanded(
+                        flex: fatFlex,
+                        child: Container(
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF3FA7FF),
+                            borderRadius: BorderRadius.horizontal(
+                              right: Radius.circular(999),
+                            ),
+                          ),
                         ),
                       ),
-                    ),
                   ],
                 ),
               ),
@@ -1608,7 +1548,7 @@ class _MacroLegend extends StatelessWidget {
           ),
         ),
         Text(
-          '$label · ${grams}g (${percent}%)',
+          '$label · ${grams}g ($percent%)',
           style: const TextStyle(
             fontSize: 12,
             color: Color(0xFF9BA7B4),
@@ -1643,8 +1583,8 @@ class _SleepOverviewCard extends StatelessWidget {
     final tone = deltaPositive
         ? TrendTone.positive
         : absDelta < 0.3
-            ? TrendTone.neutral
-            : TrendTone.negative;
+        ? TrendTone.neutral
+        : TrendTone.negative;
 
     final label =
         '${deltaPositive ? '+' : '-'}${absDelta.toStringAsFixed(1)} h vs semana';
@@ -1658,8 +1598,8 @@ class _SleepOverviewCard extends StatelessWidget {
     final tone = improved
         ? TrendTone.positive
         : deltaMinutes < 3
-            ? TrendTone.neutral
-            : TrendTone.negative;
+        ? TrendTone.neutral
+        : TrendTone.negative;
 
     final label = '${improved ? '-' : '+'}$deltaMinutes min vs semana';
     return TrendChipData(label: label, tone: tone);
@@ -1695,7 +1635,8 @@ class _SleepOverviewCard extends StatelessWidget {
           children: [
             Text(
               label,
-              style: textTheme.labelMedium?.copyWith(
+              style:
+                  textTheme.labelMedium?.copyWith(
                     color: AppColors.textMuted,
                     fontWeight: FontWeight.w700,
                   ) ??
@@ -1704,7 +1645,8 @@ class _SleepOverviewCard extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               value,
-              style: textTheme.titleLarge?.copyWith(
+              style:
+                  textTheme.titleLarge?.copyWith(
                     fontSize: 20,
                     color: valueColor,
                     fontWeight: FontWeight.w800,
@@ -1745,7 +1687,8 @@ class _SleepOverviewCard extends StatelessWidget {
               const SizedBox(width: 10),
               Text(
                 'Sueño',
-                style: textTheme.titleMedium?.copyWith(
+                style:
+                    textTheme.titleMedium?.copyWith(
                       fontSize: 17,
                       color: AppColors.textPrimary,
                       fontWeight: FontWeight.w800,
@@ -1782,200 +1725,6 @@ class _SleepOverviewCard extends StatelessWidget {
                   value: regularityValue,
                   valueColor: AppColors.accentSecondary,
                   trend: _regularityTrend(),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SleepInfoCard extends StatelessWidget {
-  const _SleepInfoCard({
-    required this.avgSleepHours,
-    required this.avgSleepDelta,
-    required this.onTap,
-  });
-
-  final double avgSleepHours;
-  final double avgSleepDelta;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final hoursPart = avgSleepHours.floor();
-    final minutesPart = ((avgSleepHours - hoursPart) * 60).round();
-    final formattedHours =
-        '${hoursPart.toString()} h ${minutesPart.toString().padLeft(2, '0')} min';
-    final deltaPositive = avgSleepDelta >= 0;
-    final deltaText =
-        '${deltaPositive ? '+' : '-'}${avgSleepDelta.abs().toStringAsFixed(1)} h vs semana previa';
-    final tone = deltaPositive
-        ? TrendTone.positive
-        : avgSleepDelta.abs() < 0.3
-            ? TrendTone.neutral
-            : TrendTone.negative;
-    final trend = TrendChipData(
-      label: deltaPositive ? 'Mejorando descanso' : 'Por debajo del objetivo',
-      tone: tone,
-    );
-    final textTheme = Theme.of(context).textTheme;
-
-    return SummaryCard(
-      minHeight: 170,
-      padding: const EdgeInsets.all(18),
-      onTap: onTap,
-      glass: true,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Sueño',
-            style: textTheme.titleMedium?.copyWith(
-              fontSize: 17,
-              color: Colors.white,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            formattedHours,
-            style: textTheme.headlineSmall?.copyWith(
-              fontSize: 24,
-              color: const Color(0xFFA4A7FF),
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 6),
-          _TrendChip(data: trend),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Icon(
-                deltaPositive
-                    ? Icons.arrow_upward_rounded
-                    : Icons.arrow_downward_rounded,
-                color:
-                    deltaPositive ? const Color(0xFF7CF4FF) : const Color(0xFFFF6A6A),
-                size: 18,
-              ),
-              const SizedBox(width: 6),
-              Text(
-                deltaText,
-                style: const TextStyle(
-                  fontSize: 13,
-                  color: Color(0xFF9BA7B4),
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Text(
-            'Promedio últimos 7 días',
-            style: textTheme.bodySmall?.copyWith(
-              color: const Color(0xFF9BA7B4),
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SleepMetricsCard extends StatelessWidget {
-  const _SleepMetricsCard({
-    required this.regularityScore,
-    required this.regularityDelta,
-    required this.onTap,
-  });
-
-  final double regularityScore;
-  final double regularityDelta;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final improved = regularityDelta <= 0;
-    final variability = regularityScore.round();
-    final deltaMinutes = regularityDelta.abs().round();
-    final trend = TrendChipData(
-      label: improved ? 'En rango' : 'Por debajo del objetivo',
-      tone: improved ? TrendTone.positive : TrendTone.negative,
-    );
-    final textTheme = Theme.of(context).textTheme;
-
-    return SummaryCard(
-      minHeight: 170,
-      padding: const EdgeInsets.all(18),
-      onTap: onTap,
-      glass: true,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Flexible(
-                child: Text(
-                  'Regularidad del Sueño',
-                  style: textTheme.titleMedium?.copyWith(
-                    fontSize: 17,
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              Icon(
-                improved ? Icons.trending_up_rounded : Icons.trending_down_rounded,
-                color: improved ? const Color(0xFF34D27B) : const Color(0xFFFF6A6A),
-                size: 20,
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          _TrendChip(data: trend),
-          const SizedBox(height: 8),
-          Text(
-            'Variabilidad de horario',
-            style: textTheme.bodySmall?.copyWith(
-              color: const Color(0xFF9BA7B4),
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Row(
-            children: [
-              Text(
-                '${variability} min',
-                style: textTheme.headlineSmall?.copyWith(
-                      fontSize: 22,
-                      color: const Color(0xFF7CF4FF),
-                      fontWeight: FontWeight.w700,
-                    ) ??
-                    const TextStyle(fontSize: 22, color: Color(0xFF7CF4FF)),
-              ),
-              const SizedBox(width: 8),
-              Icon(
-                improved ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded,
-                color: improved ? const Color(0xFF34D27B) : const Color(0xFFFF6A6A),
-                size: 18,
-              ),
-              const SizedBox(width: 4),
-              Expanded(
-                child: Text(
-                  '${deltaMinutes} min vs semana previa',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: const Color(0xFF9BA7B4),
-                        fontWeight: FontWeight.w600,
-                      ) ??
-                      const TextStyle(fontSize: 12, color: Color(0xFF9BA7B4)),
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 1,
-                  softWrap: false,
                 ),
               ),
             ],

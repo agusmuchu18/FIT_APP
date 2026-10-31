@@ -53,15 +53,20 @@ class WorkoutRepeatService {
             restEnabled: e.restEnabled ?? e.restSeconds != null,
             restSeconds: e.restSeconds,
             isTimed: WorkoutAnalytics.isTimed(e),
+            isBodyweight: WorkoutAnalytics.isBodyweight(e),
             isAssisted: e.targetLoadType == RoutineExerciseLoadType.assistedKg,
             sets: [
               for (var i = 0; i < e.sets.length; i++)
                 SetInSession(
                   id: const Uuid().v4(),
                   index: i + 1,
-                  kg: e.sets[i].loadIsAmbiguous
-                      ? null
-                      : e.sets[i].externalLoadKg,
+                  kg: e.sets[i].externalLoadKg,
+                  bodyweightKg: e.sets[i].bodyweightKg,
+                  bodyweightFactor: e.sets[i].bodyweightFactor,
+                  loadType: WorkoutAnalytics.setLoadType(e, e.sets[i]),
+                  loadTypeOverride: true,
+                  loadIsAmbiguous:
+                      WorkoutAnalytics.setLoadType(e, e.sets[i]) == null,
                   reps: e.sets[i].reps,
                   durationSeconds: e.sportPlan == null
                       ? e.sets[i].durationSeconds

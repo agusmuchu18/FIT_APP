@@ -517,18 +517,29 @@ class WorkoutRepository {
   ) async {
     final mapped = WorkoutAnalytics.fromLive([exercise]).single;
     final seed =
-        exercise.sets.firstOrNull ?? const SetInSession(id: '', index: 1);
-    final key = exerciseLoadKey(
-      mapped,
-      SetEntry(
-        id: seed.id,
-        loadConvention: seed.loadConvention,
-        implementCount: seed.implementCount,
-      ),
-    );
+        mapped.sets.firstOrNull ??
+        SetEntry(id: '', loadType: exercise.defaultMode);
+    final key = exerciseLoadKey(mapped, seed);
     final index = await performanceIndex();
     final id = WorkoutAnalytics.definition(mapped)?.id ?? mapped.id;
     final history = index.exerciseHistory(id, loadKey: key);
+    if (history.isEmpty &&
+        (seed.loadType ?? exercise.defaultMode) ==
+            RoutineExerciseLoadType.assistedKg &&
+        seed.assistanceKg == null) {
+      return index
+              .exerciseHistory(id)
+              .where(
+                (o) =>
+                    o.sets.isNotEmpty &&
+                    WorkoutAnalytics.setLoadType(o.exercise, o.sets.first) ==
+                        RoutineExerciseLoadType.assistedKg &&
+                    o.sets.first.loadConvention == seed.loadConvention,
+              )
+              .firstOrNull
+              ?.sets ??
+          const [];
+    }
     return history.firstOrNull?.sets ?? const [];
   }
 
@@ -586,13 +597,20 @@ class WorkoutRepository {
       ];
       if (sets.isNotEmpty) {
         return [
-          for (final s in sets)
-            PreviousSet(
-              kg: s.externalLoadKg,
-              reps: s.reps,
-              durationSeconds: s.durationSeconds,
-              assistanceKg: s.assistanceKg,
-            ),
+          for (final e in matching)
+            for (final s in e.sets.where(
+              (s) => s.done != false && WorkoutAnalytics.isRecordedSet(e, s),
+            ))
+              PreviousSet(
+                loadType: WorkoutAnalytics.setLoadType(e, s),
+                loadIsAmbiguous:
+                    s.loadIsAmbiguous ||
+                    WorkoutAnalytics.setLoadType(e, s) == null,
+                kg: s.externalLoadKg,
+                reps: s.reps,
+                durationSeconds: s.durationSeconds,
+                assistanceKg: s.assistanceKg,
+              ),
         ];
       }
     }
@@ -637,6 +655,11 @@ class WorkoutRepository {
             previous.add(
               PreviousSet(
                 kg: positive(set['kg'] ?? set['externalLoadKg'], zero: true),
+                loadType: decodeSetLoadType(set['loadType']),
+                loadIsAmbiguous:
+                    set['loadIsAmbiguous'] == true ||
+                    (set['loadType'] == null &&
+                        (set['kg'] ?? set['externalLoadKg']) != null),
                 reps: reps?.toInt(),
                 durationSeconds: seconds?.toInt(),
                 assistanceKg: positive(set['assistanceKg'], zero: true),

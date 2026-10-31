@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../../app/theme/app_theme.dart';
 
 import '../domain/routine_labels.dart';
+import '../domain/workout_analytics.dart';
+import '../presentation/widgets/bodyweight_mode_selector.dart';
 import '../domain/routine_plan_validation.dart';
 import '../domain/exercise_technique.dart';
 import '../domain/sport_activity.dart';
@@ -98,23 +100,53 @@ class _ExerciseConfigurationSheetState
     text: _memory.raw['seconds'] ?? '${_value.targetDurationSeconds ?? 30}',
   );
   late final _weight = TextEditingController(
-    text: _memory.raw['weight'] ?? _value.targetWeightKg?.toString() ?? '',
+    text:
+        _memory.raw['weight'] ??
+        (_value.targetLoadType == RoutineExerciseLoadType.assistedKg &&
+                _value.loadSchemaVersion == 0 &&
+                _value.targetAssistanceKg == null
+            ? ''
+            : _value.targetWeightKg?.toString()) ??
+        '',
   );
+  late final _assistance = TextEditingController(
+    text:
+        _memory.raw['assistance'] ??
+        (_value.targetLoadType == RoutineExerciseLoadType.assistedKg
+                ? _value.plannedLoad
+                : _value.targetAssistanceKg)
+            ?.toString() ??
+        '',
+  );
+  bool get _bodyweight => WorkoutAnalytics.isBodyweight(_value);
+  TextEditingController get _activeWeight =>
+      _value.targetLoadType == RoutineExerciseLoadType.assistedKg
+      ? _assistance
+      : _weight;
+  double? _loadValue(String raw, double? original) {
+    if (raw == _displayWeight(original)) return original;
+    final n = double.tryParse(raw.replaceAll(',', '.'));
+    return n == null ? null : _weightUnit.toKg(n);
+  }
+
   late bool _range = _memory.range ?? (_value.targetReps == null);
   late List<RoutineSetTarget> _targets = [
-    ...?_memory.targets,
-    if (_memory.targets == null) ..._value.setTargets,
+    for (final target in _memory.targets ?? _value.setTargets)
+      if (_value.loadSchemaVersion == 0 &&
+          target.loadType == null &&
+          _value.targetLoadType == RoutineExerciseLoadType.assistedKg &&
+          target.assistanceKg == null)
+        target.copyWith(
+          loadType: RoutineExerciseLoadType.assistedKg,
+          assistanceKg: target.weightKg,
+          clearWeight: true,
+        )
+      else
+        target,
   ];
   SportMeasurements? _sportTargets;
   late bool _invalidSport = _value.sportPlan != null && !_memory.valid;
   WeightUnit get _weightUnit => WorkoutUnits.of(context).weight;
-  double? _canonicalWeight(String raw) {
-    if (raw == _displayWeight(_value.targetWeightKg)) {
-      return _value.targetWeightKg;
-    }
-    final value = double.tryParse(raw.replaceAll(',', '.'));
-    return value == null ? null : _weightUnit.toKg(value);
-  }
 
   String _displayWeight(double? value) => value == null
       ? ''
@@ -139,8 +171,12 @@ class _ExerciseConfigurationSheetState
       }
 
       _weight.text = convert(_weight.text);
+      _assistance.text = convert(_assistance.text);
       for (final key in _memory.raw.keys.toList()) {
-        if (key == 'weight' || key.endsWith(':weight')) {
+        if (key == 'weight' ||
+            key == 'assistance' ||
+            key.endsWith(':weight') ||
+            key.endsWith(':assistance')) {
           _memory.raw[key] = convert(_memory.raw[key]!);
         }
       }
@@ -150,7 +186,15 @@ class _ExerciseConfigurationSheetState
 
   @override
   void dispose() {
-    for (final c in [_sets, _reps, _min, _max, _seconds, _weight]) {
+    for (final c in [
+      _sets,
+      _reps,
+      _min,
+      _max,
+      _seconds,
+      _weight,
+      _assistance,
+    ]) {
       c.dispose();
     }
     super.dispose();
@@ -168,6 +212,7 @@ class _ExerciseConfigurationSheetState
       'max': _max,
       'seconds': _seconds,
       'weight': _weight,
+      'assistance': _assistance,
     }.entries) {
       _memory.raw[entry.key] = entry.value.text;
     }
@@ -203,16 +248,26 @@ class _ExerciseConfigurationSheetState
     }
 
     if (_value.targetLoadType != RoutineExerciseLoadType.bodyweight &&
-        !validWeight(_weight.text)) {
+        !validWeight(_activeWeight.text)) {
       return null;
     }
     for (final entry in _memory.raw.entries.where(
       (e) => e.key.startsWith('series:'),
     )) {
-      if (entry.key.contains(':weight')
-          ? _value.targetLoadType != RoutineExerciseLoadType.bodyweight &&
-                !validWeight(entry.value)
-          : _positive(entry.value) != null) {
+      final parts = entry.key.split(':');
+      final i = int.tryParse(parts[1]);
+      if (i == null || i >= _targets.length) continue;
+      final mode = _targets[i].loadType ?? _value.targetLoadType;
+      final loadKey = mode == RoutineExerciseLoadType.assistedKg
+          ? 'assistance'
+          : 'weight';
+      if (parts.last == 'weight' || parts.last == 'assistance') {
+        if (mode != RoutineExerciseLoadType.bodyweight &&
+            parts.last == loadKey &&
+            !validWeight(entry.value)) {
+          return null;
+        }
+      } else if (_positive(entry.value) != null) {
         return null;
       }
     }
@@ -223,14 +278,13 @@ class _ExerciseConfigurationSheetState
       targetRepsMax: _range
           ? int.tryParse(_max.text)
           : int.tryParse(_reps.text),
-      clearTargetWeightKg:
-          _value.targetLoadType == RoutineExerciseLoadType.bodyweight ||
-          _weight.text.trim().isEmpty,
+      clearTargetWeightKg: _weight.text.trim().isEmpty,
     );
     return RoutinePlanValidation.error(value) == null ? value : null;
   }
 
   WorkoutExercise get _preview => _value.copyWith(
+    loadSchemaVersion: 1,
     targetSets: int.tryParse(_sets.text),
     targetReps: _range || _value.isTimed ? null : int.tryParse(_reps.text),
     clearTargetReps: _range || _value.isTimed,
@@ -238,7 +292,16 @@ class _ExerciseConfigurationSheetState
     targetRepsMax: int.tryParse(_max.text),
     targetDurationSeconds: _value.isTimed ? int.tryParse(_seconds.text) : null,
     clearTargetDuration: !_value.isTimed,
-    targetWeightKg: _canonicalWeight(_weight.text),
+    targetWeightKg: _loadValue(_weight.text, _value.targetWeightKg),
+    targetAssistanceKg: _loadValue(
+      _assistance.text,
+      _value.targetAssistanceKg ??
+          (_value.targetLoadType == RoutineExerciseLoadType.assistedKg &&
+                  _value.loadSchemaVersion == 0
+              ? _value.targetWeightKg
+              : null),
+    ),
+    clearTargetAssistanceKg: _assistance.text.trim().isEmpty,
     clearTargetWeightKg: _weight.text.isEmpty,
     setTargets: _targets,
   );
@@ -438,48 +501,50 @@ class _ExerciseConfigurationSheetState
                 ] else
                   _number('Repeticiones objetivo', _reps),
               ],
-              _labeled(
-                'Tipo de carga',
-                (decoration) =>
-                    DropdownButtonFormField<RoutineExerciseLoadType>(
-                      initialValue: _value.targetLoadType,
-                      isExpanded: true,
-                      decoration: decoration,
-                      isDense: MediaQuery.textScalerOf(context).scale(16) <= 24,
-                      itemHeight:
-                          MediaQuery.textScalerOf(context).scale(16) > 24
-                          ? null
-                          : kMinInteractiveDimension,
-                      items: [
-                        for (final type in RoutineExerciseLoadType.values)
-                          DropdownMenuItem(
-                            value: type,
-                            child: Text(RoutineLabels.load(type)),
-                          ),
-                      ],
-                      onChanged: (type) {
-                        if (type != null) {
-                          _change(() {
-                            _value = _value.copyWith(
-                              targetLoadType: type,
-                              clearTargetWeightKg:
-                                  type == RoutineExerciseLoadType.bodyweight,
-                            );
-                            if (type == RoutineExerciseLoadType.bodyweight) {
-                              _weight.clear();
-                            }
-                          });
-                        }
-                      },
-                    ),
-              ),
+              if (_bodyweight)
+                BodyweightModeSelector(
+                  value: _value.targetLoadType,
+                  disclosure: true,
+                  onChanged: (type) => _change(
+                    () => _value = _value.copyWith(targetLoadType: type),
+                  ),
+                )
+              else
+                _labeled(
+                  'Tipo de carga',
+                  (
+                    decoration,
+                  ) => DropdownButtonFormField<RoutineExerciseLoadType>(
+                    initialValue: _value.targetLoadType,
+                    isExpanded: true,
+                    decoration: decoration,
+                    isDense: MediaQuery.textScalerOf(context).scale(16) <= 24,
+                    itemHeight: MediaQuery.textScalerOf(context).scale(16) > 24
+                        ? null
+                        : kMinInteractiveDimension,
+                    items: [
+                      for (final type in RoutineExerciseLoadType.values)
+                        DropdownMenuItem(
+                          value: type,
+                          child: Text(RoutineLabels.load(type)),
+                        ),
+                    ],
+                    onChanged: (type) {
+                      if (type != null) {
+                        _change(() {
+                          _value = _value.copyWith(targetLoadType: type);
+                        });
+                      }
+                    },
+                  ),
+                ),
               if (_value.targetLoadType !=
                   RoutineExerciseLoadType.bodyweight) ...[
                 const SizedBox(height: 12),
                 _labeled(
                   '${RoutineLabels.load(_value.targetLoadType)} objetivo (${_weightUnit.label})',
                   (decoration) => TextFormField(
-                    controller: _weight,
+                    controller: _activeWeight,
                     onChanged: (_) => _change(() {}),
                     keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
@@ -612,7 +677,12 @@ class _ExerciseConfigurationSheetState
                   repsMax: _range && !_value.isTimed
                       ? int.tryParse(_max.text)
                       : null,
-                  weightKg: _canonicalWeight(_weight.text),
+                  loadType: _value.targetLoadType,
+                  weightKg: _loadValue(_weight.text, _value.targetWeightKg),
+                  assistanceKg: _loadValue(
+                    _assistance.text,
+                    _value.targetAssistanceKg,
+                  ),
                   durationSeconds: _value.isTimed
                       ? int.tryParse(_seconds.text)
                       : null,
@@ -626,6 +696,7 @@ class _ExerciseConfigurationSheetState
 
   Widget _individual(int index) {
     final target = _targets[index];
+    final mode = target.loadType ?? _value.targetLoadType;
     Widget number(String label, int? value, void Function(int?) change) =>
         TextFormField(
           initialValue:
@@ -638,77 +709,73 @@ class _ExerciseConfigurationSheetState
             change(int.tryParse(v));
           }),
         );
+    final key = mode == RoutineExerciseLoadType.assistedKg
+        ? 'assistance'
+        : 'weight';
+    final load = target.loadFor(_value.targetLoadType);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('Serie ${index + 1}'),
+          if (_bodyweight)
+            BodyweightModeSelector(
+              value: mode,
+              onChanged: (type) => _change(
+                () => _targets[index] = target.copyWith(loadType: type),
+              ),
+            ),
           if (_value.isTimed)
             number(
               'Segundos',
               target.durationSeconds,
-              (v) => _targets[index] = RoutineSetTarget(
-                durationSeconds: v,
-                weightKg: target.weightKg,
-              ),
+              (v) => _targets[index] = target.copyWith(durationSeconds: v),
             )
           else if (target.repsMin != null && target.reps == null) ...[
             number(
               'Repeticiones mínimas',
               target.repsMin,
-              (v) => _targets[index] = RoutineSetTarget(
-                repsMin: v,
-                repsMax: target.repsMax,
-                weightKg: target.weightKg,
-              ),
+              (v) => _targets[index] = target.copyWith(repsMin: v),
             ),
             number(
               'Repeticiones máximas',
               target.repsMax,
-              (v) => _targets[index] = RoutineSetTarget(
-                repsMin: target.repsMin,
-                repsMax: v,
-                weightKg: target.weightKg,
-              ),
+              (v) => _targets[index] = target.copyWith(repsMax: v),
             ),
           ] else
             number(
               'Repeticiones',
               target.reps,
-              (v) => _targets[index] = RoutineSetTarget(
-                reps: v,
-                weightKg: target.weightKg,
-              ),
+              (v) => _targets[index] = target.copyWith(reps: v),
             ),
-          if (_value.targetLoadType != RoutineExerciseLoadType.bodyweight)
+          if (mode != RoutineExerciseLoadType.bodyweight)
             TextFormField(
+              key: ValueKey('target-$index-${mode.name}'),
               initialValue:
-                  _memory.raw['series:$index:weight'] ??
-                  _displayWeight(target.weightKg),
+                  _memory.raw['series:$index:$key'] ?? _displayWeight(load),
               decoration: InputDecoration(
                 labelText:
-                    '${RoutineLabels.load(_value.targetLoadType)} (${_weightUnit.label}) · serie ${index + 1}',
+                    '${RoutineLabels.load(mode)} (${_weightUnit.label}) · serie ${index + 1}',
+                errorMaxLines: 3,
               ),
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
               ),
-              validator: (v) {
-                if (v?.trim().isEmpty != false) return null;
-                final n = double.tryParse(v!.replaceAll(',', '.'));
-                return n != null && n.isFinite && n >= 0
-                    ? null
-                    : 'Carga inválida';
-              },
               onChanged: (v) => _change(() {
-                _memory.raw['series:$index:weight'] = v;
-                _targets[index] = RoutineSetTarget(
-                  reps: target.reps,
-                  repsMin: target.repsMin,
-                  repsMax: target.repsMax,
-                  durationSeconds: target.durationSeconds,
-                  weightKg: _canonicalWeight(v),
-                );
+                _memory.raw['series:$index:$key'] = v;
+                final n = _loadValue(v, load);
+                _targets[index] = mode == RoutineExerciseLoadType.assistedKg
+                    ? target.copyWith(
+                        loadType: mode,
+                        assistanceKg: n,
+                        clearAssistance: v.trim().isEmpty,
+                      )
+                    : target.copyWith(
+                        loadType: mode,
+                        weightKg: n,
+                        clearWeight: v.trim().isEmpty,
+                      );
               }),
             ),
         ],

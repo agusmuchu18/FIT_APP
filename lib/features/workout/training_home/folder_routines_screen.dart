@@ -4,6 +4,7 @@ import 'routine_library_actions.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../domain/relative_day_label.dart';
 import '../pro/models/workout_models.dart';
 import 'routine_preview_screen.dart';
 import 'start_routine_flow.dart';
@@ -71,26 +72,20 @@ class FolderRoutinesScreen extends StatelessWidget {
     );
   }
 
-  String _daysAgoLabel(DateTime? date) {
-    if (date == null) return 'Nunca';
-    final days = DateTime.now().difference(date).inDays;
-    if (days == 0) return 'hoy';
-    if (days == 1) return 'hace 1 día';
-    return 'hace $days días';
-  }
+  String _daysAgoLabel(DateTime? date) => relativeDayLabel(date);
 
   String _typeLabel(WorkoutType type) {
     switch (type) {
       case WorkoutType.strength:
-        return 'Gym';
+        return 'Gimnasio';
       case WorkoutType.cardio:
         return 'Cardio';
       case WorkoutType.functional:
         return 'Funcional';
       case WorkoutType.sport:
-        return 'Outdoor';
+        return 'Deporte';
       case WorkoutType.custom:
-        return 'Custom';
+        return 'Personalizado';
     }
   }
 }

@@ -142,7 +142,7 @@ void main() {
           },
         ),
       );
-      final field = find.widgetWithText(TextField, 'Lb');
+      final field = find.byKey(const ValueKey('set-load-s'));
       await tester.enterText(field, '22,046226218487757');
       expect(result, closeTo(10, 1e-10));
       expect(cleared, isFalse);
@@ -165,7 +165,7 @@ void main() {
         onDistanceChanged: (v) => meters = v,
       ),
     );
-    await tester.enterText(find.widgetWithText(TextField, 'Millas'), '1');
+    await tester.enterText(find.byKey(const ValueKey('set-result-s')), '1');
     expect(meters, 1609.344);
     expect(tester.takeException(), isNull);
   });

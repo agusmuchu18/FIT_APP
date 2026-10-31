@@ -41,7 +41,9 @@ class _ModulesSettingsScreenState extends State<ModulesSettingsScreen> {
     }
 
     final enabled = _controller.enabledModules;
-    final activeModules = _controller.optionalOrder.where(enabled.contains).toList();
+    final activeModules = _controller.optionalOrder
+        .where(enabled.contains)
+        .toList();
 
     return Scaffold(
       appBar: AppBar(title: const Text('Módulos')),
@@ -81,13 +83,15 @@ class _ModulesSettingsScreenState extends State<ModulesSettingsScreen> {
             child: activeModules.isEmpty
                 ? const Padding(
                     padding: EdgeInsets.all(12),
-                    child: Text('Activá módulos para habilitar el reordenamiento.'),
+                    child: Text(
+                      'Activá módulos para habilitar el reordenamiento.',
+                    ),
                   )
                 : ReorderableListView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: activeModules.length,
-                    onReorder: _controller.reorderEnabledModules,
+                    onReorderItem: _controller.reorderEnabledModules,
                     buildDefaultDragHandles: false,
                     itemBuilder: (context, index) {
                       final module = activeModules[index];
@@ -120,7 +124,7 @@ class _ModulesSettingsScreenState extends State<ModulesSettingsScreen> {
       decoration: BoxDecoration(
         color: AppColors.card,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withOpacity(0.06)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

@@ -50,6 +50,12 @@ la implementación relevante con una búsqueda puntual antes de editar.
 
 ## Relaciones importantes
 
+Nutrition 2.0, cortes A y B–H incrementales: `docs/nutrition/MASTER_PLAN.md` y `NUTRITION_AUDIT.md`.
+`NutritionDayRepository` es el diario rico Hive v2 por cuenta; proyecta por ID
+a `MealEntry` para Inicio/Analytics. `nutrition_writes.dart` ordena escrituras
+por dueño. Snapshot decimal y fecha explícita evitan reconstrucciones por título.
+Ver migración, recuperación y límites de sync en `docs/nutrition/ARCHITECTURE.md`.
+
 Expansión complementaria: `docs/expansion/MASTER_PLAN.md`, `FEATURE_AUDIT.md`,
 `IMPLEMENTATION_STATUS.md`, `PRIVACY_MODEL.md` y `TEST_REPORT.md`.
 API social: `backend/social/src/social_identity.js`, callable `src/index.js`;
@@ -103,6 +109,12 @@ taxonomía heredada: `docs/plans/ROUTINE_INLINE_UX_2026_10_14.md`.
 Ejecutar primero el archivo de prueba asociado al feature.
 
 ### Continuidad de Entrenamiento
+
+- Peso corporal adaptativo (25/10): `domain/exercise_load_policy.dart` clasifica
+  metadatos; `presentation/widgets/bodyweight_mode_selector.dart` reutiliza la
+  expansión inline en rutinas/sesión/series. Modalidad por serie en modelos
+  existentes, sin segundo motor. Contratos, fórmulas y aceptación:
+  `docs/plans/BODYWEIGHT_ADAPTIVE_REGISTRATION.md`.
 
 - Expansión 17–21/10: auditoría `docs/auditorias/ENTRENAMIENTO_AUDITORIA_FUNCIONAL.md`
   y aceptación/evidencia `docs/plans/TRAINING_EXPANSION_2026_10_17.md`.
@@ -160,3 +172,12 @@ Ejecutar primero el archivo de prueba asociado al feature.
 - GitHub Pages: `.github/workflows/pages.yml`.
 - Actualizaciones: `.github/dependabot.yml`.
 - Firebase: `firebase.json`, `.firebaserc` y `firestore.rules`; proxy USDA gratuito en `worker/`.
+
+
+Nutrición B–H: `nutrition_workspace.dart` es un part del diario canónico
+(metas/planes/notas/ayuno/edición/backup), no un import independiente.
+`NutritionBackupService` coordina almacenes existentes. Nuevas rutas internas
+reutilizan selector y editores; `nutrition_compare_screen`, `nutrition_text_screen`,
+`nutrition_barcode_screen`, `nutrition_fasting_screen`. Fuente offline activa:
+`assets/data/usda_foundation_2026_10.json`, generada por
+`tools/build_verified_usda_catalog.py`. Estado y QA: `docs/nutrition/`.

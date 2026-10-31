@@ -22,7 +22,9 @@ void main() {
 
     await store.incrementMany(['a', 'a', 'b']);
 
-    final decoded = jsonDecode(memory.data[HabitTemplatePopularityStore.storageKey]!) as Map;
+    final decoded =
+        jsonDecode(memory.data[HabitTemplatePopularityStore.storageKey]!)
+            as Map;
     expect(decoded['a'], 2);
     expect(decoded['b'], 1);
 

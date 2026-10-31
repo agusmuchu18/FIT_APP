@@ -46,7 +46,9 @@ class HabitTemplatePopularityStore {
   }
 
   Future<void> incrementMany(Iterable<String> templateIds) async {
-    final ids = templateIds.where((id) => id.isNotEmpty).toList(growable: false);
+    final ids = templateIds
+        .where((id) => id.isNotEmpty)
+        .toList(growable: false);
     if (ids.isEmpty) return;
 
     final scores = await loadScores();

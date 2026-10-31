@@ -4,9 +4,17 @@ import '../../common/theme/app_colors.dart';
 import '../../common/widgets/fit_glyph.dart';
 
 class PrimaryStartWorkoutCard extends StatelessWidget {
-  const PrimaryStartWorkoutCard({super.key, required this.onTap});
+  const PrimaryStartWorkoutCard({
+    super.key,
+    required this.onTap,
+    this.activeWorkoutName,
+  });
 
   final VoidCallback onTap;
+
+  /// When a session is already running, the card continues it instead of
+  /// pretending to start an empty one.
+  final String? activeWorkoutName;
 
   @override
   Widget build(BuildContext context) {
@@ -20,7 +28,7 @@ class PrimaryStartWorkoutCard extends StatelessWidget {
             onTap: onTap,
             child: ConstrainedBox(
               constraints: BoxConstraints(
-                minHeight: constraints.maxWidth * 9 / 16,
+                minHeight: constraints.maxWidth * 0.42,
               ),
               child: Stack(
                 alignment: Alignment.bottomLeft,
@@ -66,7 +74,9 @@ class PrimaryStartWorkoutCard extends StatelessWidget {
                           ),
                           const SizedBox(height: 16),
                           Text(
-                            'Entrenamiento libre',
+                            activeWorkoutName == null
+                                ? 'Entrenamiento libre'
+                                : 'Continuar entrenamiento',
                             style: theme.textTheme.titleLarge?.copyWith(
                               color: AppColors.textPrimary,
                               fontWeight: FontWeight.w800,
@@ -74,7 +84,8 @@ class PrimaryStartWorkoutCard extends StatelessWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Registrá cada serie a tu ritmo.',
+                            activeWorkoutName ??
+                                'Registrá cada serie a tu ritmo.',
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: AppColors.textSecondary,
                             ),
@@ -86,7 +97,9 @@ class PrimaryStartWorkoutCard extends StatelessWidget {
                             crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
                               Text(
-                                'Iniciar sesión',
+                                activeWorkoutName == null
+                                    ? 'Empezar'
+                                    : 'Continuar',
                                 style: theme.textTheme.labelLarge?.copyWith(
                                   color: AppColors.textPrimary,
                                 ),
@@ -157,7 +170,7 @@ class RoutineActionTile extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             FitGlyph(kind: glyph, color: AppColors.accent, size: 24),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             Text(
               title,
               maxLines: 2,

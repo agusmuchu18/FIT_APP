@@ -1,3 +1,4 @@
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:fit_app/core/data/account_storage_scope.dart';
 import 'package:fit_app/core/data/local_storage_service.dart';
 import 'package:fit_app/features/workout/data/workout_repository.dart';
@@ -11,6 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../test/support/workout_device_journey.dart';
 
 void main() {
+  setUpAll(() => initializeDateFormatting('es'));
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
   testWidgets('rutina → reapertura → pausa → cierre → historial local', (
     tester,

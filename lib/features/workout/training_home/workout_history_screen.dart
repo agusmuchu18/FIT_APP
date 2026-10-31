@@ -1,3 +1,4 @@
+import '../widgets/workout_mini_bar_host_overlay.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -119,7 +120,8 @@ class _WorkoutHistoryScreenState extends State<WorkoutHistoryScreen> {
   @override
   Widget build(BuildContext context) => Theme(
     data: AppTheme.workoutFor(Theme.of(context)),
-    child: Scaffold(
+    child: WorkoutMiniBarInset(
+      child: Scaffold(
       appBar: AppBar(
         title: const Text('Historial'),
         actions: [
@@ -128,6 +130,7 @@ class _WorkoutHistoryScreenState extends State<WorkoutHistoryScreen> {
             icon: const Icon(Icons.insights_outlined),
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute<void>(
+                settings: const RouteSettings(name: '/workout/insights'),
                 builder: (_) => WorkoutInsightsScreen(
                   repository: _repository,
                   now: widget.now,
@@ -362,6 +365,7 @@ class _WorkoutHistoryScreenState extends State<WorkoutHistoryScreen> {
             ),
           );
         },
+      ),
       ),
     ),
   );

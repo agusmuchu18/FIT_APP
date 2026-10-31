@@ -144,7 +144,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
             decoration: BoxDecoration(
               color: AppColors.card,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.white.withOpacity(0.06)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -164,8 +164,9 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                       builder: (context, bytes, _) {
                         return CircleAvatar(
                           radius: 32,
-                          backgroundColor: AppColors.accentSecondary
-                              .withOpacity(0.2),
+                          backgroundColor: AppColors.accentSecondary.withValues(
+                            alpha: 0.2,
+                          ),
                           backgroundImage: bytes == null
                               ? null
                               : MemoryImage(bytes),
@@ -188,7 +189,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                         style: OutlinedButton.styleFrom(
                           foregroundColor: AppColors.textPrimary,
                           side: BorderSide(
-                            color: Colors.white.withOpacity(0.15),
+                            color: Colors.white.withValues(alpha: 0.15),
                           ),
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
@@ -208,7 +209,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
             decoration: BoxDecoration(
               color: AppColors.card,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.white.withOpacity(0.06)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -234,13 +235,13 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
                       borderSide: BorderSide(
-                        color: Colors.white.withOpacity(0.08),
+                        color: Colors.white.withValues(alpha: 0.08),
                       ),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
                       borderSide: BorderSide(
-                        color: Colors.white.withOpacity(0.08),
+                        color: Colors.white.withValues(alpha: 0.08),
                       ),
                     ),
                     focusedBorder: OutlineInputBorder(

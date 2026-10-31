@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'widgets/workout_units_host.dart';
+import 'widgets/bodyweight_mode_selector.dart';
 import 'widgets/sport_measurements_fields.dart';
 import '../domain/sport_activity.dart';
 
@@ -123,6 +124,15 @@ class _WorkoutHistoryEditorScreenState
   void _set(int exercise, int index, Map<String, dynamic> values) {
     final e = _exercises[exercise];
     setState(() {
+      if (values.containsKey('loadType')) {
+        _invalid.removeWhere(
+          (key) =>
+              key.startsWith('$exercise|$index|') &&
+              (key.contains('Carga') ||
+                  key.contains('Lastre') ||
+                  key.contains('Asistencia')),
+        );
+      }
       _dirty = true;
       _exercises = [..._exercises]
         ..[exercise] = e.copyWith(
@@ -398,6 +408,64 @@ class _HistoricalExerciseFields extends StatefulWidget {
 class _HistoricalExerciseFieldsState extends State<_HistoricalExerciseFields> {
   var _limit = 30;
   final _sportDraft = SportMeasurementsDraft();
+  List<Widget> _loadFields(int index) {
+    final e = widget.exercise, s = e.sets[index];
+    final body = WorkoutAnalytics.isBodyweight(e);
+    final mode =
+        s.loadType ??
+        WorkoutAnalytics.setLoadType(e, s) ??
+        (body ? RoutineExerciseLoadType.bodyweight : e.targetLoadType);
+    final units = WorkoutUnits.of(context);
+    final assisted = mode == RoutineExerciseLoadType.assistedKg;
+    final value = assisted ? s.assistanceKg : s.externalLoadKg;
+    final label = s.loadIsAmbiguous
+        ? 'Carga sin clasificar'
+        : assisted
+        ? 'Asistencia'
+        : mode == RoutineExerciseLoadType.addedWeightKg
+        ? 'Lastre'
+        : 'Carga externa';
+    return [
+      if (body)
+        BodyweightModeSelector(
+          value: mode,
+          onChanged: !widget.enabled
+              ? null
+              : (type) => widget.onSet(index, {'loadType': type.name}),
+          disclosure: true,
+        ),
+      if (s.loadIsAmbiguous || WorkoutAnalytics.setLoadType(e, s) == null)
+        Text(
+          'Carga antigua sin clasificar: ${s.externalLoadKg == null ? "sin valor" : units.valueWithUnit("kg", s.externalLoadKg!)}. Se conserva sin contar como lastre ni volumen externo.',
+        ),
+      if (mode != RoutineExerciseLoadType.bodyweight &&
+          e.measurement != 'distance' &&
+          (!WorkoutAnalytics.isTimed(e) || body))
+        widget.field(
+          index,
+          '$label (${units.weight.label})',
+          value == null ? null : units.weight.fromKg(value),
+          (n) => widget.onSet(index, {
+            assisted ? 'assistanceKg' : 'externalLoadKg': n == null
+                ? null
+                : units.weight.toKg(n),
+          }),
+          positive: false,
+        ),
+      if (s.loadIsAmbiguous)
+        CheckboxListTile(
+          title: const Text('Confirmo que la carga corregida es verificable'),
+          value: false,
+          onChanged: !widget.enabled
+              ? null
+              : (v) => widget.onSet(index, {
+                  'loadIsAmbiguous': v != true,
+                  if (v == true) 'loadType': mode.name,
+                }),
+        ),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
     final e = widget.exercise;
@@ -449,29 +517,9 @@ class _HistoricalExerciseFieldsState extends State<_HistoricalExerciseFields> {
                           ? null
                           : (v) => widget.onSet(i, {'done': v}),
                     ),
+                    ..._loadFields(i),
                     if (!WorkoutAnalytics.isTimed(e) &&
                         e.measurement != 'distance') ...[
-                      widget.field(
-                        i,
-                        e.targetLoadType == RoutineExerciseLoadType.assistedKg
-                            ? 'Asistencia (${units.weight.label})'
-                            : 'Carga externa (${units.weight.label})',
-                        e.targetLoadType == RoutineExerciseLoadType.assistedKg
-                            ? e.sets[i].assistanceKg == null
-                                  ? null
-                                  : units.weight.fromKg(e.sets[i].assistanceKg!)
-                            : e.sets[i].externalLoadKg == null
-                            ? null
-                            : units.weight.fromKg(e.sets[i].externalLoadKg!),
-                        (n) => widget.onSet(i, {
-                          e.targetLoadType == RoutineExerciseLoadType.assistedKg
-                              ? 'assistanceKg'
-                              : 'externalLoadKg': n == null
-                              ? null
-                              : units.weight.toKg(n),
-                        }),
-                        positive: false,
-                      ),
                       widget.field(
                         i,
                         'Repeticiones',
@@ -479,18 +527,6 @@ class _HistoricalExerciseFieldsState extends State<_HistoricalExerciseFields> {
                         (n) => widget.onSet(i, {'reps': n?.toInt()}),
                         integer: true,
                       ),
-                      if (e.sets[i].loadIsAmbiguous)
-                        CheckboxListTile(
-                          title: const Text(
-                            'Confirmo que la carga corregida es verificable',
-                          ),
-                          value: false,
-                          onChanged: widget.enabled
-                              ? (v) => widget.onSet(i, {
-                                  'loadIsAmbiguous': v != true,
-                                })
-                              : null,
-                        ),
                     ] else
                       widget.field(
                         i,

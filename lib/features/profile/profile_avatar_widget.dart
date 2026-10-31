@@ -55,7 +55,7 @@ class ProfileAvatarWidget extends StatelessWidget {
           ),
         );
       },
-      pageBuilder: (context, _, __) {
+      pageBuilder: (context, _, _) {
         return ProfilePhotoViewer(
           displayName: displayName,
           avatarBytes: avatarBytes,
@@ -72,7 +72,7 @@ class ProfileAvatarWidget extends StatelessWidget {
       borderRadius: BorderRadius.circular(radius + 6),
       child: CircleAvatar(
         radius: radius,
-        backgroundColor: AppColors.accentSecondary.withOpacity(0.2),
+        backgroundColor: AppColors.accentSecondary.withValues(alpha: 0.2),
         backgroundImage: avatarBytes == null ? null : MemoryImage(avatarBytes!),
         child: avatarBytes == null
             ? Text(

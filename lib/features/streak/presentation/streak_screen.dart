@@ -21,7 +21,7 @@ class StreakScreen extends StatelessWidget {
 
     final activityDays = <DateTime>{};
     for (final workout in workouts) {
-      activityDays.add(_dateOnly(_safeParseDate(workout.id)));
+      activityDays.add(_dateOnly(workoutEntryDate(workout)));
     }
     for (final meal in meals) {
       activityDays.add(_dateOnly(_safeParseDate(meal.id)));
@@ -31,7 +31,7 @@ class StreakScreen extends StatelessWidget {
     }
 
     var streak = 0;
-    for (var i = 0;; i++) {
+    for (var i = 0; ; i++) {
       final day = today.subtract(Duration(days: i));
       if (activityDays.contains(day)) {
         streak++;
@@ -74,9 +74,7 @@ class StreakScreen extends StatelessWidget {
         future: _loadData(context),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(
-              child: CircularProgressIndicator.adaptive(),
-            );
+            return const Center(child: CircularProgressIndicator.adaptive());
           }
 
           final data = snapshot.data ?? _StreakData.empty();
@@ -99,7 +97,8 @@ class StreakScreen extends StatelessWidget {
     );
   }
 
-  DateTime _dateOnly(DateTime date) => DateTime(date.year, date.month, date.day);
+  DateTime _dateOnly(DateTime date) =>
+      DateTime(date.year, date.month, date.day);
 
   DateTime _safeParseDate(String raw) {
     return DateTime.tryParse(raw) ?? DateTime.now();
@@ -249,7 +248,8 @@ class _RecentDaysList extends StatelessWidget {
               final dayStatus = days[index];
               final date = dayStatus.date;
               final weekdayLabel = weekdayNames[date.weekday - 1];
-              final dateLabel = '${date.day.toString().padLeft(2, '0')}/'
+              final dateLabel =
+                  '${date.day.toString().padLeft(2, '0')}/'
                   '${date.month.toString().padLeft(2, '0')}';
 
               return Row(
@@ -304,8 +304,10 @@ class _RecentDaysList extends StatelessWidget {
                   ),
                   const Spacer(),
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: dayStatus.hasActivity
                           ? const Color(0x1A2AF5D2)
@@ -318,7 +320,9 @@ class _RecentDaysList extends StatelessWidget {
                       ),
                     ),
                     child: Text(
-                      dayStatus.hasActivity ? 'Actividad registrada' : 'Sin actividad',
+                      dayStatus.hasActivity
+                          ? 'Actividad registrada'
+                          : 'Sin actividad',
                       style: TextStyle(
                         fontSize: 12,
                         color: dayStatus.hasActivity
@@ -332,7 +336,7 @@ class _RecentDaysList extends StatelessWidget {
                 ],
               );
             },
-            separatorBuilder: (_, __) => const SizedBox(height: 12),
+            separatorBuilder: (_, _) => const SizedBox(height: 12),
             itemCount: days.length,
           ),
         ],
@@ -342,7 +346,10 @@ class _RecentDaysList extends StatelessWidget {
 }
 
 class _DecoratedCard extends StatelessWidget {
-  const _DecoratedCard({required this.child, this.padding = const EdgeInsets.all(20)});
+  const _DecoratedCard({
+    required this.child,
+    this.padding = const EdgeInsets.all(20),
+  });
 
   final Widget child;
   final EdgeInsets padding;
@@ -356,16 +363,13 @@ class _DecoratedCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(22),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.18),
+            color: Colors.black.withValues(alpha: 0.18),
             blurRadius: 18,
             offset: const Offset(0, 10),
           ),
         ],
       ),
-      child: Padding(
-        padding: padding,
-        child: child,
-      ),
+      child: Padding(padding: padding, child: child),
     );
   }
 }

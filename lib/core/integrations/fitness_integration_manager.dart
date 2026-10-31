@@ -7,10 +7,9 @@ import 'platform_integration_service.dart';
 /// resolving conflicts with manual entries.
 class FitnessIntegrationManager {
   FitnessIntegrationManager({
-    required FitnessRepository repository,
-    required List<PlatformIntegrationService> integrations,
-  })  : _repository = repository,
-        _integrations = integrations;
+    required this._repository,
+    required this._integrations,
+  });
 
   final FitnessRepository _repository;
   final List<PlatformIntegrationService> _integrations;
@@ -22,7 +21,8 @@ class FitnessIntegrationManager {
     final manualSleep = await _repository.getSleep();
 
     for (final integration in _integrations) {
-      final permitted = await integration.hasPermissions() ||
+      final permitted =
+          await integration.hasPermissions() ||
           await integration.requestPermissions();
       if (!permitted) continue;
 
@@ -30,9 +30,11 @@ class FitnessIntegrationManager {
       final samples = await integration.fetchLatestSamples();
 
       await _persistWorkouts(
-        samples.where((sample) =>
-            sample.type == FitnessDataType.workout ||
-            sample.type == FitnessDataType.steps),
+        samples.where(
+          (sample) =>
+              sample.type == FitnessDataType.workout ||
+              sample.type == FitnessDataType.steps,
+        ),
         manualWorkouts,
         syncRemote,
       );

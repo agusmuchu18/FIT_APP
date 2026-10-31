@@ -286,7 +286,7 @@ class _ProfileSocialScreenState extends State<ProfileSocialScreen> {
             Positioned.fill(
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-                child: Container(color: Colors.black.withOpacity(0.16)),
+                child: Container(color: Colors.black.withValues(alpha: 0.16)),
               ),
             ),
             SafeArea(
@@ -297,7 +297,7 @@ class _ProfileSocialScreenState extends State<ProfileSocialScreen> {
                   builder: (context, name, _) {
                     return ValueListenableBuilder(
                       valueListenable: ProfileController.instance.avatarBytes,
-                      builder: (context, avatar, __) {
+                      builder: (context, avatar, _) {
                         return ProfileHero(
                           displayName: name,
                           username: 'Perfil privado',
@@ -330,7 +330,7 @@ class _ProfileSocialScreenState extends State<ProfileSocialScreen> {
           decoration: BoxDecoration(
             color: AppColors.background,
             border: Border(
-              top: BorderSide(color: Colors.white.withOpacity(0.05)),
+              top: BorderSide(color: Colors.white.withValues(alpha: 0.05)),
             ),
           ),
           child: TabBar(
@@ -352,13 +352,23 @@ class _ProfileSocialScreenState extends State<ProfileSocialScreen> {
         ),
       );
 
-  Route<void> _avatarViewerRoute(BuildContext context, ImageProvider<Object>? avatarProvider) {
+  Route<void> _avatarViewerRoute(
+    BuildContext context,
+    ImageProvider<Object>? avatarProvider,
+  ) {
     return PageRouteBuilder(
       transitionDuration: const Duration(milliseconds: 280),
       reverseTransitionDuration: const Duration(milliseconds: 260),
-      pageBuilder: (_, __, ___) => ProfileAvatarFullscreen(imageProvider: avatarProvider),
+      pageBuilder: (_, _, _) =>
+          ProfileAvatarFullscreen(imageProvider: avatarProvider),
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
-        return FadeTransition(opacity: CurvedAnimation(parent: animation, curve: Curves.easeOutCubic), child: child);
+        return FadeTransition(
+          opacity: CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutCubic,
+          ),
+          child: child,
+        );
       },
     );
   }
@@ -373,7 +383,8 @@ class _PhotosTab extends StatefulWidget {
   State<_PhotosTab> createState() => _PhotosTabState();
 }
 
-class _PhotosTabState extends State<_PhotosTab> with AutomaticKeepAliveClientMixin {
+class _PhotosTabState extends State<_PhotosTab>
+    with AutomaticKeepAliveClientMixin {
   @override
   bool get wantKeepAlive => true;
 
@@ -533,13 +544,18 @@ class _StatsTabState extends State<_StatsTab>
 }
 
 class ProgressPhotoViewerScreen extends StatefulWidget {
-  const ProgressPhotoViewerScreen({super.key, required this.photos, required this.initialIndex});
+  const ProgressPhotoViewerScreen({
+    super.key,
+    required this.photos,
+    required this.initialIndex,
+  });
 
   final List<ProfileProgressPhoto> photos;
   final int initialIndex;
 
   @override
-  State<ProgressPhotoViewerScreen> createState() => _ProgressPhotoViewerScreenState();
+  State<ProgressPhotoViewerScreen> createState() =>
+      _ProgressPhotoViewerScreenState();
 }
 
 class _ProgressPhotoViewerScreenState extends State<ProgressPhotoViewerScreen> {
@@ -597,9 +613,12 @@ class _ProgressPhotoViewerScreenState extends State<ProgressPhotoViewerScreen> {
             bottom: 30,
             child: Center(
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.44),
+                  color: Colors.black.withValues(alpha: 0.44),
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
@@ -608,7 +627,7 @@ class _ProgressPhotoViewerScreenState extends State<ProgressPhotoViewerScreen> {
                 ),
               ),
             ),
-          )
+          ),
         ],
       ),
     );
@@ -621,7 +640,8 @@ class ProfileAvatarFullscreen extends StatefulWidget {
   final ImageProvider<Object>? imageProvider;
 
   @override
-  State<ProfileAvatarFullscreen> createState() => _ProfileAvatarFullscreenState();
+  State<ProfileAvatarFullscreen> createState() =>
+      _ProfileAvatarFullscreenState();
 }
 
 class _ProfileAvatarFullscreenState extends State<ProfileAvatarFullscreen> {
@@ -639,7 +659,8 @@ class _ProfileAvatarFullscreenState extends State<ProfileAvatarFullscreen> {
           setState(() => _dragOffset += details.primaryDelta ?? 0);
         },
         onVerticalDragEnd: (details) {
-          if (_dragOffset.abs() > 120 || (details.primaryVelocity ?? 0).abs() > 900) {
+          if (_dragOffset.abs() > 120 ||
+              (details.primaryVelocity ?? 0).abs() > 900) {
             Navigator.of(context).pop();
             return;
           }
@@ -648,7 +669,7 @@ class _ProfileAvatarFullscreenState extends State<ProfileAvatarFullscreen> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 280),
           curve: Curves.easeOutCubic,
-          color: Colors.black.withOpacity(opacity),
+          color: Colors.black.withValues(alpha: opacity),
           child: Stack(
             fit: StackFit.expand,
             children: [
@@ -666,9 +687,18 @@ class _ProfileAvatarFullscreenState extends State<ProfileAvatarFullscreen> {
                                 width: 320,
                                 height: 320,
                                 color: AppColors.card,
-                                child: const Icon(Icons.person, size: 140, color: AppColors.textMuted),
+                                child: const Icon(
+                                  Icons.person,
+                                  size: 140,
+                                  color: AppColors.textMuted,
+                                ),
                               )
-                            : Image(image: widget.imageProvider!, width: 340, height: 340, fit: BoxFit.cover),
+                            : Image(
+                                image: widget.imageProvider!,
+                                width: 340,
+                                height: 340,
+                                fit: BoxFit.cover,
+                              ),
                       ),
                     ),
                   ),
@@ -678,9 +708,19 @@ class _ProfileAvatarFullscreenState extends State<ProfileAvatarFullscreen> {
                 top: MediaQuery.paddingOf(context).top + 12,
                 right: 16,
                 child: TextButton.icon(
-                  onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ProfileSettingsScreen())),
-                  icon: const Icon(Icons.photo_camera_outlined, color: Colors.white),
-                  label: const Text('Cambiar foto', style: TextStyle(color: Colors.white)),
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const ProfileSettingsScreen(),
+                    ),
+                  ),
+                  icon: const Icon(
+                    Icons.photo_camera_outlined,
+                    color: Colors.white,
+                  ),
+                  label: const Text(
+                    'Cambiar foto',
+                    style: TextStyle(color: Colors.white),
+                  ),
                 ),
               ),
             ],
@@ -690,7 +730,6 @@ class _ProfileAvatarFullscreenState extends State<ProfileAvatarFullscreen> {
     );
   }
 }
-
 
 class ProgressPhotosGalleryScreen extends StatelessWidget {
   const ProgressPhotosGalleryScreen({super.key});
@@ -728,7 +767,10 @@ class ProfileActivityHistoryScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Historial de actividad')),
       body: const Center(
-        child: Text('Próximamente: historial completo de actividad', style: TextStyle(color: AppColors.textMuted)),
+        child: Text(
+          'Próximamente: historial completo de actividad',
+          style: TextStyle(color: AppColors.textMuted),
+        ),
       ),
     );
   }

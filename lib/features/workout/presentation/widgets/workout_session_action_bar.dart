@@ -5,6 +5,8 @@ import '../../../common/widgets/fit_glyph.dart';
 import '../../application/workout_session_controller.dart';
 import 'rest_timer_banner.dart';
 
+/// Bottom controls: rest timer, one primary action and compact secondaries.
+/// Finishing early lives in the app bar, always one tap away.
 class WorkoutSessionActionBar extends StatelessWidget {
   const WorkoutSessionActionBar({
     super.key,
@@ -25,9 +27,9 @@ class WorkoutSessionActionBar extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.lg,
-        AppSpacing.md,
-        AppSpacing.lg,
-        AppSpacing.md,
+        AppSpacing.sm,
+        AppSpacing.sm,
+        AppSpacing.sm,
       ),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
@@ -39,77 +41,79 @@ class WorkoutSessionActionBar extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             if (controller.hasActiveRest)
-              RestTimerBanner(controller: controller),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                style: FilledButton.styleFrom(
-                  minimumSize: const Size(0, 56),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppShape.control),
-                  ),
-                ),
-                onPressed: controller.isFinishing
-                    ? null
-                    : finalize
-                    ? onFinish
-                    : controller.canEdit
-                    ? onAdd
-                    : null,
-                child: Row(
-                  children: [
-                    controller.isFinishing
-                        ? const SizedBox.square(
-                            dimension: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : FitGlyph(
-                            kind: finalize
-                                ? FitGlyphKind.check
-                                : FitGlyphKind.add,
-                          ),
-                    const SizedBox(width: AppSpacing.sm),
-                    Expanded(
-                      child: Text(
-                        controller.isFinishing
-                            ? 'Guardando entrenamiento…'
-                            : finalize
-                            ? 'Finalizar entrenamiento'
-                            : 'Agregar ejercicio',
-                        textAlign: TextAlign.center,
+              Padding(
+                padding: const EdgeInsets.only(right: AppSpacing.sm),
+                child: RestTimerBanner(controller: controller),
+              ),
+            Row(
+              children: [
+                Expanded(
+                  child: FilledButton(
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size(0, 52),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppShape.control),
                       ),
                     ),
-                  ],
+                    onPressed: controller.isFinishing
+                        ? null
+                        : finalize
+                        ? onFinish
+                        : controller.canEdit
+                        ? onAdd
+                        : null,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        controller.isFinishing
+                            ? const SizedBox.square(
+                                dimension: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : FitGlyph(
+                                kind: finalize
+                                    ? FitGlyphKind.check
+                                    : FitGlyphKind.add,
+                              ),
+                        const SizedBox(width: AppSpacing.sm),
+                        Flexible(
+                          child: Text(
+                            controller.isFinishing
+                                ? 'Guardando entrenamiento…'
+                                : finalize
+                                ? 'Finalizar entrenamiento'
+                                : 'Agregar ejercicio',
+                            textAlign: TextAlign.center,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            if (finalize && controller.canEdit)
-              TextButton.icon(
-                onPressed: onAdd,
-                icon: const FitGlyph(kind: FitGlyphKind.add),
-                label: const Text('Agregar ejercicio'),
-              ),
-            Wrap(
-              alignment: WrapAlignment.center,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              spacing: AppSpacing.sm,
-              children: [
-                TextButton.icon(
+                const SizedBox(width: AppSpacing.xs),
+                IconButton(
+                  tooltip: controller.isPaused
+                      ? 'Reanudar sesión'
+                      : 'Pausar sesión',
                   onPressed: controller.canEdit ? onPause : null,
                   icon: Icon(
-                    controller.isPaused ? Icons.play_arrow : Icons.pause,
-                  ),
-                  label: Text(
-                    controller.isPaused ? 'Reanudar sesión' : 'Pausar sesión',
+                    controller.isPaused
+                        ? Icons.play_arrow_rounded
+                        : Icons.pause_rounded,
                   ),
                 ),
                 PopupMenuButton<String>(
-                  tooltip: 'Opciones de sesión',
+                  tooltip: 'Más opciones',
                   enabled: !controller.isFinishing,
+                  icon: const Icon(Icons.more_vert),
                   onSelected: (action) {
                     switch (action) {
-                      case 'finish':
-                        onFinish();
+                      case 'add':
+                        onAdd();
                       case 'settings':
                         onSettings();
                       case 'discard':
@@ -117,11 +121,12 @@ class WorkoutSessionActionBar extends StatelessWidget {
                     }
                   },
                   itemBuilder: (_) => [
-                    PopupMenuItem(
-                      value: 'finish',
-                      enabled: controller.completedSets > 0,
-                      child: const Text('Finalizar anticipadamente'),
-                    ),
+                    if (finalize)
+                      PopupMenuItem(
+                        value: 'add',
+                        enabled: controller.canEdit,
+                        child: const Text('Agregar ejercicio'),
+                      ),
                     const PopupMenuItem(
                       value: 'settings',
                       child: Text('Configuración'),
@@ -137,17 +142,6 @@ class WorkoutSessionActionBar extends StatelessWidget {
                       ),
                     ),
                   ],
-                  child: const Padding(
-                    padding: EdgeInsets.all(AppSpacing.md),
-                    child: Wrap(
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        Text('Más opciones'),
-                        SizedBox(width: AppSpacing.xs),
-                        FitGlyph(kind: FitGlyphKind.chevronDown),
-                      ],
-                    ),
-                  ),
                 ),
               ],
             ),

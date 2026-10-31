@@ -61,8 +61,7 @@ void main() {
       find.byType(Scaffold),
       matchesGoldenFile('workout_session_overview.png'),
     );
-    await tester.tap(find.text('Press de banca'));
-    await tester.pumpAndSettle();
+    // Press de banca has a pending set, so it is already open.
     await tester.drag(find.byType(CustomScrollView), const Offset(0, -330));
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);

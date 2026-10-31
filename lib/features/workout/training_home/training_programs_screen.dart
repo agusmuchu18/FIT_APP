@@ -1,3 +1,4 @@
+import '../widgets/workout_mini_bar_host_overlay.dart';
 import '../../../app/theme/app_theme.dart';
 
 import 'package:flutter/material.dart';
@@ -251,7 +252,7 @@ class _TrainingProgramsScreenState extends State<TrainingProgramsScreen> {
   @override
   Widget build(BuildContext context) => Theme(
     data: AppTheme.workoutFor(Theme.of(context)),
-    child: Builder(builder: _buildContent),
+    child: WorkoutMiniBarInset(child: Builder(builder: _buildContent)),
   );
 
   Widget _buildContent(BuildContext context) => Scaffold(

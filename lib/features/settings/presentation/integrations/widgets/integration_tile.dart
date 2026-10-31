@@ -35,7 +35,7 @@ class IntegrationTile extends StatelessWidget {
                   height: 44,
                   decoration: BoxDecoration(
                     color: Theme.of(context).colorScheme.primary
-                        .withOpacity(0.12),
+                        .withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: Icon(item.iconData),
@@ -79,7 +79,7 @@ class IntegrationTile extends StatelessWidget {
       return Chip(
         avatar: const Icon(Icons.check, size: 16),
         label: const Text('Conectado'),
-        backgroundColor: Colors.green.withOpacity(0.18),
+        backgroundColor: Colors.green.withValues(alpha: 0.18),
       );
     }
 

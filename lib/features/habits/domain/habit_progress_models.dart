@@ -31,12 +31,12 @@ class HabitDailyLog {
   }
 
   Map<String, Object?> toJson() => {
-        'habitId': habitId,
-        'dateKey': dateKey,
-        'count': count,
-        'isCompleted': isCompleted,
-        'completedAt': completedAt?.toIso8601String(),
-      };
+    'habitId': habitId,
+    'dateKey': dateKey,
+    'count': count,
+    'isCompleted': isCompleted,
+    'completedAt': completedAt?.toIso8601String(),
+  };
 
   static HabitDailyLog? tryDecode(Map<String, Object?> map) {
     final habitId = map['habitId'] as String? ?? '';
@@ -61,17 +61,17 @@ class HabitStreak {
   });
 
   const HabitStreak.empty(String habitId)
-      : this(habitId: habitId, currentStreak: 0);
+    : this(habitId: habitId, currentStreak: 0);
 
   final String habitId;
   final int currentStreak;
   final String? lastCompletedDateKey;
 
   Map<String, Object?> toJson() => {
-        'habitId': habitId,
-        'currentStreak': currentStreak,
-        'lastCompletedDateKey': lastCompletedDateKey,
-      };
+    'habitId': habitId,
+    'currentStreak': currentStreak,
+    'lastCompletedDateKey': lastCompletedDateKey,
+  };
 
   static HabitStreak? tryDecode(Map<String, Object?> map) {
     final habitId = map['habitId'] as String? ?? '';

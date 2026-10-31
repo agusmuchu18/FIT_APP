@@ -7,7 +7,9 @@ class NutritionQuickAddPlaceholderScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Duplicar reciente')),
-      body: const Center(child: Text('TODO: lista de comidas recientes para duplicar')),
+      body: const Center(
+        child: Text('TODO: lista de comidas recientes para duplicar'),
+      ),
     );
   }
 }

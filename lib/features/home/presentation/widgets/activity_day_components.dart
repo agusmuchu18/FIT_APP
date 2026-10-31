@@ -4,11 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../../common/theme/app_colors.dart';
 
-enum ActivityModuleType {
-  workout,
-  meal,
-  sleep,
-}
+enum ActivityModuleType { workout, meal, sleep }
 
 extension ActivityModuleTypeX on ActivityModuleType {
   String get label {
@@ -68,11 +64,11 @@ class ActivityModuleTile extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
-        color: AppColors.surface.withOpacity(0.07),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        color: AppColors.surface.withValues(alpha: 0.07),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.12),
+            color: Colors.black.withValues(alpha: 0.12),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -94,7 +90,7 @@ class ActivityModuleTile extends StatelessWidget {
                     height: 40,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: module.color.withOpacity(0.20),
+                      color: module.color.withValues(alpha: 0.20),
                     ),
                     child: Icon(module.icon, color: module.color, size: 20),
                   ),
@@ -109,8 +105,11 @@ class ActivityModuleTile extends StatelessWidget {
                             Expanded(
                               child: Text(
                                 module.label,
-                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                      color: Colors.white.withOpacity(textOpacity),
+                                style: Theme.of(context).textTheme.titleMedium
+                                    ?.copyWith(
+                                      color: Colors.white.withValues(
+                                        alpha: textOpacity,
+                                      ),
                                       fontWeight: FontWeight.w700,
                                     ),
                               ),
@@ -120,18 +119,26 @@ class ActivityModuleTile extends StatelessWidget {
                                 alignment: Alignment.center,
                                 child: Container(
                                   alignment: Alignment.center,
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 4,
+                                  ),
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(10),
-                                    color: module.color.withOpacity(0.20),
+                                    color: module.color.withValues(alpha: 0.20),
                                     border: Border.all(
-                                      color: module.color.withOpacity(0.45),
+                                      color: module.color.withValues(
+                                        alpha: 0.45,
+                                      ),
                                     ),
                                   ),
                                   child: Text(
                                     '$count',
                                     textAlign: TextAlign.center,
-                                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .labelMedium
+                                        ?.copyWith(
                                           color: module.color,
                                           fontWeight: FontWeight.w800,
                                           height: 1,
@@ -146,8 +153,11 @@ class ActivityModuleTile extends StatelessWidget {
                           subtitle,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: AppColors.textSecondary.withOpacity(textOpacity),
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
+                                color: AppColors.textSecondary.withValues(
+                                  alpha: textOpacity,
+                                ),
                                 fontWeight: FontWeight.w600,
                               ),
                         ),
@@ -157,7 +167,7 @@ class ActivityModuleTile extends StatelessWidget {
                   const SizedBox(width: 8),
                   Icon(
                     Icons.chevron_right_rounded,
-                    color: Colors.white.withOpacity(0.60),
+                    color: Colors.white.withValues(alpha: 0.60),
                   ),
                 ],
               ),
@@ -184,10 +194,7 @@ class TimelineEvent {
 }
 
 class ActivityTimelineSection extends StatelessWidget {
-  const ActivityTimelineSection({
-    super.key,
-    required this.events,
-  });
+  const ActivityTimelineSection({super.key, required this.events});
 
   final List<TimelineEvent> events;
 
@@ -199,98 +206,94 @@ class ActivityTimelineSection extends StatelessWidget {
         Text(
           'Timeline del día',
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.w700,
-              ),
+            color: Colors.white,
+            fontWeight: FontWeight.w700,
+          ),
         ),
         const SizedBox(height: 10),
         if (events.isEmpty)
           Text(
             'No hay eventos registrados este día.',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppColors.textMuted,
-                  fontWeight: FontWeight.w600,
-                ),
+              color: AppColors.textMuted,
+              fontWeight: FontWeight.w600,
+            ),
           )
         else
-          ...List.generate(
-            events.length,
-            (index) {
-              final event = events[index];
-              final isLast = index == events.length - 1;
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 7),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(
-                      width: 28,
-                      child: Column(
-                        children: [
-                          Container(
-                            width: 20,
-                            height: 20,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: event.module.color.withOpacity(0.20),
-                            ),
-                            child: Icon(
-                              event.module.icon,
-                              size: 12,
-                              color: event.module.color,
-                            ),
+          ...List.generate(events.length, (index) {
+            final event = events[index];
+            final isLast = index == events.length - 1;
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 7),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    width: 28,
+                    child: Column(
+                      children: [
+                        Container(
+                          width: 20,
+                          height: 20,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: event.module.color.withValues(alpha: 0.20),
                           ),
-                          if (!isLast)
-                            Container(
-                              width: 1.5,
-                              height: 28,
-                              margin: const EdgeInsets.only(top: 6),
-                              color: Colors.white.withOpacity(0.08),
-                            ),
+                          child: Icon(
+                            event.module.icon,
+                            size: 12,
+                            color: event.module.color,
+                          ),
+                        ),
+                        if (!isLast)
+                          Container(
+                            width: 1.5,
+                            height: 28,
+                            margin: const EdgeInsets.only(top: 6),
+                            color: Colors.white.withValues(alpha: 0.08),
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 1),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            event.timeLabel,
+                            style: Theme.of(context).textTheme.labelLarge
+                                ?.copyWith(
+                                  color: AppColors.textMuted,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            event.description,
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                          ),
                         ],
                       ),
                     ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.only(top: 1),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              event.timeLabel,
-                              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                                    color: AppColors.textMuted,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                            ),
-                            const SizedBox(height: 3),
-                            Text(
-                              event.description,
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
+                  ),
+                ],
+              ),
+            );
+          }),
       ],
     );
   }
 }
 
 class ModuleStatsHeader extends StatelessWidget {
-  const ModuleStatsHeader({
-    super.key,
-    required this.children,
-  });
+  const ModuleStatsHeader({super.key, required this.children});
 
   final List<Widget> children;
 
@@ -300,7 +303,9 @@ class ModuleStatsHeader extends StatelessWidget {
       children: List.generate(
         children.length,
         (index) => Padding(
-          padding: EdgeInsets.only(bottom: index == children.length - 1 ? 0 : 16),
+          padding: EdgeInsets.only(
+            bottom: index == children.length - 1 ? 0 : 16,
+          ),
           child: children[index],
         ),
       ),
@@ -309,10 +314,7 @@ class ModuleStatsHeader extends StatelessWidget {
 }
 
 class GlassStatCard extends StatelessWidget {
-  const GlassStatCard({
-    super.key,
-    required this.child,
-  });
+  const GlassStatCard({super.key, required this.child});
 
   final Widget child;
 
@@ -323,8 +325,8 @@ class GlassStatCard extends StatelessWidget {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
-        color: AppColors.surface.withOpacity(0.06),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        color: AppColors.surface.withValues(alpha: 0.06),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
       child: child,
     );
@@ -365,7 +367,9 @@ class RingStat extends StatelessWidget {
               CircularProgressIndicator(
                 value: 1,
                 strokeWidth: 9,
-                valueColor: AlwaysStoppedAnimation<Color>(color.withOpacity(0.15)),
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  color.withValues(alpha: 0.15),
+                ),
                 backgroundColor: Colors.transparent,
               ),
               CircularProgressIndicator(
@@ -379,19 +383,19 @@ class RingStat extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      this.value,
+                      value,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w800,
-                          ),
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       label,
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color: AppColors.textSecondary.withOpacity(0.6),
-                            fontWeight: FontWeight.w600,
-                          ),
+                        color: AppColors.textSecondary.withValues(alpha: 0.6),
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ],
                 ),
@@ -432,17 +436,17 @@ class ProgressBar extends StatelessWidget {
               child: Text(
                 label,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
             Text(
               trailing,
               style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: AppColors.textMuted,
-                    fontWeight: FontWeight.w700,
-                  ),
+                color: AppColors.textMuted,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ],
         ),
@@ -451,7 +455,7 @@ class ProgressBar extends StatelessWidget {
           borderRadius: BorderRadius.circular(height),
           child: Container(
             height: height,
-            color: Colors.white.withOpacity(0.12),
+            color: Colors.white.withValues(alpha: 0.12),
             child: Align(
               alignment: Alignment.centerLeft,
               child: FractionallySizedBox(
@@ -461,7 +465,7 @@ class ProgressBar extends StatelessWidget {
                     borderRadius: BorderRadius.circular(height),
                     gradient: LinearGradient(
                       colors: [
-                        color.withOpacity(0.85),
+                        color.withValues(alpha: 0.85),
                         Color.lerp(color, Colors.white, 0.2) ?? color,
                       ],
                     ),
@@ -497,9 +501,9 @@ class EmptyModuleState extends StatelessWidget {
           Text(
             message,
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: AppColors.textSecondary,
-                  fontWeight: FontWeight.w600,
-                ),
+              color: AppColors.textSecondary,
+              fontWeight: FontWeight.w600,
+            ),
           ),
           const SizedBox(height: 14),
           SizedBox(
@@ -508,7 +512,7 @@ class EmptyModuleState extends StatelessWidget {
             child: FilledButton(
               onPressed: onCtaTap,
               style: FilledButton.styleFrom(
-                backgroundColor: Colors.white.withOpacity(0.12),
+                backgroundColor: Colors.white.withValues(alpha: 0.12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
@@ -549,8 +553,8 @@ class DayRecordTile extends StatelessWidget {
             height: 72,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(16),
-              color: AppColors.surface.withOpacity(0.06),
-              border: Border.all(color: Colors.white.withOpacity(0.08)),
+              color: AppColors.surface.withValues(alpha: 0.06),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
             ),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -565,7 +569,8 @@ class DayRecordTile extends StatelessWidget {
                           title,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          style: Theme.of(context).textTheme.titleSmall
+                              ?.copyWith(
                                 color: Colors.white,
                                 fontWeight: FontWeight.w700,
                               ),
@@ -575,7 +580,8 @@ class DayRecordTile extends StatelessWidget {
                           subtitle,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
                                 color: AppColors.textMuted,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -587,9 +593,9 @@ class DayRecordTile extends StatelessWidget {
                   Text(
                     value,
                     style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700,
-                        ),
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ],
               ),
@@ -627,7 +633,20 @@ String formatTimeLabel(DateTime? date) {
 
 String formatDateChipText(DateTime date) {
   const weekdays = ['lun', 'mar', 'mié', 'jue', 'vie', 'sáb', 'dom'];
-  const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+  const months = [
+    'ene',
+    'feb',
+    'mar',
+    'abr',
+    'may',
+    'jun',
+    'jul',
+    'ago',
+    'sep',
+    'oct',
+    'nov',
+    'dic',
+  ];
   final weekday = weekdays[date.weekday - 1];
   final month = months[date.month - 1];
   final capWeekday = '${weekday[0].toUpperCase()}${weekday.substring(1)}';
@@ -636,7 +655,15 @@ String formatDateChipText(DateTime date) {
 }
 
 String formatDateLong(DateTime date) {
-  const weekdays = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
+  const weekdays = [
+    'lunes',
+    'martes',
+    'miércoles',
+    'jueves',
+    'viernes',
+    'sábado',
+    'domingo',
+  ];
   const months = [
     'enero',
     'febrero',

@@ -43,98 +43,115 @@ class RoutineLibraryCard extends StatelessWidget {
             .take(3)
             .join(' · ');
   @override
-  Widget build(BuildContext context) => Theme(
-    data: AppTheme.workoutFor(Theme.of(context)),
-    child: Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+  Widget build(BuildContext context) {
+    final large = _large(context);
+    final names = routine.exercises
+        .map((e) => RoutineLabels.exerciseName(e.name))
+        .join(' · ');
+    final summary = [
+      '${routine.exercises.length} ${routine.footballMode != null && routine.footballMode != FootballMode.gym ? 'actividades' : 'ejercicios'}',
+      '${routine.exercises.fold(0, (n, e) => n + e.targetSets)} series',
+      lastUsed,
+    ].join(' · ');
+    return Theme(
+      data: AppTheme.workoutFor(Theme.of(context)),
+      child: Card(
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onOpen,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 4, 12),
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (routine.exercises.isNotEmpty)
-                  ExerciseThumbnail(exercise: routine.exercises.first),
-                const SizedBox(width: 12),
-                if (!_large(context)) Expanded(child: _heading(context)),
-                if (_large(context)) const Spacer(),
-                PopupMenuButton<String>(
-                  tooltip: 'Opciones de ${routine.name}',
-                  onSelected: onMenu,
-                  itemBuilder: (_) => [
-                    PopupMenuItem(
-                      value: "pin",
-                      child: Text(pinned ? "Desfijar" : "Fijar"),
-                    ),
-                    const PopupMenuItem(value: 'edit', child: Text('Editar')),
-                    const PopupMenuItem(
-                      value: 'duplicate',
-                      child: Text('Duplicar'),
-                    ),
-                    const PopupMenuItem(
-                      value: 'move',
-                      child: Text('Mover a carpeta'),
-                    ),
-                    const PopupMenuItem(
-                      value: 'delete',
-                      child: Text('Eliminar'),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (routine.exercises.isNotEmpty)
+                      ExerciseThumbnail(exercise: routine.exercises.first),
+                    const SizedBox(width: 12),
+                    if (!large) Expanded(child: _heading(context)),
+                    if (large) const Spacer(),
+                    PopupMenuButton<String>(
+                      tooltip: 'Opciones de ${routine.name}',
+                      onSelected: onMenu,
+                      itemBuilder: (_) => [
+                        PopupMenuItem(
+                          value: "pin",
+                          child: Text(pinned ? "Desfijar" : "Fijar"),
+                        ),
+                        const PopupMenuItem(value: 'edit', child: Text('Editar')),
+                        const PopupMenuItem(
+                          value: 'duplicate',
+                          child: Text('Duplicar'),
+                        ),
+                        const PopupMenuItem(
+                          value: 'move',
+                          child: Text('Mover a carpeta'),
+                        ),
+                        const PopupMenuItem(
+                          value: 'delete',
+                          child: Text('Eliminar'),
+                        ),
+                      ],
                     ),
                   ],
                 ),
+                if (large) _heading(context),
+                Padding(
+                  padding: const EdgeInsets.only(right: 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 8),
+                      Text(
+                        summary,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                      if (names.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          names,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          onPressed: onStart,
+                          icon: const Icon(Icons.play_arrow),
+                          label: Text(
+                            large ? 'Iniciar' : 'Iniciar entrenamiento',
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
-            const SizedBox(height: 12),
-            if (_large(context)) _heading(context),
-            Text(
-              '${routine.exercises.length} ${routine.footballMode != null && routine.footballMode != FootballMode.gym ? 'actividades' : 'ejercicios'} · ${routine.exercises.fold(0, (n, e) => n + e.targetSets)} series',
-            ),
-            Text(lastUsed),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: routine.exercises
-                  .take(3)
-                  .map((e) => Text(RoutineLabels.exerciseName(e.name)))
-                  .toList(),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: onStart,
-                icon: const Icon(Icons.play_arrow),
-                label: Text(
-                  _large(context) ? 'Iniciar' : 'Iniciar entrenamiento',
-                ),
-              ),
-            ),
-            SizedBox(
-              width: double.infinity,
-              child: TextButton(
-                onPressed: onOpen,
-                child: const Text('Ver rutina'),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
-    ),
-  );
+    );
+  }
 
   bool _large(BuildContext context) =>
       MediaQuery.textScalerOf(context).scale(16) > 24;
-  Widget _heading(BuildContext context) => InkWell(
-    onTap: onOpen,
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(routine.name, style: Theme.of(context).textTheme.titleLarge),
-        const SizedBox(height: 4),
-        Text(type(routine)),
-        if (focus(routine).isNotEmpty) Text(focus(routine)),
-      ],
-    ),
+  Widget _heading(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(routine.name, style: Theme.of(context).textTheme.titleMedium),
+      const SizedBox(height: 2),
+      Text(
+        [type(routine), if (focus(routine).isNotEmpty) focus(routine)]
+            .join(' · '),
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+        style: Theme.of(context).textTheme.bodySmall,
+      ),
+    ],
   );
 }

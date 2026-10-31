@@ -1,7 +1,7 @@
-
 import 'package:flutter/material.dart';
 
 import '../../../../core/data/app_preferences.dart';
+
 import 'integration_detail_screen.dart';
 import 'integration_models.dart';
 import 'integration_readiness.dart';
@@ -13,10 +13,12 @@ class IntegrationsSettingsScreen extends StatefulWidget {
   const IntegrationsSettingsScreen({super.key});
 
   @override
-  State<IntegrationsSettingsScreen> createState() => _IntegrationsSettingsScreenState();
+  State<IntegrationsSettingsScreen> createState() =>
+      _IntegrationsSettingsScreenState();
 }
 
-class _IntegrationsSettingsScreenState extends State<IntegrationsSettingsScreen> {
+class _IntegrationsSettingsScreenState
+    extends State<IntegrationsSettingsScreen> {
   AppPreferences? _prefs;
   bool _failed = false;
   final TextEditingController _searchController = TextEditingController();
@@ -110,7 +112,9 @@ class _IntegrationsSettingsScreenState extends State<IntegrationsSettingsScreen>
                   decoration: InputDecoration(
                     hintText: 'Buscar integración…',
                     prefixIcon: const Icon(Icons.search_rounded),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(20)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
                     filled: true,
                   ),
                 ),
@@ -152,28 +156,35 @@ class _IntegrationsSettingsScreenState extends State<IntegrationsSettingsScreen>
                 onTap: () => _openDetail(list[i]),
                 onConnect: () => _handleConnect(list[i]),
               ),
-              if (i != list.length - 1) Divider(color: Colors.white.withOpacity(0.08)),
-            ]
+              if (i != list.length - 1)
+                Divider(color: Colors.white.withValues(alpha: 0.08)),
+            ],
           ],
         ),
       );
     });
 
     if (out.isEmpty) {
-      out.add(const Padding(
-        padding: EdgeInsets.only(top: 24),
-        child: Center(child: Text('No encontramos integraciones para ese filtro.')),
-      ));
+      out.add(
+        const Padding(
+          padding: EdgeInsets.only(top: 24),
+          child: Center(
+            child: Text('No encontramos integraciones para ese filtro.'),
+          ),
+        ),
+      );
     }
     return out;
   }
 
   bool _passesFilters(IntegrationItem item) {
     final query = _searchController.text.trim().toLowerCase();
-    final matchesSearch = query.isEmpty || item.title.toLowerCase().contains(query);
+    final matchesSearch =
+        query.isEmpty || item.title.toLowerCase().contains(query);
     if (!matchesSearch) return false;
 
-    if (_selectedFilter == IntegrationsFilter.connected && !_statusFor(item.id).connected) {
+    if (_selectedFilter == IntegrationsFilter.connected &&
+        !_statusFor(item.id).connected) {
       return false;
     }
 
@@ -198,9 +209,13 @@ class _IntegrationsSettingsScreenState extends State<IntegrationsSettingsScreen>
   }
 
   Future<void> _disconnect(IntegrationItem item) async {
-    await _persist(item.id, const IntegrationStatus(enabled: false, connected: false));
+    await _persist(
+      item.id,
+      const IntegrationStatus(enabled: false, connected: false),
+    );
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${item.title} desconectado.')));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text('${item.title} desconectado.')));
   }
 
   Future<void> _openDetail(IntegrationItem item) async {
@@ -252,8 +267,15 @@ class _IntegrationsSettingsScreenState extends State<IntegrationsSettingsScreen>
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Ayuda'),
-        content: const Text('Conectá tus apps y dispositivos para importar actividad, salud, sueño y nutrición automáticamente.'),
-        actions: [TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cerrar'))],
+        content: const Text(
+          'Conectá tus apps y dispositivos para importar actividad, salud, sueño y nutrición automáticamente.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cerrar'),
+          ),
+        ],
       ),
     );
   }
@@ -281,7 +303,11 @@ const List<IntegrationItem> _allItems = [
     isAvailable: false,
     iconData: Icons.route_rounded,
     description: 'Sincroniza entrenamientos al aire libre, segmentos y métricas de actividad.',
-    importableData: ['Carreras y ciclismo', 'Distancia y ritmo', 'Frecuencia cardíaca'],
+    importableData: [
+      'Carreras y ciclismo',
+      'Distancia y ritmo',
+      'Frecuencia cardíaca',
+    ],
   ),
   IntegrationItem(
     id: IntegrationId.trainingPeaks,
@@ -291,7 +317,11 @@ const List<IntegrationItem> _allItems = [
     isAvailable: false,
     iconData: Icons.trending_up_rounded,
     description: 'Importa métricas de entrenamiento estructurado y cumplimiento de planificación.',
-    importableData: ['TSS y carga', 'Sesiones completadas', 'Duración e intensidad'],
+    importableData: [
+      'TSS y carga',
+      'Sesiones completadas',
+      'Duración e intensidad',
+    ],
   ),
   IntegrationItem(
     id: IntegrationId.garmin,
@@ -330,8 +360,13 @@ const List<IntegrationItem> _allItems = [
     category: IntegrationCategory.activityTraining,
     isAvailable: false,
     iconData: Icons.sports_soccer_rounded,
-    description: 'Integra métricas de rendimiento usadas en deportes de equipo.',
-    importableData: ['Player load', 'Aceleraciones', 'Distancias de alta intensidad'],
+    description:
+        'Integra métricas de rendimiento usadas en deportes de equipo.',
+    importableData: [
+      'Player load',
+      'Aceleraciones',
+      'Distancias de alta intensidad',
+    ],
   ),
   IntegrationItem(
     id: IntegrationId.fitbit,
@@ -390,8 +425,13 @@ const List<IntegrationItem> _allItems = [
     category: IntegrationCategory.healthSensors,
     isAvailable: false,
     iconData: Icons.sensors_rounded,
-    description: 'Conecta bandas pectorales para capturar pulsaciones en tiempo real.',
-    importableData: ['Frecuencia cardíaca en vivo', 'Zonas de pulso', 'Promedio por sesión'],
+    description:
+        'Conecta bandas pectorales para capturar pulsaciones en tiempo real.',
+    importableData: [
+      'Frecuencia cardíaca en vivo',
+      'Zonas de pulso',
+      'Promedio por sesión',
+    ],
   ),
   IntegrationItem(
     id: IntegrationId.ring,
@@ -401,7 +441,11 @@ const List<IntegrationItem> _allItems = [
     isAvailable: false,
     iconData: Icons.radio_button_checked_rounded,
     description: 'Sincroniza sensores en formato anillo para métricas de pulso y recuperación.',
-    importableData: ['Pulso basal', 'Variabilidad cardíaca', 'Tendencias diarias'],
+    importableData: [
+      'Pulso basal',
+      'Variabilidad cardíaca',
+      'Tendencias diarias',
+    ],
   ),
   IntegrationItem(
     id: IntegrationId.oura,
@@ -410,7 +454,8 @@ const List<IntegrationItem> _allItems = [
     category: IntegrationCategory.healthSensors,
     isAvailable: false,
     iconData: Icons.nightlight_round,
-    description: 'Conecta Oura para métricas de descanso, readiness y recuperación.',
+    description:
+        'Conecta Oura para métricas de descanso, readiness y recuperación.',
     importableData: ['Sleep score', 'Readiness score', 'Frecuencia nocturna'],
   ),
   IntegrationItem(
@@ -421,7 +466,11 @@ const List<IntegrationItem> _allItems = [
     isAvailable: false,
     iconData: Icons.bedtime_rounded,
     description: 'Importa análisis de ciclos de sueño y consistencia nocturna.',
-    importableData: ['Duración de sueño', 'Calidad', 'Hora de dormir/despertar'],
+    importableData: [
+      'Duración de sueño',
+      'Calidad',
+      'Hora de dormir/despertar',
+    ],
   ),
   IntegrationItem(
     id: IntegrationId.openFoodFacts,
@@ -430,8 +479,13 @@ const List<IntegrationItem> _allItems = [
     category: IntegrationCategory.nutrition,
     isAvailable: false,
     iconData: Icons.qr_code_scanner_rounded,
-    description: 'Escanea productos y sincroniza datos nutricionales en tu registro.',
-    importableData: ['Macros por producto', 'Ingredientes', 'Información por código de barras'],
+    description:
+        'Escanea productos y sincroniza datos nutricionales en tu registro.',
+    importableData: [
+      'Macros por producto',
+      'Ingredientes',
+      'Información por código de barras',
+    ],
   ),
   IntegrationItem(
     id: IntegrationId.myFitnessPal,

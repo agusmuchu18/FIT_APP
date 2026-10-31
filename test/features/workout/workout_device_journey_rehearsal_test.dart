@@ -1,3 +1,4 @@
+import 'package:intl/date_symbol_data_local.dart';
 import 'dart:io';
 
 import 'package:fit_app/core/data/account_storage_scope.dart';
@@ -12,6 +13,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../support/workout_device_journey.dart';
 
 void main() {
+  setUpAll(() => initializeDateFormatting('es'));
   testWidgets(
     'rehearses the mobile journey with disk Hive and mocked preferences',
     (tester) async {

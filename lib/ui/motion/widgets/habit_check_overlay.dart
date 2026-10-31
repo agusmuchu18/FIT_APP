@@ -35,27 +35,23 @@ class HabitCheckOverlayState extends State<HabitCheckOverlay>
     reverseCurve: MotionConfig.exit,
   );
 
-  late final Animation<double> _opacity = Tween<double>(
-    begin: 0,
-    end: 1,
-  ).animate(
-    CurvedAnimation(
-      parent: _controller,
-      curve: MotionConfig.entrance,
-      reverseCurve: MotionConfig.exit,
-    ),
-  );
+  late final Animation<double> _opacity = Tween<double>(begin: 0, end: 1)
+      .animate(
+        CurvedAnimation(
+          parent: _controller,
+          curve: MotionConfig.entrance,
+          reverseCurve: MotionConfig.exit,
+        ),
+      );
 
-  late final Animation<double> _scale = Tween<double>(
-    begin: 0.9,
-    end: 1.0,
-  ).animate(
-    CurvedAnimation(
-      parent: _controller,
-      curve: MotionConfig.pop,
-      reverseCurve: MotionConfig.exit,
-    ),
-  );
+  late final Animation<double> _scale = Tween<double>(begin: 0.9, end: 1.0)
+      .animate(
+        CurvedAnimation(
+          parent: _controller,
+          curve: MotionConfig.pop,
+          reverseCurve: MotionConfig.exit,
+        ),
+      );
 
   Future<void> play() async {
     if (!mounted) return;

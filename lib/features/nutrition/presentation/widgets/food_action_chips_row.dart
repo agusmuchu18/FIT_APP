@@ -18,19 +18,21 @@ class FoodActionChipsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          ActionChip(label: Text('($draftCount)'), onPressed: onDraftTap),
-          const SizedBox(width: 8),
-          ActionChip(label: const Text('Plantillas'), onPressed: onTemplatesTap),
-          const SizedBox(width: 8),
-          ActionChip(label: const Text('Copiar último'), onPressed: onCopyLastTap),
-          const SizedBox(width: 8),
-          ActionChip(label: const Text('Crear alimento'), onPressed: onCreateTap),
-        ],
-      ),
+    return Wrap(
+      spacing: 8,
+      runSpacing: 4,
+      children: [
+        ActionChip(
+          label: Text('Borrador ($draftCount)'),
+          onPressed: onDraftTap,
+        ),
+        ActionChip(label: const Text('Plantillas'), onPressed: onTemplatesTap),
+        ActionChip(
+          label: const Text('Copiar último'),
+          onPressed: onCopyLastTap,
+        ),
+        ActionChip(label: const Text('Crear alimento'), onPressed: onCreateTap),
+      ],
     );
   }
 }

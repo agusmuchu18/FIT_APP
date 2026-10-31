@@ -88,23 +88,29 @@ class _WelcomeCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(Icons.emoji_events_rounded,
-                    color: theme.colorScheme.primary),
+                Icon(
+                  Icons.emoji_events_rounded,
+                  color: theme.colorScheme.primary,
+                ),
                 const SizedBox(width: 8),
-                Text('Bienvenido de nuevo',
-                    style: theme.textTheme.titleMedium),
+                Text('Bienvenido de nuevo', style: theme.textTheme.titleMedium),
               ],
             ),
             const SizedBox(height: 8),
-            Text('Objetivo: ${preferences.primaryGoal}',
-                style: theme.textTheme.bodyLarge),
+            Text(
+              'Objetivo: ${preferences.primaryGoal}',
+              style: theme.textTheme.bodyLarge,
+            ),
             const SizedBox(height: 4),
             Wrap(
               spacing: 8,
               runSpacing: 8,
               children: [
                 _Tag(text: 'Experiencia: ${preferences.experienceLevel}'),
-                _Tag(text: 'Frecuencia: ${preferences.targetSessionsPerWeek} días/sem'),
+                _Tag(
+                  text:
+                      'Frecuencia: ${preferences.targetSessionsPerWeek} días/sem',
+                ),
                 _Tag(text: 'Modo: ${preferences.modePreference}'),
               ],
             ),
@@ -181,12 +187,14 @@ class _SecondaryActions extends StatelessWidget {
               runSpacing: 8,
               children: [
                 OutlinedButton.icon(
-                  onPressed: () => Navigator.of(context).pushNamed('/analytics/overview'),
+                  onPressed: () =>
+                      Navigator.of(context).pushNamed('/analytics/overview'),
                   icon: const Icon(Icons.bar_chart_rounded),
                   label: const Text('Estadísticas'),
                 ),
                 OutlinedButton.icon(
-                  onPressed: () => Navigator.of(context).pushNamed('/groups/list'),
+                  onPressed: () =>
+                      Navigator.of(context).pushNamed('/groups/list'),
                   icon: const Icon(Icons.groups_rounded),
                   label: const Text('Grupos de atletas'),
                 ),
@@ -212,8 +220,10 @@ class _EmptyState extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Configura tus preferencias',
-              style: theme.textTheme.headlineSmall),
+          Text(
+            'Configura tus preferencias',
+            style: theme.textTheme.headlineSmall,
+          ),
           const SizedBox(height: 8),
           Text(
             'Responde las preguntas del onboarding para abrir el modo correcto y ver mensajes personalizados.',
@@ -240,7 +250,7 @@ class _Tag extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Chip(
-      backgroundColor: theme.colorScheme.surfaceVariant,
+      backgroundColor: theme.colorScheme.surfaceContainerHighest,
       label: Text(text),
       avatar: const Icon(Icons.check_circle_rounded, size: 18),
     );

@@ -30,28 +30,28 @@ class _AnimatedPlusXButtonState extends State<AnimatedPlusXButton>
     duration: MotionDurations.micro,
   );
 
-  late final Animation<double> _rotation = Tween<double>(
-    begin: 0,
-    end: 0.125,
-  ).animate(
-    CurvedAnimation(
-      parent: _controller,
-      curve: MotionConfig.entrance,
-      reverseCurve: MotionConfig.exit,
-    ),
-  );
+  late final Animation<double> _rotation = Tween<double>(begin: 0, end: 0.125)
+      .animate(
+        CurvedAnimation(
+          parent: _controller,
+          curve: MotionConfig.entrance,
+          reverseCurve: MotionConfig.exit,
+        ),
+      );
 
   late final Animation<double> _scale = TweenSequence<double>([
     TweenSequenceItem(
-      tween: Tween<double>(begin: 1.0, end: 1.06).chain(
-        CurveTween(curve: MotionConfig.pop),
-      ),
+      tween: Tween<double>(
+        begin: 1.0,
+        end: 1.06,
+      ).chain(CurveTween(curve: MotionConfig.pop)),
       weight: 55,
     ),
     TweenSequenceItem(
-      tween: Tween<double>(begin: 1.06, end: 1.0).chain(
-        CurveTween(curve: MotionConfig.exit),
-      ),
+      tween: Tween<double>(
+        begin: 1.06,
+        end: 1.0,
+      ).chain(CurveTween(curve: MotionConfig.exit)),
       weight: 45,
     ),
   ]).animate(_controller);
@@ -83,10 +83,7 @@ class _AnimatedPlusXButtonState extends State<AnimatedPlusXButton>
         builder: (context, child) {
           return Transform.rotate(
             angle: _rotation.value * 2 * 3.1415926535897932,
-            child: Transform.scale(
-              scale: _scale.value,
-              child: child,
-            ),
+            child: Transform.scale(scale: _scale.value, child: child),
           );
         },
         child: Container(
@@ -97,7 +94,7 @@ class _AnimatedPlusXButtonState extends State<AnimatedPlusXButton>
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.4),
+                color: Colors.black.withValues(alpha: 0.4),
                 blurRadius: 14,
                 offset: const Offset(0, 6),
               ),

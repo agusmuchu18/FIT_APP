@@ -37,16 +37,18 @@ class FoodSearchPage extends StatelessWidget {
             Expanded(
               child: ListView.separated(
                 itemCount: c.results.length,
-                separatorBuilder: (_, __) => const Divider(height: 1),
+                separatorBuilder: (_, _) => const Divider(height: 1),
                 itemBuilder: (context, i) {
                   final item = c.results[i];
                   return ListTile(
                     title: Text(item.description),
-                    subtitle: Text([
-                      if (item.dataType != null) item.dataType!,
-                      if (item.brandOwner != null) item.brandOwner!,
-                      'FDC: ${item.fdcId}',
-                    ].join(' • ')),
+                    subtitle: Text(
+                      [
+                        if (item.dataType != null) item.dataType!,
+                        if (item.brandOwner != null) item.brandOwner!,
+                        'FDC: ${item.fdcId}',
+                      ].join(' • '),
+                    ),
                     onTap: () async {
                       // IMPORTANTE: details solo cuando toca (liviano)
                       final json = await context
@@ -79,8 +81,9 @@ class FoodDetailsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final name = (detailsJson['description'] ?? detailsJson['dataType'] ?? 'Detalle')
-        .toString();
+    final name =
+        (detailsJson['description'] ?? detailsJson['dataType'] ?? 'Detalle')
+            .toString();
 
     final nutrients = (detailsJson['foodNutrients'] as List?) ?? const [];
 

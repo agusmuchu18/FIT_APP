@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../common/theme/app_colors.dart';
 import '../../common/widgets/fit_glyph.dart';
@@ -13,12 +14,17 @@ class WorkoutMiniBar extends StatefulWidget {
     required this.onContinue,
     required this.onPauseResume,
     required this.onDiscard,
+    this.alertOnRestEnd = true,
   });
 
   final WorkoutInProgressDraft draft;
   final VoidCallback onContinue;
   final VoidCallback onPauseResume;
   final VoidCallback onDiscard;
+
+  /// False while the bar is hidden behind the session screen, which already
+  /// signals the end of the rest itself.
+  final bool alertOnRestEnd;
 
   @override
   State<WorkoutMiniBar> createState() => _WorkoutMiniBarState();
@@ -45,10 +51,27 @@ class _WorkoutMiniBarState extends State<WorkoutMiniBar> {
     _ticker?.cancel();
     if (widget.draft.isPaused) return;
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted) {
-        setState(() {});
-      }
+      if (!mounted) return;
+      _alertWhenRestEnds();
+      setState(() {});
     });
+  }
+
+  String? _alertedRest;
+
+  /// Outside the session screen the bar is the only rest signal left, so it
+  /// vibrates and sounds once when the rest reaches zero.
+  void _alertWhenRestEnds() {
+    final draft = widget.draft;
+    final key = '${draft.workoutId}|${draft.restStartedAtElapsedSeconds}';
+    if (draft.restRemainingAt(DateTime.now()) != Duration.zero ||
+        _alertedRest == key) {
+      return;
+    }
+    _alertedRest = key;
+    if (!widget.alertOnRestEnd) return;
+    HapticFeedback.heavyImpact().catchError((Object _) {});
+    SystemSound.play(SystemSoundType.alert).catchError((Object _) {});
   }
 
   @override
@@ -62,6 +85,7 @@ class _WorkoutMiniBarState extends State<WorkoutMiniBar> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final elapsed = _elapsed(widget.draft);
+    final rest = widget.draft.restRemainingAt(DateTime.now());
 
     return Material(
       color: Colors.transparent,
@@ -122,6 +146,24 @@ class _WorkoutMiniBarState extends State<WorkoutMiniBar> {
                             fontFeatures: const [FontFeature.tabularFigures()],
                           ),
                         ),
+                        if (rest != null && !widget.draft.isPaused) ...[
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Text(
+                              rest == Duration.zero
+                                  ? 'Descanso completo'
+                                  : 'Descanso ${_format(rest)}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.labelLarge?.copyWith(
+                                color: colorScheme.primary,
+                                fontFeatures: const [
+                                  FontFeature.tabularFigures(),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                         if (widget.draft.isPaused) ...[
                           const SizedBox(width: 8),
                           Container(

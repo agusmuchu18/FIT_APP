@@ -3,6 +3,7 @@ import '../pro/models/workout_models.dart';
 import 'sport_activity.dart';
 import 'routine_display_names.dart';
 import 'training_units.dart';
+import 'exercise_load_policy.dart';
 
 class RoutineLabels {
   static const equipment = {
@@ -85,11 +86,21 @@ class RoutineLabels {
         : e.targetReps != null
         ? '${e.targetReps} repeticiones'
         : '${e.targetRepsMin}–${e.targetRepsMax} repeticiones';
-    return '${e.targetSets} series · $measure${e.sportPurpose == null ? '' : ' · ${e.sportPurpose!.label}'} · ${load(e.targetLoadType)}${e.targetWeightKg == null ? '' : ' ${units.valueWithUnit('kg', e.targetWeightKg!)}'} · ${e.restEnabled == false
+    return '${e.targetSets} series · $measure${e.sportPurpose == null ? '' : ' · ${e.sportPurpose!.label}'} · ${load(e.targetLoadType)}${e.targetLoadType == RoutineExerciseLoadType.bodyweight || e.plannedLoad == null ? '' : ' ${units.valueWithUnit('kg', e.plannedLoad!)}'} · ${e.restEnabled == false
         ? 'Sin descanso'
         : e.restSeconds == null
         ? 'Descanso heredado'
         : '${e.restSeconds! ~/ 60}:${(e.restSeconds! % 60).toString().padLeft(2, '0')} descanso'}${e.setTargets.isEmpty ? '' : ' · Por serie'}';
+  }
+
+  static String setTargetSummary(
+    WorkoutExercise e,
+    RoutineSetTarget target,
+    TrainingUnits units,
+  ) {
+    final mode = target.loadType ?? e.targetLoadType;
+    final amount = target.loadFor(e.targetLoadType);
+    return '${load(mode)}${mode == RoutineExerciseLoadType.bodyweight || amount == null ? '' : ' ${units.valueWithUnit('kg', amount)}'}';
   }
 
   static WorkoutExercise defaults(ExerciseDefinition definition) =>
@@ -100,14 +111,7 @@ class RoutineLabels {
         equipment: definition.equipment,
         measurement: definition.defaultMeasurement,
         targetDurationSeconds: definition.isTimed ? 30 : null,
-        targetLoadType: definition.equipment == 'bodyweight'
-            ? RoutineExerciseLoadType.bodyweight
-            : definition.loadType == LoadType.assistedBodyweight
-            ? RoutineExerciseLoadType.assistedKg
-            : definition.equipment == 'machine'
-            ? RoutineExerciseLoadType.machineKg
-            : definition.loadType == LoadType.external
-            ? RoutineExerciseLoadType.weightedKg
-            : RoutineExerciseLoadType.bodyweight,
+        loadSchemaVersion: 1,
+        targetLoadType: ExerciseLoadPolicy.defaultFor(definition),
       );
 }

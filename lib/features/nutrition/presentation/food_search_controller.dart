@@ -1,14 +1,12 @@
 import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
-import '../../nutrition/data/fdc_client.dart';
+import '../data/fdc_client.dart';
+import '../data/food_cache.dart';
 
 class FoodSearchController extends ChangeNotifier {
-  FoodSearchController({
-    required FdcClient client,
-    required FoodCache cache,
-  })  : _client = client,
-        _cache = cache;
+  FoodSearchController({required this._client, required this._cache});
 
   final FdcClient _client;
   final FoodCache _cache;
@@ -19,11 +17,13 @@ class FoodSearchController extends ChangeNotifier {
 
   Timer? _debounce;
   String _lastQuery = '';
+  int _searchGeneration = 0;
 
   /// Llamalo en onChanged del TextField.
   void onQueryChanged(String query) {
     _debounce?.cancel();
     final q = query.trim();
+    final generation = ++_searchGeneration;
 
     // Si está vacío, limpiamos.
     if (q.isEmpty) {
@@ -37,13 +37,14 @@ class FoodSearchController extends ChangeNotifier {
 
     // Debounce: espera 300ms después de que deje de tipear.
     _debounce = Timer(const Duration(milliseconds: 300), () async {
-      await search(q);
+      await search(q, generation: generation);
     });
   }
 
-  Future<void> search(String query) async {
+  Future<void> search(String query, {int? generation}) async {
     final q = query.trim();
     if (q.isEmpty) return;
+    final requestGeneration = generation ?? ++_searchGeneration;
 
     // Evitá repetir la misma query.
     if (q == _lastQuery && results.isNotEmpty) return;
@@ -64,14 +65,18 @@ class FoodSearchController extends ChangeNotifier {
 
     try {
       final items = await _client.searchFoods(q, pageSize: 25, pageNumber: 1);
+      if (requestGeneration != _searchGeneration) return;
       results = items;
       _cache.putSearch(q, items); // cachear búsqueda
     } catch (e) {
+      if (requestGeneration != _searchGeneration) return;
       error = e.toString();
       results = const [];
     } finally {
-      isLoading = false;
-      notifyListeners();
+      if (requestGeneration == _searchGeneration) {
+        isLoading = false;
+        notifyListeners();
+      }
     }
   }
 
@@ -90,6 +95,7 @@ class FoodSearchController extends ChangeNotifier {
   @override
   void dispose() {
     _debounce?.cancel();
+    _searchGeneration++;
     super.dispose();
   }
 }

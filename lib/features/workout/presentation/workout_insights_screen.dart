@@ -1,3 +1,4 @@
+import '../widgets/workout_mini_bar_host_overlay.dart';
 import '../../../app/theme/app_theme.dart';
 
 import 'package:fl_chart/fl_chart.dart';
@@ -176,7 +177,7 @@ class _WorkoutInsightsScreenState extends State<WorkoutInsightsScreen> {
   @override
   Widget build(BuildContext context) => Theme(
     data: AppTheme.workoutFor(Theme.of(context)),
-    child: Builder(builder: _buildContent),
+    child: WorkoutMiniBarInset(child: Builder(builder: _buildContent)),
   );
 
   Widget _buildContent(BuildContext context) => DefaultTabController(

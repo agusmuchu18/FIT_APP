@@ -1,19 +1,10 @@
 import '../domain/entities.dart';
 
 /// Supported platforms.
-enum FitnessSource {
-  healthKit,
-  googleFit,
-  fitbit,
-}
+enum FitnessSource { healthKit, googleFit, fitbit }
 
 /// Standardized data types retrieved from platform APIs.
-enum FitnessDataType {
-  workout,
-  nutrition,
-  sleep,
-  steps,
-}
+enum FitnessDataType { workout, nutrition, sleep, steps }
 
 /// Representation of an item fetched from a health platform.
 class ExternalFitnessSample {
@@ -26,11 +17,11 @@ class ExternalFitnessSample {
     this.notes,
     this.startTime,
     this.endTime,
-  })  : type = FitnessDataType.workout,
-        calories = null,
-        macros = null,
-        hours = null,
-        quality = null;
+  }) : type = FitnessDataType.workout,
+       calories = null,
+       macros = null,
+       hours = null,
+       quality = null;
 
   ExternalFitnessSample.nutrition({
     required this.externalId,
@@ -41,11 +32,11 @@ class ExternalFitnessSample {
     this.notes,
     this.startTime,
     this.endTime,
-  })  : type = FitnessDataType.nutrition,
-        durationMinutes = null,
-        intensity = null,
-        hours = null,
-        quality = null;
+  }) : type = FitnessDataType.nutrition,
+       durationMinutes = null,
+       intensity = null,
+       hours = null,
+       quality = null;
 
   ExternalFitnessSample.sleep({
     required this.externalId,
@@ -55,12 +46,12 @@ class ExternalFitnessSample {
     this.notes,
     this.startTime,
     this.endTime,
-  })  : type = FitnessDataType.sleep,
-        title = null,
-        durationMinutes = null,
-        intensity = null,
-        calories = null,
-        macros = null;
+  }) : type = FitnessDataType.sleep,
+       title = null,
+       durationMinutes = null,
+       intensity = null,
+       calories = null,
+       macros = null;
 
   ExternalFitnessSample.steps({
     required this.externalId,
@@ -69,13 +60,13 @@ class ExternalFitnessSample {
     this.startTime,
     this.endTime,
     this.notes,
-  })  : type = FitnessDataType.steps,
-        title = 'Steps',
-        intensity = 'light',
-        calories = null,
-        macros = null,
-        hours = null,
-        quality = 'auto';
+  }) : type = FitnessDataType.steps,
+       title = 'Steps',
+       intensity = 'light',
+       calories = null,
+       macros = null,
+       hours = null,
+       quality = 'auto';
 
   final String externalId;
   final FitnessDataType type;

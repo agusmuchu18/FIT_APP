@@ -74,8 +74,11 @@ class _SleepHistoryScreenState extends State<SleepHistoryScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.nightlight_round,
-                            color: AppColors.textSecondary, size: 36),
+                        const Icon(
+                          Icons.nightlight_round,
+                          color: AppColors.textSecondary,
+                          size: 36,
+                        ),
                         const SizedBox(height: 10),
                         const Text(
                           'Todavía no hay registros',
@@ -109,7 +112,7 @@ class _SleepHistoryScreenState extends State<SleepHistoryScreen> {
               child: ListView.separated(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
                 itemCount: entries.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                separatorBuilder: (_, _) => const SizedBox(height: 12),
                 itemBuilder: (context, i) {
                   final e = entries[i];
                   final date = _dateFor(e);
@@ -124,8 +127,10 @@ class _SleepHistoryScreenState extends State<SleepHistoryScreen> {
                         color: const Color(0x33FF6A6A),
                         borderRadius: BorderRadius.circular(24),
                       ),
-                      child: const Icon(Icons.delete_outline_rounded,
-                          color: Color(0xFFFF6A6A)),
+                      child: const Icon(
+                        Icons.delete_outline_rounded,
+                        color: Color(0xFFFF6A6A),
+                      ),
                     ),
                     confirmDismiss: (_) async {
                       return await showDialog<bool>(
@@ -133,7 +138,8 @@ class _SleepHistoryScreenState extends State<SleepHistoryScreen> {
                             builder: (ctx) => AlertDialog(
                               title: const Text('Eliminar registro'),
                               content: const Text(
-                                  'Se ocultará del historial (y se sincronizará si corresponde).'),
+                                'Se ocultará del historial (y se sincronizará si corresponde).',
+                              ),
                               actions: [
                                 TextButton(
                                   onPressed: () => Navigator.pop(ctx, false),
@@ -152,7 +158,7 @@ class _SleepHistoryScreenState extends State<SleepHistoryScreen> {
                       final repo = _repo!;
                       await repo.saveSleep(e.markDeleted(), sync: true);
                       await _reload();
-                      if (!mounted) return;
+                      if (!context.mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('Registro eliminado')),
                       );
@@ -212,9 +218,11 @@ class _SleepHistoryScreenState extends State<SleepHistoryScreen> {
                                 const SizedBox(height: 8),
                                 Row(
                                   children: [
-                                    const Icon(Icons.bedtime_rounded,
-                                        size: 16,
-                                        color: AppColors.textSecondary),
+                                    const Icon(
+                                      Icons.bedtime_rounded,
+                                      size: 16,
+                                      color: AppColors.textSecondary,
+                                    ),
                                     const SizedBox(width: 6),
                                     Text(
                                       _fmtTime(e.bedtime),
@@ -223,9 +231,11 @@ class _SleepHistoryScreenState extends State<SleepHistoryScreen> {
                                       ),
                                     ),
                                     const SizedBox(width: 12),
-                                    const Icon(Icons.wb_sunny_rounded,
-                                        size: 16,
-                                        color: AppColors.textSecondary),
+                                    const Icon(
+                                      Icons.wb_sunny_rounded,
+                                      size: 16,
+                                      color: AppColors.textSecondary,
+                                    ),
                                     const SizedBox(width: 6),
                                     Text(
                                       _fmtTime(e.wakeTime),
@@ -238,8 +248,10 @@ class _SleepHistoryScreenState extends State<SleepHistoryScreen> {
                               ],
                             ),
                           ),
-                          const Icon(Icons.chevron_right_rounded,
-                              color: AppColors.textMuted),
+                          const Icon(
+                            Icons.chevron_right_rounded,
+                            color: AppColors.textMuted,
+                          ),
                         ],
                       ),
                     ),

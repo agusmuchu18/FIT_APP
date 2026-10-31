@@ -401,18 +401,30 @@ String workoutSetLabel(
   SetEntry s, [
   TrainingUnits units = const TrainingUnits(),
 ]) {
-  final parts = <String>['Serie $index'];
+  final parts = <String>[
+    'Serie $index',
+    if (s.kind != SetKind.normal) s.kind.label,
+  ];
   if (s.reps != null) parts.add('${s.reps} repeticiones');
-  if (s.externalLoadKg != null) {
+  final mode = WorkoutAnalytics.setLoadType(e, s);
+  if (s.externalLoadKg != null &&
+      (mode == null ||
+          mode != RoutineExerciseLoadType.bodyweight &&
+              mode != RoutineExerciseLoadType.assistedKg)) {
     parts.add(
-      '${units.valueWithUnit('kg', s.externalLoadKg!)}${s.loadIsAmbiguous ? ' (carga antigua sin clasificar)' : ' externos'}',
+      '${units.valueWithUnit('kg', s.externalLoadKg!)}${mode == null
+          ? ' (carga antigua sin clasificar)'
+          : mode == RoutineExerciseLoadType.addedWeightKg
+          ? ' de lastre'
+          : ' externos'}',
     );
   }
   if (s.distanceMeters != null) {
     parts.add(units.valueWithUnit('m', s.distanceMeters!));
   }
   if (s.durationSeconds != null) parts.add('${s.durationSeconds} s');
-  if (s.assistanceKg != null) {
+  if (s.assistanceKg != null &&
+      (mode == null || mode == RoutineExerciseLoadType.assistedKg)) {
     parts.add('${units.valueWithUnit('kg', s.assistanceKg!)} de asistencia');
   }
   if (s.bodyweightKg != null) {
@@ -420,9 +432,7 @@ String workoutSetLabel(
       'Peso corporal registrado: ${units.valueWithUnit('kg', s.bodyweightKg!)}',
     );
   }
-  if (s.externalLoadKg == null &&
-      s.assistanceKg == null &&
-      e.targetLoadType == RoutineExerciseLoadType.bodyweight) {
+  if (mode == RoutineExerciseLoadType.bodyweight) {
     parts.add('Peso corporal');
   }
   if (s.rir != null) parts.add('RIR ${s.rir}');
@@ -463,9 +473,15 @@ class WorkoutExerciseReportCard extends StatelessWidget {
           report.exercise.name,
           style: Theme.of(context).textTheme.titleMedium,
         ),
+        if (report.exercise.supersetId != null)
+          Text(
+            'En superserie',
+            style: Theme.of(context).textTheme.labelMedium
+                ?.copyWith(color: Theme.of(context).colorScheme.tertiary),
+          ),
         const SizedBox(height: AppSpacing.sm),
         Text(
-          '${report.performed.length}/${report.exercise.sets.length} series · ${WorkoutUnits.of(context).valueWithUnit('kg·rep', report.externalVolume)} externos',
+          '${report.performed.length}/${report.exercise.sets.length - report.warmups} series${report.warmups > 0 ? ' + ${report.warmups} de calentamiento' : ''} · ${WorkoutUnits.of(context).valueWithUnit('kg·rep', report.externalVolume)} externos',
         ),
         Text(
           WorkoutAnalytics.isTimed(report.exercise)

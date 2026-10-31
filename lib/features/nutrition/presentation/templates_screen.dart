@@ -38,14 +38,25 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Plantillas'),
-        actions: [IconButton(onPressed: () => Navigator.pushNamed(context, '/nutrition/template_editor').then((_) => _load()), icon: const Icon(Icons.add))],
+        actions: [
+          IconButton(
+            onPressed: () => Navigator.pushNamed(
+              context,
+              '/nutrition/template_editor',
+            ).then((_) => _load()),
+            icon: const Icon(Icons.add),
+          ),
+        ],
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                Text('Carpetas', style: Theme.of(context).textTheme.titleMedium),
+                Text(
+                  'Carpetas',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
                 const SizedBox(height: 8),
                 Wrap(
                   spacing: 8,
@@ -68,7 +79,9 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
                   ..._templates.map(
                     (item) => ListTile(
                       title: Text(item.name),
-                      subtitle: Text('${item.effectiveTotals.kcal.round()} kcal · ${item.effectiveItems.length} alimentos'),
+                      subtitle: Text(
+                        '${MacroValues.display(item.effectiveTotals.kcal, decimals: 0)} kcal · ${item.effectiveItems.length} alimentos',
+                      ),
                       trailing: IconButton(
                         icon: const Icon(Icons.delete_outline),
                         onPressed: () async {

@@ -7,6 +7,7 @@ import '../data/training_library_repository.dart';
 import 'exercise_progress_panel.dart';
 import '../domain/exercise_technique.dart';
 import '../domain/routine_labels.dart';
+import '../domain/workout_analytics.dart';
 import '../domain/sport_activity.dart';
 import '../presentation/widgets/exercise_thumbnail.dart';
 import '../pro/data/exercise_definition.dart';
@@ -72,6 +73,12 @@ class _TechniqueTab extends StatelessWidget {
               'También conocido como: ${d.aliases.join(', ')}',
           ]),
         ],
+        if (WorkoutAnalytics.isBodyweight(exercise))
+          section('Cómo registrar', [
+            'Solo peso corporal: ${d?.isTimed == true || exercise.isTimed ? 'tiempo' : 'repeticiones'}, sin kilos obligatorios.',
+            'Lastre y asistencia se eligen de forma opcional, incluso para una sola serie.',
+            'El volumen externo cuenta solo el lastre registrado y sus repeticiones; no suma el peso corporal ni la asistencia.',
+          ]),
         section(
           'Instrucciones de ejecución',
           technique?.steps ??

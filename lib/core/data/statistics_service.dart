@@ -5,14 +5,34 @@ class NutritionMetrics {
     required this.date,
     required this.totalCalories,
     required this.macros,
+    this.unknownNutrients = const {},
   });
 
   final DateTime date;
   final int totalCalories;
   final Macros macros;
+  final Set<String> unknownNutrients;
 }
 
 class StatisticsService {
+  /// Aggregate exact saved values; round only at the legacy display boundary.
+  NutritionMetrics summarizeNutrition(
+    Iterable<MealEntry> meals,
+    DateTime date,
+  ) {
+    final rows = meals.toList();
+    return NutritionMetrics(
+      date: date,
+      unknownNutrients: {for (final meal in rows) ...meal.unknownNutrients},
+      totalCalories: rows.fold(0.0, (s, m) => s + m.energyKcal).round(),
+      macros: Macros(
+        carbs: rows.fold(0.0, (s, m) => s + m.carbohydrateGrams).round(),
+        protein: rows.fold(0.0, (s, m) => s + m.proteinGrams).round(),
+        fat: rows.fold(0.0, (s, m) => s + m.fatGrams).round(),
+      ),
+    );
+  }
+
   final Map<String, NutritionMetrics> _nutritionHistory = {};
   final List<SleepEntry> _sleepSamples = [];
 
@@ -38,8 +58,7 @@ class StatisticsService {
     final entries = _nutritionHistory.values.where((metrics) {
       final dateOnly = _dateOnly(metrics.date);
       return !dateOnly.isBefore(startDate) && !dateOnly.isAfter(endDate);
-    }).toList()
-      ..sort((a, b) => a.date.compareTo(b.date));
+    }).toList()..sort((a, b) => a.date.compareTo(b.date));
 
     return entries;
   }
@@ -70,12 +89,13 @@ class StatisticsService {
     final startDate = _dateOnly(now.subtract(Duration(days: days - 1)));
     final endDate = _dateOnly(now);
 
-    final entries = _sleepSamples.where((entry) {
-      final entryDate = _dateOnly(_safeParseDate(entry.id));
-      return !entryDate.isBefore(startDate) && !entryDate.isAfter(endDate);
-    }).toList()
-      ..sort((a, b) =>
-          _safeParseDate(a.id).compareTo(_safeParseDate(b.id)));
+    final entries =
+        _sleepSamples.where((entry) {
+          final entryDate = _dateOnly(_safeParseDate(entry.id));
+          return !entryDate.isBefore(startDate) && !entryDate.isAfter(endDate);
+        }).toList()..sort(
+          (a, b) => _safeParseDate(a.id).compareTo(_safeParseDate(b.id)),
+        );
 
     return entries;
   }
@@ -86,5 +106,6 @@ class StatisticsService {
     return DateTime.tryParse(raw) ?? DateTime.now();
   }
 
-  DateTime _dateOnly(DateTime date) => DateTime(date.year, date.month, date.day);
+  DateTime _dateOnly(DateTime date) =>
+      DateTime(date.year, date.month, date.day);
 }

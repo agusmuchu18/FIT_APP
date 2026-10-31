@@ -15,6 +15,7 @@ import 'training_home_controller.dart';
 import 'training_home_widgets.dart';
 import 'training_programs_screen.dart';
 import '../presentation/workout_insights_screen.dart';
+import '../domain/relative_day_label.dart';
 import '../workout_in_progress_controller.dart';
 
 class TrainingHomeScreen extends StatelessWidget {
@@ -125,12 +126,16 @@ class _TrainingHomeViewState extends State<_TrainingHomeView> {
                         ),
                       ),
                     const SizedBox(height: 14),
-                    PrimaryStartWorkoutCard(
-                      onTap: () => _goAndRefresh(
-                        context,
-                        controller,
-                        '/workout/session',
-                        arguments: {'trainingContext': 'Gym'},
+                    ValueListenableBuilder(
+                      valueListenable: WorkoutInProgressController.instance
+                          .watchDraft(),
+                      builder: (context, draft, _) => PrimaryStartWorkoutCard(
+                        activeWorkoutName: draft?.routineName,
+                        onTap: () => _goAndRefresh(
+                          context,
+                          controller,
+                          '/workout/session',
+                        ),
                       ),
                     ),
                     const SizedBox(height: 20),
@@ -141,7 +146,7 @@ class _TrainingHomeViewState extends State<_TrainingHomeView> {
                     const SizedBox(height: 12),
                     SizedBox(
                       height:
-                          184 *
+                          152 *
                           (MediaQuery.textScalerOf(context).scale(16) / 16),
                       child: Row(
                         children: [
@@ -186,6 +191,9 @@ class _TrainingHomeViewState extends State<_TrainingHomeView> {
                           onPressed: () async {
                             await Navigator.of(context).push(
                               MaterialPageRoute<void>(
+                                settings: const RouteSettings(
+                                  name: '/workout/programs',
+                                ),
                                 builder: (_) => const TrainingProgramsScreen(),
                               ),
                             );
@@ -198,6 +206,9 @@ class _TrainingHomeViewState extends State<_TrainingHomeView> {
                           onPressed: () async {
                             await Navigator.of(context).push(
                               MaterialPageRoute<void>(
+                                settings: const RouteSettings(
+                                  name: '/workout/insights',
+                                ),
                                 builder: (_) => const WorkoutInsightsScreen(),
                               ),
                             );
@@ -609,13 +620,7 @@ class _TrainingHomeViewState extends State<_TrainingHomeView> {
     }
   }
 
-  String _daysAgoLabel(DateTime? date) {
-    if (date == null) return 'Nunca';
-    final days = DateTime.now().difference(date).inDays;
-    if (days == 0) return 'hoy';
-    if (days == 1) return 'hace 1 día';
-    return 'hace $days días';
-  }
+  String _daysAgoLabel(DateTime? date) => relativeDayLabel(date);
 
   String _lastSessionLabel(WorkoutSession session) {
     return session.templateName ??
@@ -632,9 +637,9 @@ class _TrainingHomeViewState extends State<_TrainingHomeView> {
       case WorkoutType.functional:
         return 'Funcional';
       case WorkoutType.sport:
-        return 'Outdoor';
+        return 'Deporte';
       case WorkoutType.custom:
-        return 'Custom';
+        return 'Personalizado';
     }
   }
 

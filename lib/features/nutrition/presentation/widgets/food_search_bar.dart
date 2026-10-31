@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 
 class FoodSearchBar extends StatelessWidget {
-  const FoodSearchBar({super.key, required this.controller, required this.onChanged, required this.onClear});
+  const FoodSearchBar({
+    super.key,
+    required this.controller,
+    required this.onChanged,
+    required this.onClear,
+  });
 
   final TextEditingController controller;
   final ValueChanged<String> onChanged;
@@ -15,7 +20,13 @@ class FoodSearchBar extends StatelessWidget {
       decoration: InputDecoration(
         hintText: 'Buscar alimentos o comidas…',
         prefixIcon: const Icon(Icons.search),
-        suffixIcon: controller.text.isNotEmpty ? IconButton(onPressed: onClear, icon: const Icon(Icons.close)) : null,
+        suffixIcon: controller.text.isNotEmpty
+            ? IconButton(
+                tooltip: 'Limpiar búsqueda',
+                onPressed: onClear,
+                icon: const Icon(Icons.close),
+              )
+            : null,
       ),
     );
   }

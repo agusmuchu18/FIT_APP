@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:fit_app/features/workout/pro/models/workout_models.dart';
 import 'package:fit_app/features/workout/domain/sport_activity.dart';
+import 'package:fit_app/features/workout/domain/workout_analytics.dart';
 
 import 'training_test_fixtures.dart';
 
@@ -28,6 +29,88 @@ class _Projection implements FitnessRepository {
 
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
+  testWidgets(
+    'mixed bodyweight history edits assistance without changing inactive loads or IDs',
+    (tester) async {
+      final repository = WorkoutRepository(), projection = _Projection();
+      final original = WorkoutSession(
+        id: 'mixed-editor',
+        date: DateTime(2026, 10, 24),
+        type: WorkoutType.strength,
+        exercises: [
+          WorkoutExercise(
+            id: 'pull_up',
+            name: 'Dominadas',
+            targetLoadType: RoutineExerciseLoadType.addedWeightKg,
+            loadSchemaVersion: 1,
+            sets: [
+              SetEntry(
+                id: 'body',
+                loadType: RoutineExerciseLoadType.bodyweight,
+                externalLoadKg: 7,
+                reps: 10,
+                done: true,
+              ),
+              SetEntry(
+                id: 'added',
+                loadType: RoutineExerciseLoadType.addedWeightKg,
+                externalLoadKg: 10,
+                reps: 8,
+                done: true,
+              ),
+              SetEntry(
+                id: 'assist',
+                loadType: RoutineExerciseLoadType.assistedKg,
+                assistanceKg: 20,
+                externalLoadKg: 9,
+                reps: 12,
+                done: true,
+              ),
+            ],
+          ),
+        ],
+      );
+      await repository.persistLegacySession(original);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: WorkoutHistoryEditorScreen(
+            session: original,
+            repository: repository,
+            fitness: projection,
+            initialRevision: 0,
+          ),
+        ),
+      );
+      await tester.ensureVisible(find.text('Dominadas'));
+      await tester.tap(find.text('Dominadas'));
+      await tester.pumpAndSettle();
+      expect(
+        find.widgetWithText(TextFormField, 'Carga externa (kg)'),
+        findsNothing,
+      );
+      expect(find.widgetWithText(TextFormField, 'Lastre (kg)'), findsOneWidget);
+      final assistance = find.widgetWithText(TextFormField, 'Asistencia (kg)');
+      await tester.ensureVisible(assistance);
+      expect(tester.widget<TextFormField>(assistance).initialValue, '20.0');
+      await tester.enterText(assistance, '30');
+      await tester.pump();
+      await tester.tap(find.byTooltip('Guardar corrección'));
+      await tester.pumpAndSettle();
+      final updated = (await repository.listAllSessions()).single;
+      final sets = updated.exercises.single.sets;
+      expect(sets.map((s) => s.id), ['body', 'added', 'assist']);
+      expect(sets.map((s) => s.externalLoadKg), [7, 10, 9]);
+      expect(sets.last.assistanceKg, 30);
+      expect(sets.map((s) => s.loadType), [
+        RoutineExerciseLoadType.bodyweight,
+        RoutineExerciseLoadType.addedWeightKg,
+        RoutineExerciseLoadType.assistedKg,
+      ]);
+      expect(WorkoutReport(updated).externalVolume, 80);
+      expect(projection.entries.keys, [original.id]);
+      expect(tester.takeException(), isNull);
+    },
+  );
   testWidgets(
     'historical edit rejects invalid raw input then persists correction and projection',
     (tester) async {

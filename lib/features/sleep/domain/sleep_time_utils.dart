@@ -85,8 +85,9 @@ DateTime sleepEntryDate(SleepEntry entry) {
 double? computeDurationHours(SleepEntry entry) {
   final bed = parseHHmmToMinutes(entry.bedtime);
   final wake = parseHHmmToMinutes(entry.wakeTime);
-  final minutes =
-      bed != null && wake != null ? computeDurationMinutes(bedMin: bed, wakeMin: wake) : null;
+  final minutes = bed != null && wake != null
+      ? computeDurationMinutes(bedMin: bed, wakeMin: wake)
+      : null;
   return minutes != null ? minutes / 60 : null;
 }
 
@@ -106,10 +107,16 @@ int computeSleepScore(SleepEntry entry, double goalHours) {
 
   final bedtimeMinutes = parseHHmmToMinutes(entry.bedtime);
   final wakeMinutes = parseHHmmToMinutes(entry.wakeTime);
-  final mid = computeMidSleepMinutes(bedMin: bedtimeMinutes, wakeMin: wakeMinutes);
+  final mid = computeMidSleepMinutes(
+    bedMin: bedtimeMinutes,
+    wakeMin: wakeMinutes,
+  );
   final consistencyPenalty = mid == null ? 0.0 : 10.0;
 
-  final score = (durationScore + qualityScore + consistencyPenalty).clamp(0.0, 100.0);
+  final score = (durationScore + qualityScore + consistencyPenalty).clamp(
+    0.0,
+    100.0,
+  );
   return score.round();
 }
 

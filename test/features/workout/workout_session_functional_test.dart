@@ -1,3 +1,4 @@
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:fit_app/app/theme/app_theme.dart';
 import 'package:fit_app/features/workout/application/workout_session_controller.dart';
 import 'package:fit_app/features/workout/data/workout_repository.dart';
@@ -13,6 +14,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  setUpAll(() => initializeDateFormatting('es'));
   setUp(() => SharedPreferences.setMockInitialValues({}));
   testWidgets(
     'back saves edits and reopening can finish with a visible summary',
@@ -53,10 +55,10 @@ void main() {
       );
       await tester.tap(find.text('Abrir sesión'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Press de banca'));
-      await tester.pumpAndSettle();
-      await tester.ensureVisible(find.widgetWithText(TextField, 'Reps'));
-      await tester.enterText(find.widgetWithText(TextField, 'Reps'), '9');
+      // The first exercise with pending sets opens by itself.
+      final reps = find.byKey(const ValueKey('set-result-one'));
+      await tester.ensureVisible(reps);
+      await tester.enterText(reps, '9');
       await tester.tap(find.byType(BackButton));
       await tester.pumpAndSettle();
       expect(find.text('Abrir sesión'), findsOneWidget);
@@ -65,8 +67,6 @@ void main() {
         9,
       );
       await tester.tap(find.text('Abrir sesión'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Press de banca'));
       await tester.pumpAndSettle();
       await tester.drag(find.byType(CustomScrollView), const Offset(0, -350));
       await tester.pumpAndSettle();
@@ -98,7 +98,7 @@ void main() {
       MaterialApp(theme: AppTheme.dark, home: const WorkoutInProgressScreen()),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Más opciones'));
+    await tester.tap(find.byTooltip('Más opciones'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Configuración'));
     await tester.pumpAndSettle();
@@ -378,7 +378,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.text('Pausar sesión'), findsOneWidget);
+      expect(find.byTooltip('Pausar sesión'), findsOneWidget);
       await tester.drag(find.byType(CustomScrollView), const Offset(0, -400));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);

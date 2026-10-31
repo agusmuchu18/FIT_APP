@@ -23,23 +23,25 @@ class HomeModulesController extends ChangeNotifier {
   List<ModuleId> _optionalOrder = List<ModuleId>.from(defaultOrder);
 
   bool get initialized => _initialized;
-  Set<ModuleId> get enabledModules => Set<ModuleId>.unmodifiable(_enabledModules);
-  List<ModuleId> get optionalOrder => List<ModuleId>.unmodifiable(_optionalOrder);
+  Set<ModuleId> get enabledModules =>
+      Set<ModuleId>.unmodifiable(_enabledModules);
+  List<ModuleId> get optionalOrder =>
+      List<ModuleId>.unmodifiable(_optionalOrder);
 
   Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
-    final enabledRaw = prefs.getStringList(_enabledModulesKey) ?? const <String>[];
-    final orderRaw = prefs.getStringList(_optionalOrderKey) ?? defaultOrder.map((e) => e.name).toList();
+    final enabledRaw =
+        prefs.getStringList(_enabledModulesKey) ?? const <String>[];
+    final orderRaw =
+        prefs.getStringList(_optionalOrderKey) ??
+        defaultOrder.map((e) => e.name).toList();
 
     final enabled = enabledRaw
         .map(_moduleFromName)
         .whereType<ModuleId>()
         .toSet();
 
-    final order = orderRaw
-        .map(_moduleFromName)
-        .whereType<ModuleId>()
-        .toList();
+    final order = orderRaw.map(_moduleFromName).whereType<ModuleId>().toList();
 
     for (final module in defaultOrder) {
       if (!order.contains(module)) {
@@ -72,13 +74,12 @@ class HomeModulesController extends ChangeNotifier {
     final active = _activeOrderedModules();
     if (active.length < 2) return;
 
-    if (oldIndex < newIndex) {
-      newIndex -= 1;
-    }
     final moved = active.removeAt(oldIndex);
     active.insert(newIndex, moved);
 
-    final inactive = _optionalOrder.where((module) => !_enabledModules.contains(module)).toList();
+    final inactive = _optionalOrder
+        .where((module) => !_enabledModules.contains(module))
+        .toList();
     _optionalOrder = [...active, ...inactive];
 
     await _persist();

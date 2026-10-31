@@ -1,3 +1,4 @@
+import 'package:intl/date_symbol_data_local.dart';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -11,6 +12,7 @@ import 'package:fit_app/features/workout/training_home/workout_history_screen.da
 import '../support/workout_report_fixture.dart';
 
 void main() {
+  setUpAll(() => initializeDateFormatting('es'));
   testWidgets('summary, history, detail, empty and compact reports', (
     tester,
   ) async {

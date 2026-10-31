@@ -45,16 +45,19 @@ class TemplateSelector extends StatelessWidget {
                     ),
                   ),
                   onPressed: () => onSelected(template),
-                  onDeleted:
-                      onDeleted == null ? null : () => onDeleted!(template),
+                  onDeleted: onDeleted == null
+                      ? null
+                      : () => onDeleted!(template),
                   backgroundColor: AppColors.surface,
                   selectedColor: AppColors.card,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(18),
                     side: const BorderSide(color: Colors.transparent),
                   ),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
                   deleteIconColor: AppColors.textMuted,
                 ),
               )

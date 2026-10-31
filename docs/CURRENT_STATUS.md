@@ -1,6 +1,6 @@
 # Current status
 
-**Actualizado:** 2026-10-24
+**Actualizado:** 2026-10-31
 **Base auditada:** `9f61c68ff4a362d48f97265d300f7ae54de64edc`
 **Carpeta local:** `D:\Datos User\Escritorio\fitness\fit_app`
 
@@ -11,10 +11,10 @@
 | SDK | Flutter 3.47.3 / Dart 3.13.3; actualización estable aplicada |
 | `dart format` | Base de 158 archivos; cambios posteriores formateados por archivo |
 | `flutter analyze --fatal-infos` | 0 problemas |
-| `flutter test --no-pub` | 345 aprobadas + 1 omitida (24/10); contrato omitido ejecutado aparte con emuladores: 1 aprobado; backend social: 13 aprobadas |
-| Web release | Compila; dry run Wasm aprobado. Último recorrido local en `/`; el build anterior también comprobó `/FIT_APP/` |
+| `flutter test` | 435 aprobadas + 1 omitida (31/10); contrato social requiere emuladores y no se reejecutó en este corte nutricional. Evidencia previa del 24/10: contrato 1 aprobado; backend social 13 aprobadas |
+| Web release | Compila el 31/10; dry run Wasm aprobado. Nutrición B–H: diario, recetas, plan, recuperación y reapertura. El build anterior también comprobó `/FIT_APP/` |
 | YAML de GitHub | Sintaxis válida |
-| APK Android | Debug compilado el 24/10, incluyendo expansión social y medidas locales; conserva desugaring/notificaciones previos; no ejecutado en Android ni validado para tienda |
+| APK Android | Debug compilado el 31/10 con Nutrition 2.0 B–H incremental y registro corporal adaptativo; conserva desugaring/notificaciones previos; no ejecutado en Android ni validado para tienda |
 | Integración móvil local | APK de prueba compilado; recorrido compartido ensayado en host. No ejecutado en Android/iPhone |
 
 La ampliación previa de alimentación/USDA está en la carpeta original y sigue
@@ -23,6 +23,32 @@ pendiente de commit. Entrenamiento tiene commits locales en
 `codex/routine-inline-ux-20261014`; no se hizo push ni despliegue. Las comprobaciones
 corresponden a la carpeta de trabajo actual, que conserva cambios previos de otros
 módulos; no equivalen a validar un checkout limpio de esos commits.
+
+## Nutrition 2.0 · corte A · 30/10
+
+Auditoría F0 y primera base de datos segura implementadas: diario Hive v2,
+migración sin borrar v1, scopes por cuenta/invitado, snapshots/UUID, repetición
+sin ceros inventados, proyección recuperable y consultas de Inicio/Analytics
+durables. Se quitaron metas de muestra. Los nutrientes decimales se conservan
+también en la proyección y se agregan antes del redondeo de presentación.
+38 pruebas focalizadas finales; suite global 396 + 1 omitida y análisis sin incidencias.
+APK debug compilado; cierre del navegador/evidencia en `nutrition/QA_REPORT.md`.
+Plan y pendientes B–H: `nutrition/MASTER_PLAN.md`. Esto no completa el rediseño,
+catálogo regional, IA, recetas/planes ni sincronización rica.
+
+## Entrenamiento · registro corporal adaptativo 25/10
+
+Implementado y probado en host/web. Corporal por defecto solo reps o tiempo;
+lastre/asistencia opcionales inline y por serie. Volumen/PRs distinguen
+modalidades; kg antiguos ambiguos se preservan sin inferir su significado.
+Rutinas v0 compatibles; planes nuevos separan asistencia en esquema 1.
+Navegador local: mezcla corporal/lastre/asistencia, recuperación tras recarga,
+guardado e historial; 80 kg·rep para 10 kg adicionales × 8 reps, excluyendo
+corporal y asistencia. El editor de historial también respeta cada modalidad.
+27 regresiones nuevas, temas claro/oscuro y texto 200 %.
+Informe con archivos, fórmulas, compatibilidad y pruebas:
+`plans/BODYWEIGHT_ADAPTIVE_REGISTRATION.md`. Pendientes Android/iPhone reales y
+compilación iOS; no se hizo push/despliegue ni commit sobre el WIP previo.
 
 ## Entrenamiento · sesión sin fricción 23/10
 
@@ -312,3 +338,18 @@ por el SDK; no son dependencias directas actualizables desde esta app.
 
 Actualizar este archivo sólo cuando cambien validaciones, versiones, bloqueadores
 o decisiones; no copiar logs completos.
+
+
+## Nutrition 2.0 B–H · 31/10
+
+Implementación incremental: datos nullable/decimales y USDA verificable 424/50
+energías desconocidas; diario y biblioteca, texto/GTIN manual, recetas/planes,
+metas fechadas/revisiones, Analytics 7/30/90, notas/ayuno y backup aditivo.
+Análisis sin observaciones; 435 tests + 1 omitido; Worker 5; web/APK debug.
+UI ensayada con fixtures locales en navegador 390/320 px; texto 200 % claro/oscuro
+en widget tests. Ver `nutrition/QA_REPORT.md` y `IMPLEMENTATION_STATUS.md`.
+B–H no completos: IA/cámara, catálogo regional, automatismos, reportes, agua
+profunda, sincronización rica, localización Material y QA móvil siguen pendientes.
+El Worker actualizado no está desplegado. Copiar/pegar JSON end-to-end queda
+sin verificar por limitación del portapapeles virtual de las herramientas.
+No se modificó Entrenamiento ni navegación principal; sin commit/push/reset.

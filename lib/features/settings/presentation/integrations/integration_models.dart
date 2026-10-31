@@ -21,12 +21,7 @@ enum IntegrationId {
   trainingPeaks,
 }
 
-enum IntegrationCategory {
-  activityTraining,
-  healthSensors,
-  sleep,
-  nutrition,
-}
+enum IntegrationCategory { activityTraining, healthSensors, sleep, nutrition }
 
 class IntegrationItem {
   const IntegrationItem({

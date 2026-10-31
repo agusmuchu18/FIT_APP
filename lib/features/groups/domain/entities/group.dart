@@ -1,9 +1,5 @@
 class Group {
-  Group({
-    required this.id,
-    required this.name,
-    required this.members,
-  });
+  Group({required this.id, required this.name, required this.members});
 
   final String id;
   final String name;
@@ -32,10 +28,7 @@ class Group {
     return Group(id: id, name: name, members: parsed);
   }
 
-  Group copyWith({
-    String? name,
-    List<GroupMember>? members,
-  }) {
+  Group copyWith({String? name, List<GroupMember>? members}) {
     return Group(
       id: id,
       name: name ?? this.name,

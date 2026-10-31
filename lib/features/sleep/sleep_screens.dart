@@ -156,7 +156,7 @@ class _SleepProScreenState extends State<SleepProScreen> {
                                 Text(
                                   durationError
                                       ? 'Revisa horas'
-                                      : '${(durationMinutes! / 60).toStringAsFixed(1)} h',
+                                      : '${(durationMinutes / 60).toStringAsFixed(1)} h',
                                   style: TextStyle(
                                     color: durationError
                                         ? Colors.redAccent
@@ -213,12 +213,14 @@ class _SleepProScreenState extends State<SleepProScreen> {
                     _LabeledSlider(
                       label: 'Estrés percibido',
                       value: _stressLevel,
-                      onChanged: (value) => setState(() => _stressLevel = value),
+                      onChanged: (value) =>
+                          setState(() => _stressLevel = value),
                     ),
                     _LabeledSlider(
                       label: 'Energía al despertar',
                       value: _energyLevel,
-                      onChanged: (value) => setState(() => _energyLevel = value),
+                      onChanged: (value) =>
+                          setState(() => _energyLevel = value),
                     ),
                   ],
                 ),
@@ -399,10 +401,10 @@ class _SleepProScreenState extends State<SleepProScreen> {
     final repository = RepositoryScope.of(context);
     await repository.saveSleep(entry, sync: true);
 
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Sueño guardado.')),
-    );
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Sueño guardado.')));
     Navigator.pop(context);
   }
 }
